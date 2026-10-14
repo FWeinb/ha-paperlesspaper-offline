@@ -104,6 +104,43 @@ await new Promise((r) => setTimeout(r, 400));
 const saved = (await ws()).find((m) => m.type === "paperlessoffline/defaults/set");
 check(saved?.defaults?.saturation === 1.5, `global defaults saved (${JSON.stringify(saved?.defaults)})`);
 
+// 5. Overlays: add from a preset, edit, preview, save, toggle.
+await page.goto(`${BASE}?frame=kitchen&tab=settings`);
+await new Promise((r) => setTimeout(r, 1500));
+await page.evaluate(() => {
+  const panel = document.querySelector("paperlessoffline-panel");
+  panel.tab = "settings";
+});
+await new Promise((r) => setTimeout(r, 800));
+const overlaysRoot = () =>
+  page.evaluateHandle(() => document.querySelector("paperlessoffline-panel").shadowRoot.querySelector("pp-overlays").shadowRoot);
+await (await overlaysRoot()).evaluate((root) => root.querySelector(".menu-wrap button").click());
+await new Promise((r) => setTimeout(r, 200));
+await (await overlaysRoot()).evaluate((root) => root.querySelector(".menu button").click()); // "Sensor value"
+await new Promise((r) => setTimeout(r, 300));
+await (await overlaysRoot()).evaluate((root) => {
+  const editor = root.querySelector("pp-overlay-editor").shadowRoot;
+  const area = editor.querySelector("textarea.template");
+  area.value = "**{{ states('sensor.living_room_humidity') }} %**";
+  area.dispatchEvent(new Event("input"));
+  editor.querySelectorAll(".anchors button")[6].click(); // bottom left
+});
+await new Promise((r) => setTimeout(r, 1200));
+const ovPreviews = (await ws()).filter((m) => m.type === "paperlessoffline/overlay/preview");
+check(ovPreviews.length >= 2, `overlay preview re-rendered (${ovPreviews.length})`);
+const lastPreview = ovPreviews.at(-1);
+check(lastPreview?.overlays?.some((o) => o.id === "draft" && o.anchor === "bottom_left"), "preview includes the draft with its anchor");
+await (await overlaysRoot()).evaluate((root) => root.querySelector("pp-overlay-editor").shadowRoot.querySelector("button.primary").click());
+await new Promise((r) => setTimeout(r, 500));
+const saveMsg = (await ws()).filter((m) => m.type === "paperlessoffline/overlay/save").pop();
+check(saveMsg?.overlay?.template?.includes("living_room_humidity") && !saveMsg.overlay.id, "new overlay saved without id");
+const rows = await (await overlaysRoot()).evaluate((root) => root.querySelectorAll("li").length);
+check(rows === 3, `list shows 3 overlays (${rows})`);
+await (await overlaysRoot()).evaluate((root) => root.querySelector("li .toggle input").click());
+await new Promise((r) => setTimeout(r, 400));
+const toggled = (await ws()).filter((m) => m.type === "paperlessoffline/overlay/save").pop();
+check(toggled?.overlay?.id === "o1" && toggled.overlay.enabled === false, "toggle disables an overlay");
+
 await browser.close();
 console.log(failures.length ? `${failures.length} failure(s)` : "all interactions ok");
 process.exit(failures.length ? 1 : 0);

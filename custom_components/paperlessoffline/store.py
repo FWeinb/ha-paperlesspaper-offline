@@ -24,6 +24,36 @@ class Photo:
     added: str
     enabled: bool = True
     overrides: dict[str, Any] = field(default_factory=dict)
+    hide_frame_overlays: bool = False
+
+    def as_dict(self) -> dict[str, Any]:
+        """Serialise."""
+        return asdict(self)
+
+
+@dataclass
+class OverlayDef:
+    """A markdown/template text box drawn over what a frame shows."""
+
+    id: str
+    name: str
+    template: str
+    enabled: bool = True
+    show_if: str | None = None
+    anchor: str = "bottom_right"
+    margin: float = 0.03
+    width: int | None = None
+    align: str = "left"
+    size: str = "m"
+    text_color: str = "black"
+    backing: str = "box"
+    backing_color: str = "white"
+    redraw: str = "change"  # "change": every wake it changed; "photo": with the photo
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> OverlayDef:
+        """Deserialise, ignoring unknown keys."""
+        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
 
     def as_dict(self) -> dict[str, Any]:
         """Serialise."""
@@ -62,6 +92,11 @@ class FrameState:
     fetched_device_hash: str | None = None
     last_settings_fetch: float | None = None
     last_timeout: int | None = None
+    served_base_key: str | None = None
+    # Overlay texts evaluated at the last wake (None = hidden) and what they were evaluated for.
+    overlay_texts: dict[str, str | None] = field(default_factory=dict)
+    overlay_eval_base: str | None = None
+    overlay_errors: dict[str, str] = field(default_factory=dict)
     ble_status: dict[str, Any] = field(default_factory=dict)
     ble_read_at: float | None = None
     ble_error: str | None = None
@@ -102,17 +137,23 @@ class FrameStore:
         """Initialise."""
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry_id}")
         self.photos: list[Photo] = []
+        self.overlays: list[OverlayDef] = []
         self.state = FrameState()
 
     async def async_load(self) -> None:
         """Load from disk."""
         data = await self._store.async_load() or {}
-        self.photos = [Photo(**p) for p in data.get("photos", [])]
+        self.photos = [
+            Photo(**{k: v for k, v in p.items() if k in Photo.__dataclass_fields__})
+            for p in data.get("photos", [])
+        ]
+        self.overlays = [OverlayDef.from_dict(o) for o in data.get("overlays", [])]
         self.state = FrameState.from_dict(data.get("state", {}))
 
     def _data(self) -> dict[str, Any]:
         return {
             "photos": [p.as_dict() for p in self.photos],
+            "overlays": [o.as_dict() for o in self.overlays],
             "state": asdict(self.state),
         }
 

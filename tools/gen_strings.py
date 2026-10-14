@@ -850,6 +850,282 @@ def _url_host(lang: str) -> dict:
     }
 
 
+def _overlays(lang: str) -> dict:
+    """Strings for text and entity overlays (Step A)."""
+    L = lambda pair: pair[lang]  # noqa: E731
+
+    def opts(pairs: dict) -> dict:
+        return {"options": {k: L(v) for k, v in pairs.items()}}
+
+    anchors = {
+        "top_left": t("Top left", "Oben links"),
+        "top_center": t("Top centre", "Oben Mitte"),
+        "top_right": t("Top right", "Oben rechts"),
+        "center_left": t("Centre left", "Mitte links"),
+        "center": t("Centre", "Mitte"),
+        "center_right": t("Centre right", "Mitte rechts"),
+        "bottom_left": t("Bottom left", "Unten links"),
+        "bottom_center": t("Bottom centre", "Unten Mitte"),
+        "bottom_right": t("Bottom right", "Unten rechts"),
+    }
+    colors = {
+        "black": t("Black", "Schwarz"),
+        "white": t("White", "Weiß"),
+        "red": t("Red", "Rot"),
+        "green": t("Green", "Grün"),
+        "blue": t("Blue", "Blau"),
+        "yellow": t("Yellow", "Gelb"),
+    }
+    fields = {
+        "config_entry_id": (
+            t("Frame", "Rahmen"),
+            t("The frame to act on.", "Der betroffene Rahmen."),
+        ),
+        "target_config_entry_id": (
+            t("Target frame", "Zielrahmen"),
+            t("Frame to copy the overlays to.", "Rahmen, in den die Overlays kopiert werden."),
+        ),
+        "overlay_id": (
+            t("Overlay ID", "Overlay-ID"),
+            t(
+                "ID of the overlay (see the list overlays action).",
+                "ID des Overlays (siehe Aktion „Overlays auflisten“).",
+            ),
+        ),
+        "name": (t("Name", "Name"), t("Name shown in the panel.", "Im Panel angezeigter Name.")),
+        "template": (
+            t("Text", "Text"),
+            t(
+                "Markdown with Home Assistant templates, e.g. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**.",
+                "Markdown mit Home-Assistant-Templates, z. B. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**.",
+            ),
+        ),
+        "show_if": (
+            t("Show if", "Anzeigen wenn"),
+            t(
+                "Optional template; the overlay is only drawn when it renders to something truthy.",
+                "Optionales Template; das Overlay wird nur gezeichnet, wenn es etwas Wahres ergibt.",
+            ),
+        ),
+        "enabled": (
+            t("Enabled", "Aktiv"),
+            t("Whether the overlay is drawn.", "Ob das Overlay gezeichnet wird."),
+        ),
+        "anchor": (
+            t("Position", "Position"),
+            t("Where the box sits on the frame.", "Wo die Box auf dem Rahmen sitzt."),
+        ),
+        "size": (
+            t("Text size", "Textgröße"),
+            t(
+                "Scaled to the panel, so it looks the same on every frame.",
+                "Passt sich dem Panel an, damit es auf jedem Rahmen gleich aussieht.",
+            ),
+        ),
+        "width": (
+            t("Width", "Breite"),
+            t(
+                "Box width in percent of the frame; empty to fit the text.",
+                "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen.",
+            ),
+        ),
+        "margin": (
+            t("Margin", "Abstand"),
+            t(
+                "Distance from the edge, as a fraction of the frame's short side.",
+                "Abstand zum Rand als Anteil der kurzen Rahmenseite.",
+            ),
+        ),
+        "align": (
+            t("Alignment", "Ausrichtung"),
+            t("Text alignment inside the box.", "Textausrichtung in der Box."),
+        ),
+        "text_color": (
+            t("Text colour", "Textfarbe"),
+            t(
+                "Default text colour; colour spans override it.",
+                "Standard-Textfarbe; Farbmarkierungen überschreiben sie.",
+            ),
+        ),
+        "backing": (
+            t("Backing", "Hintergrund"),
+            t(
+                "What sits behind the text for readability.",
+                "Was für die Lesbarkeit hinter dem Text liegt.",
+            ),
+        ),
+        "backing_color": (
+            t("Box colour", "Boxfarbe"),
+            t("Colour of the box behind the text.", "Farbe der Box hinter dem Text."),
+        ),
+        "redraw": (
+            t("Update", "Aktualisieren"),
+            t(
+                "When changed values are sent to the frame.",
+                "Wann geänderte Werte an den Rahmen gesendet werden.",
+            ),
+        ),
+        "position": (
+            t("Position", "Position"),
+            t(
+                "New 0-based position in the drawing order.",
+                "Neue Position in der Zeichenreihenfolge (ab 0).",
+            ),
+        ),
+        "replace": (
+            t("Replace", "Ersetzen"),
+            t(
+                "Replace the target frame's overlays instead of adding to them.",
+                "Die Overlays des Zielrahmens ersetzen statt sie zu ergänzen.",
+            ),
+        ),
+    }
+    services = {
+        "add_overlay": (
+            t("Add overlay", "Overlay hinzufügen"),
+            t(
+                "Adds a text box drawn over every photo of a frame.",
+                "Fügt eine Textbox hinzu, die über jedes Foto eines Rahmens gezeichnet wird.",
+            ),
+            [
+                "config_entry_id",
+                "name",
+                "template",
+                "show_if",
+                "enabled",
+                "anchor",
+                "size",
+                "width",
+                "margin",
+                "align",
+                "text_color",
+                "backing",
+                "backing_color",
+                "redraw",
+            ],
+        ),
+        "update_overlay": (
+            t("Update overlay", "Overlay bearbeiten"),
+            t("Changes an overlay.", "Ändert ein Overlay."),
+            [
+                "config_entry_id",
+                "overlay_id",
+                "name",
+                "template",
+                "show_if",
+                "enabled",
+                "anchor",
+                "size",
+                "width",
+                "margin",
+                "align",
+                "text_color",
+                "backing",
+                "backing_color",
+                "redraw",
+            ],
+        ),
+        "remove_overlay": (
+            t("Remove overlay", "Overlay entfernen"),
+            t("Deletes an overlay.", "Löscht ein Overlay."),
+            ["config_entry_id", "overlay_id"],
+        ),
+        "move_overlay": (
+            t("Move overlay", "Overlay verschieben"),
+            t(
+                "Changes an overlay's place in the drawing order.",
+                "Ändert die Position eines Overlays in der Zeichenreihenfolge.",
+            ),
+            ["config_entry_id", "overlay_id", "position"],
+        ),
+        "copy_overlays": (
+            t("Copy overlays to frame", "Overlays in Rahmen kopieren"),
+            t(
+                "Copies all overlays of a frame to another frame.",
+                "Kopiert alle Overlays eines Rahmens in einen anderen Rahmen.",
+            ),
+            ["config_entry_id", "target_config_entry_id", "replace"],
+        ),
+        "list_overlays": (
+            t("List overlays", "Overlays auflisten"),
+            t(
+                "Returns a frame's overlays with their last text and error.",
+                "Gibt die Overlays eines Rahmens mit letztem Text und Fehler zurück.",
+            ),
+            ["config_entry_id"],
+        ),
+    }
+    return {
+        "selector": {
+            "overlay_anchor": opts(anchors),
+            "overlay_size": opts(
+                {
+                    "s": t("Small", "Klein"),
+                    "m": t("Medium", "Mittel"),
+                    "l": t("Large", "Groß"),
+                    "xl": t("Extra large", "Sehr groß"),
+                }
+            ),
+            "overlay_align": opts(
+                {
+                    "left": t("Left", "Links"),
+                    "center": t("Centre", "Mitte"),
+                    "right": t("Right", "Rechts"),
+                }
+            ),
+            "overlay_color": opts(colors),
+            "overlay_backing": opts(
+                {
+                    "box": t("Box", "Box"),
+                    "halo": t("Outline around letters", "Kontur um die Buchstaben"),
+                    "none": t("Nothing", "Nichts"),
+                }
+            ),
+            "overlay_redraw": opts(
+                {
+                    "change": t(
+                        "Every wake when the text changed",
+                        "Bei jedem Aufwachen, wenn sich der Text geändert hat",
+                    ),
+                    "photo": t("Only when the photo changes", "Nur wenn das Foto wechselt"),
+                }
+            ),
+        },
+        "exceptions": {
+            "overlay_not_found": {
+                "message": L(
+                    t("Overlay {overlay_id} not found.", "Overlay {overlay_id} nicht gefunden.")
+                )
+            },
+        },
+        "services": {
+            **{
+                name: {
+                    "name": L(title),
+                    "description": L(desc),
+                    "fields": {
+                        f: {"name": L(fields[f][0]), "description": L(fields[f][1])} for f in names
+                    },
+                }
+                for name, (title, desc, names) in services.items()
+            },
+            "update_photo": {
+                "fields": {
+                    "hide_frame_overlays": {
+                        "name": L(t("Hide frame overlays", "Rahmen-Overlays ausblenden")),
+                        "description": L(
+                            t(
+                                "Don't draw the frame's overlays on this photo.",
+                                "Die Overlays des Rahmens nicht auf diesem Foto zeichnen.",
+                            )
+                        ),
+                    }
+                }
+            },
+        },
+    }
+
+
 def _merge(base: dict, extra: dict) -> dict:
     for key, value in extra.items():
         if isinstance(value, dict) and isinstance(base.get(key), dict):
@@ -860,7 +1136,8 @@ def _merge(base: dict, extra: dict) -> dict:
 
 
 def build(lang: str) -> dict:
-    return _merge(_merge(_build_base(lang), _phase3(lang)), _url_host(lang))
+    merged = _merge(_merge(_build_base(lang), _phase3(lang)), _url_host(lang))
+    return _merge(merged, _overlays(lang))
 
 
 def main() -> None:

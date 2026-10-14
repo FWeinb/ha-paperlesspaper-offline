@@ -26,6 +26,7 @@ export class PhotoEditor extends LitElement {
   @state() private draft: PhotoSettings = {};
   @state() private name = "";
   @state() private enabled = true;
+  @state() private hideOverlays = false;
   @state() private preview: string | null = null;
   @state() private rendering = false;
   @state() private lockAspect = true;
@@ -56,6 +57,7 @@ export class PhotoEditor extends LitElement {
       this.draft = structuredClone(this.photo.overrides ?? {});
       this.name = this.photo.name;
       this.enabled = this.photo.enabled;
+      this.hideOverlays = this.photo.hide_frame_overlays ?? false;
       this.lockAspect = true;
       this.schedulePreview(0);
     }
@@ -77,6 +79,7 @@ export class PhotoEditor extends LitElement {
     return (
       this.name !== this.photo.name ||
       this.enabled !== this.photo.enabled ||
+      this.hideOverlays !== (this.photo.hide_frame_overlays ?? false) ||
       JSON.stringify(this.draft) !== JSON.stringify(this.photo.overrides ?? {})
     );
   }
@@ -138,6 +141,7 @@ export class PhotoEditor extends LitElement {
         name: this.name.trim() || this.photo.name,
         enabled: this.enabled,
         overrides: this.draft,
+        hide_frame_overlays: this.hideOverlays,
       });
       this.close();
     } catch (err) {
@@ -268,6 +272,14 @@ export class PhotoEditor extends LitElement {
                 @change=${(e: Event) => (this.enabled = (e.target as HTMLInputElement).checked)}
               />
               ${l("in_rotation")}
+            </label>
+            <label class="check">
+              <input
+                type="checkbox"
+                .checked=${this.hideOverlays}
+                @change=${(e: Event) => (this.hideOverlays = (e.target as HTMLInputElement).checked)}
+              />
+              ${l("hide_frame_overlays")}
             </label>
             <div class="section-title"><span>${l("rendering_settings")}</span></div>
             <pp-render-settings

@@ -74,6 +74,7 @@ const photoOf = (i: number, entry: string): Photo => ({
   enabled: i !== 4,
   added: new Date().toISOString(),
   overrides: i === 1 ? { dither: "atkinson", saturation: 1.3 } : i === 2 ? { crop: [0.1, 0.05, 0.5, 0.9] } : {},
+  hide_frame_overlays: false,
   thumb_url: (() => { const c = document.createElement("canvas"); c.width = 320; c.height = 215; c.getContext("2d")!.drawImage(sources[i], 0, 0, 320, 215); return c.toDataURL(); })(),
   display_urls: Object.fromEntries([0, 90, 180, 270].map((r) => [String(r), sources[i].toDataURL()])),
 });
@@ -101,6 +102,56 @@ const frames: Frame[] = [
 ];
 const photos: Record<string, Photo[]> = { kitchen: names.map((_, i) => photoOf(i, "kitchen")), hall: [] };
 
+const overlays: Record<string, any[]> = {
+  kitchen: [
+    { overlay_id: "o1", name: "Temperature", template: ":mdi:thermometer: **{{ states('sensor.outdoor_temperature') }} °C**", enabled: true, show_if: null, anchor: "top_right", margin: 0.03, width: null, align: "left", size: "l", text_color: "black", backing: "box", backing_color: "white", redraw: "change", last_text: ":mdi:thermometer: **7.5 °C**", last_error: null },
+    { overlay_id: "o2", name: "Date", template: "{{ date_local(now(), 'long') }}", enabled: true, show_if: null, anchor: "bottom_center", margin: 0.03, width: null, align: "center", size: "m", text_color: "white", backing: "halo", backing_color: "white", redraw: "change", last_text: "Wednesday, October 14, 2026", last_error: null },
+  ],
+  hall: [],
+};
+let nextOverlay = 3;
+
+function evalTemplate(tpl: string): { text: string | null; error: string | null } {
+  if (tpl.includes("| nope")) return { text: null, error: "TemplateSyntaxError: No filter named 'nope'." };
+  const text = tpl
+    .replace(/\{\{\s*states\('([^']+)'\)\s*\}\}/g, (_, id) => hass.states[id]?.state ?? "unknown")
+    .replace(/\{\{\s*date_local\([^}]*\}\}/g, "Wednesday, October 14, 2026")
+    .replace(/\{\{[^}]*\}\}/g, "…");
+  return { text: text.trim() || null, error: null };
+}
+
+function drawOverlayMock(dataUrl: string, list: any[], w: number, h: number): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      const g = c.getContext("2d")!;
+      g.imageSmoothingEnabled = false;
+      g.drawImage(img, 0, 0, w, h);
+      for (const o of list) {
+        if (!o.enabled) continue;
+        const { text } = evalTemplate(o.template);
+        if (!text) continue;
+        const size = ({ s: 9, m: 12, l: 16, xl: 22 } as any)[o.size] ?? 12;
+        g.font = `${size}px sans-serif`;
+        const lines = text.replace(/[*#]|:mdi:[a-z-]+:/g, "").split("\n");
+        const tw = Math.max(...lines.map((t: string) => g.measureText(t).width)) + size;
+        const th = lines.length * size * 1.3 + size * 0.6;
+        const [v, , hz] = o.anchor === "center" ? ["center", "", "center"] : o.anchor.split("_").length === 2 ? [o.anchor.split("_")[0], "", o.anchor.split("_")[1]] : ["center", "", "center"];
+        const m = 8;
+        const x = hz === "left" ? m : hz === "right" ? w - m - tw : (w - tw) / 2;
+        const y = v === "top" ? m : v === "bottom" ? h - m - th : (h - th) / 2;
+        if (o.backing === "box") { g.fillStyle = "#f2f2f2"; g.fillRect(x, y, tw, th); }
+        g.fillStyle = o.text_color === "white" ? "#fff" : "#1f2226";
+        lines.forEach((t: string, i: number) => g.fillText(t, x + size / 2, y + size * (1.1 + i * 1.3)));
+      }
+      resolve(c.toDataURL());
+    };
+    img.src = dataUrl;
+  });
+}
+
 const delay = <T>(v: T, ms = 120) => new Promise<T>((r) => setTimeout(() => r(v), ms));
 
 const hass: any = {
@@ -126,6 +177,27 @@ const hass: any = {
         const scale = 0.5;
         return delay({ image: quantize(sources[idx], frame.canvas.width * scale, frame.canvas.height * scale, msg.overrides?.crop), width: frame.canvas.width, height: frame.canvas.height }, 300);
       }
+      case "overlays": return delay({ overlays: overlays[msg.entry_id] ?? [] });
+      case "overlay/save": {
+        const list = overlays[msg.entry_id];
+        const { id, ...rest } = msg.overlay;
+        const r = evalTemplate(rest.template ?? "");
+        if (id) { const i = list.findIndex((o) => o.overlay_id === id); list[i] = { ...list[i], ...rest, overlay_id: id }; return delay(list[i]); }
+        const created = { ...rest, overlay_id: `o${nextOverlay++}`, last_text: r.text, last_error: r.error };
+        list.push(created); return delay(created);
+      }
+      case "overlay/delete": overlays[msg.entry_id] = overlays[msg.entry_id].filter((o) => o.overlay_id !== msg.overlay_id); return delay(null);
+      case "overlay/reorder": { const by = new Map(overlays[msg.entry_id].map((o) => [o.overlay_id, o])); overlays[msg.entry_id] = msg.order.map((i: string) => by.get(i)); return delay(null); }
+      case "overlays/copy": overlays[msg.target_entry_id].push(...overlays[msg.entry_id].map((o) => ({ ...o, overlay_id: `o${nextOverlay++}` }))); return delay({ copied: overlays[msg.entry_id].length });
+      case "overlay/preview": {
+        const frame = frames.find((f) => f.entry_id === msg.entry_id)!;
+        const list = msg.overlays.map((o: any) => ({ ...o, overlay_id: o.id ?? o.overlay_id }));
+        const idx = Math.max(0, photos[msg.entry_id].findIndex((p) => p.photo_id === msg.photo_id));
+        const base = quantize(sources[idx], frame.canvas.width / 2, frame.canvas.height / 2);
+        const image = await drawOverlayMock(base, list, frame.canvas.width / 2, frame.canvas.height / 2);
+        const results = Object.fromEntries(list.map((o: any) => [o.overlay_id, evalTemplate(o.template)]));
+        return delay({ image, width: frame.canvas.width, height: frame.canvas.height, results }, 300);
+      }
       case "media_source/browse_media":
         return delay(msg.media_content_id
           ? { title: "My media", media_content_id: msg.media_content_id, can_expand: true, children: names.map((n, i) => ({ title: `${n}.jpg`, media_content_id: `media-source://media_source/local/${i}.jpg`, media_class: "image", media_content_type: "image/jpeg", can_expand: false, can_play: true, thumbnail: photos.kitchen[i].thumb_url })) }
@@ -137,6 +209,10 @@ const hass: any = {
   async fetchWithAuth() { return new Response(JSON.stringify({ added: [], errors: [] })); },
   connection: { async subscribeMessage() { return async () => undefined; } },
 };
+
+hass.states["sensor.outdoor_temperature"] = { state: "7.5", attributes: { friendly_name: "Outdoor temperature", unit_of_measurement: "°C", device_class: "temperature" }, last_changed: "" };
+hass.states["sensor.living_room_humidity"] = { state: "56", attributes: { friendly_name: "Living room humidity", unit_of_measurement: "%" }, last_changed: "" };
+hass.states["weather.home"] = { state: "partlycloudy", attributes: { friendly_name: "Home", temperature: 8 }, last_changed: "" };
 
 // Image entities used for the "Showing"/"Up next" previews.
 for (const f of frames) {
@@ -177,6 +253,12 @@ async function main() {
   await new Promise((r) => setTimeout(r, 600));
   if (params.get("tab")) panel.tab = params.get("tab");
   if (params.get("edit")) panel.editing = photos.kitchen[Number(params.get("edit"))];
+  if (params.get("overlay")) {
+    panel.tab = "settings";
+    await new Promise((r) => setTimeout(r, 500));
+    const list = panel.shadowRoot.querySelector("pp-overlays");
+    list.editing = { ...overlays.kitchen[Number(params.get("overlay"))] };
+  }
   if (params.get("import")) {
     await panel.updateComplete;
     const lib = panel.shadowRoot.querySelector("pp-library");

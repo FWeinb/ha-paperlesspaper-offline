@@ -11,8 +11,9 @@ import numpy as np
 from PIL import Image, ImageEnhance, ImageOps
 
 from .bmp import encode_bmp4
-from .dither import dither
-from .palette import DEVICE_INDICES, PERCEIVED, get_palette
+from .dither import dither, nearest
+from .overlay import SENTINEL, OverlayStyle, draw_overlay, new_layer
+from .palette import DEVICE_INDICES, PERCEIVED, PURE, get_palette, nibble_lut
 from .placeholder import PlaceholderText, draw_placeholder
 
 try:  # HEIC support is optional at import time; the manifest requires it.
@@ -200,3 +201,31 @@ def make_thumbnail(source: Path, target: Path, size: int = 320, rotation: int = 
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(buf.getvalue())
     return buf.getvalue()
+
+
+def positions_from_bmp(bmp: bytes, canvas: Canvas) -> np.ndarray:
+    """Decode one of our 4-bit BMPs back into palette positions on the canvas."""
+    offset = int.from_bytes(bmp[10:14], "little")
+    width = int.from_bytes(bmp[18:22], "little", signed=True)
+    height = abs(int.from_bytes(bmp[22:26], "little", signed=True))
+    packed = np.frombuffer(bmp, dtype=np.uint8, count=width * height // 2, offset=offset)
+    nibbles = np.empty(packed.size * 2, dtype=np.uint8)
+    nibbles[0::2] = packed >> 4
+    nibbles[1::2] = packed & 0x0F
+    native = nibble_lut()[nibbles].reshape(height, width)
+    return np.rot90(native, -canvas.rot90)
+
+
+def composite(
+    base_bmp: bytes, overlays: list[tuple[str, OverlayStyle]], canvas: Canvas
+) -> RenderResult:
+    """Draw text boxes over an already dithered image. Blocking; run in an executor."""
+    positions = np.ascontiguousarray(positions_from_bmp(base_bmp, canvas))
+    layer = new_layer(canvas.width, canvas.height)
+    for text, style in overlays:
+        draw_overlay(layer, text, style)
+    rgb = np.asarray(layer)
+    drawn = ~(rgb == SENTINEL).all(axis=2)
+    if drawn.any():
+        positions[drawn] = nearest(rgb[drawn].astype(np.float32)[None, :, :], PURE)[0]
+    return finish(positions, canvas)

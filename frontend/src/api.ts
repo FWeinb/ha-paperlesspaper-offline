@@ -6,6 +6,8 @@ import type {
   MediaItem,
   Mounting,
   Order,
+  Overlay,
+  OverlayPreview,
   Photo,
   PhotoSettings,
 } from "./types";
@@ -27,7 +29,7 @@ export const updatePhoto = (
   hass: HomeAssistant,
   entryId: string,
   photoId: string,
-  changes: { name?: string; enabled?: boolean; overrides?: PhotoSettings },
+  changes: { name?: string; enabled?: boolean; overrides?: PhotoSettings; hide_frame_overlays?: boolean },
 ) => hass.callWS<Photo>({ type: `${D}/photo/update`, entry_id: entryId, photo_id: photoId, ...changes });
 
 export const deletePhoto = (hass: HomeAssistant, entryId: string, photoId: string) =>
@@ -110,3 +112,36 @@ export async function uploadPhotos(
 /** Extract a readable message from a websocket error. */
 export const errorMessage = (err: unknown): string =>
   (err as { message?: string })?.message ?? String(err);
+
+const toPayload = (overlay: Overlay) => {
+  const { overlay_id, last_text: _t, last_error: _e, ...rest } = overlay;
+  return overlay_id ? { id: overlay_id, ...rest } : rest;
+};
+
+export const fetchOverlays = (hass: HomeAssistant, entryId: string) =>
+  hass.callWS<{ overlays: Overlay[] }>({ type: `${D}/overlays`, entry_id: entryId }).then((r) => r.overlays);
+
+export const saveOverlay = (hass: HomeAssistant, entryId: string, overlay: Overlay) =>
+  hass.callWS<Overlay>({ type: `${D}/overlay/save`, entry_id: entryId, overlay: toPayload(overlay) });
+
+export const deleteOverlay = (hass: HomeAssistant, entryId: string, overlayId: string) =>
+  hass.callWS({ type: `${D}/overlay/delete`, entry_id: entryId, overlay_id: overlayId });
+
+export const reorderOverlays = (hass: HomeAssistant, entryId: string, order: string[]) =>
+  hass.callWS({ type: `${D}/overlay/reorder`, entry_id: entryId, order });
+
+export const copyOverlays = (hass: HomeAssistant, entryId: string, target: string) =>
+  hass.callWS<{ copied: number }>({ type: `${D}/overlays/copy`, entry_id: entryId, target_entry_id: target });
+
+export const previewOverlays = (
+  hass: HomeAssistant,
+  entryId: string,
+  overlays: Overlay[],
+  photoId?: string | null,
+) =>
+  hass.callWS<OverlayPreview>({
+    type: `${D}/overlay/preview`,
+    entry_id: entryId,
+    photo_id: photoId ?? null,
+    overlays: overlays.map(toPayload),
+  });

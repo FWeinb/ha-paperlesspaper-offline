@@ -139,6 +139,9 @@ update_photo:
     enabled:
       selector:
         boolean: {}
+    hide_frame_overlays:
+      selector:
+        boolean: {}
     reset:
       selector:
         select:
@@ -407,6 +410,273 @@ clear_image:
         config_entry:
           integration: paperlessoffline
 list_photos:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: paperlessoffline
+add_overlay:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: paperlessoffline
+    name:
+      required: true
+      selector:
+        text: {}
+    template:
+      example: ":mdi:thermometer: **{{ states('sensor.outdoor') }} \xB0C**"
+      selector:
+        text:
+          multiline: true
+      required: true
+    show_if:
+      selector:
+        text:
+          multiline: true
+    enabled:
+      selector:
+        boolean: {}
+    anchor:
+      selector:
+        select:
+          options:
+          - top_left
+          - top_center
+          - top_right
+          - center_left
+          - center
+          - center_right
+          - bottom_left
+          - bottom_center
+          - bottom_right
+          translation_key: overlay_anchor
+    size:
+      selector:
+        select:
+          options:
+          - s
+          - m
+          - l
+          - xl
+          translation_key: overlay_size
+    width:
+      selector:
+        number:
+          min: 5
+          max: 100
+          unit_of_measurement: '%'
+    margin:
+      selector:
+        number:
+          min: 0
+          max: 0.3
+          step: 0.01
+          mode: box
+    align:
+      selector:
+        select:
+          options:
+          - left
+          - center
+          - right
+          translation_key: overlay_align
+    text_color:
+      selector:
+        select:
+          options:
+          - black
+          - white
+          - red
+          - green
+          - blue
+          - yellow
+          translation_key: overlay_color
+    backing:
+      selector:
+        select:
+          options:
+          - box
+          - halo
+          - none
+          translation_key: overlay_backing
+    backing_color:
+      selector:
+        select:
+          options:
+          - black
+          - white
+          - red
+          - green
+          - blue
+          - yellow
+          translation_key: overlay_color
+    redraw:
+      selector:
+        select:
+          options:
+          - change
+          - photo
+          translation_key: overlay_redraw
+update_overlay:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: paperlessoffline
+    overlay_id:
+      required: true
+      example: a1b2c3d4e5f6
+      selector:
+        text: {}
+    name:
+      selector:
+        text: {}
+    template:
+      example: ":mdi:thermometer: **{{ states('sensor.outdoor') }} \xB0C**"
+      selector:
+        text:
+          multiline: true
+    show_if:
+      selector:
+        text:
+          multiline: true
+    enabled:
+      selector:
+        boolean: {}
+    anchor:
+      selector:
+        select:
+          options:
+          - top_left
+          - top_center
+          - top_right
+          - center_left
+          - center
+          - center_right
+          - bottom_left
+          - bottom_center
+          - bottom_right
+          translation_key: overlay_anchor
+    size:
+      selector:
+        select:
+          options:
+          - s
+          - m
+          - l
+          - xl
+          translation_key: overlay_size
+    width:
+      selector:
+        number:
+          min: 5
+          max: 100
+          unit_of_measurement: '%'
+    margin:
+      selector:
+        number:
+          min: 0
+          max: 0.3
+          step: 0.01
+          mode: box
+    align:
+      selector:
+        select:
+          options:
+          - left
+          - center
+          - right
+          translation_key: overlay_align
+    text_color:
+      selector:
+        select:
+          options:
+          - black
+          - white
+          - red
+          - green
+          - blue
+          - yellow
+          translation_key: overlay_color
+    backing:
+      selector:
+        select:
+          options:
+          - box
+          - halo
+          - none
+          translation_key: overlay_backing
+    backing_color:
+      selector:
+        select:
+          options:
+          - black
+          - white
+          - red
+          - green
+          - blue
+          - yellow
+          translation_key: overlay_color
+    redraw:
+      selector:
+        select:
+          options:
+          - change
+          - photo
+          translation_key: overlay_redraw
+remove_overlay:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: paperlessoffline
+    overlay_id:
+      required: true
+      example: a1b2c3d4e5f6
+      selector:
+        text: {}
+move_overlay:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: paperlessoffline
+    overlay_id:
+      required: true
+      example: a1b2c3d4e5f6
+      selector:
+        text: {}
+    position:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 1000
+          mode: box
+copy_overlays:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: paperlessoffline
+    target_config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: paperlessoffline
+    replace:
+      default: false
+      selector:
+        boolean: {}
+list_overlays:
   fields:
     config_entry_id:
       required: true

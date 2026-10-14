@@ -45,6 +45,31 @@ PHOTO_KEYS = ["all", *SHARED, "rotation", "focal_x", "focal_y", "crop"]
 FRAME_KEYS = ["all", "palette", *SHARED]
 NAME = {"selector": {"text": {}}}
 
+ANCHORS = [
+    "top_left", "top_center", "top_right",
+    "center_left", "center", "center_right",
+    "bottom_left", "bottom_center", "bottom_right",
+]  # fmt: skip
+COLORS = ["black", "white", "red", "green", "blue", "yellow"]
+OVERLAY_ID = {"required": True, "example": "a1b2c3d4e5f6", "selector": {"text": {}}}
+OVERLAY_FIELDS = {
+    "template": {
+        "example": ":mdi:thermometer: **{{ states('sensor.outdoor') }} °C**",
+        "selector": {"text": {"multiline": True}},
+    },
+    "show_if": {"selector": {"text": {"multiline": True}}},
+    "enabled": {"selector": {"boolean": {}}},
+    "anchor": select(ANCHORS, "overlay_anchor"),
+    "size": select(["s", "m", "l", "xl"], "overlay_size"),
+    "width": {"selector": {"number": {"min": 5, "max": 100, "unit_of_measurement": "%"}}},
+    "margin": {"selector": {"number": {"min": 0, "max": 0.3, "step": 0.01, "mode": "box"}}},
+    "align": select(["left", "center", "right"], "overlay_align"),
+    "text_color": select(COLORS, "overlay_color"),
+    "backing": select(["box", "halo", "none"], "overlay_backing"),
+    "backing_color": select(COLORS, "overlay_color"),
+    "redraw": select(["change", "photo"], "overlay_redraw"),
+}
+
 SERVICES = {
     "add_photo": {
         "config_entry_id": FRAME,
@@ -59,6 +84,7 @@ SERVICES = {
         "photo_id": PHOTO_ID,
         "name": NAME,
         "enabled": {"selector": {"boolean": {}}},
+        "hide_frame_overlays": {"selector": {"boolean": {}}},
         "reset": select(PHOTO_KEYS, multiple=True),
         **PHOTO_RENDER,
     },
@@ -86,6 +112,35 @@ SERVICES = {
     },
     "clear_image": {"config_entry_id": FRAME},
     "list_photos": {"config_entry_id": FRAME},
+    "add_overlay": {
+        "config_entry_id": FRAME,
+        "name": {"required": True, "selector": {"text": {}}},
+        **{
+            k: ({**v, "required": True} if k == "template" else v)
+            for k, v in OVERLAY_FIELDS.items()
+        },
+    },
+    "update_overlay": {
+        "config_entry_id": FRAME,
+        "overlay_id": OVERLAY_ID,
+        "name": NAME,
+        **OVERLAY_FIELDS,
+    },
+    "remove_overlay": {"config_entry_id": FRAME, "overlay_id": OVERLAY_ID},
+    "move_overlay": {
+        "config_entry_id": FRAME,
+        "overlay_id": OVERLAY_ID,
+        "position": {
+            "required": True,
+            "selector": {"number": {"min": 0, "max": 1000, "mode": "box"}},
+        },
+    },
+    "copy_overlays": {
+        "config_entry_id": FRAME,
+        "target_config_entry_id": FRAME,
+        "replace": {"default": False, "selector": {"boolean": {}}},
+    },
+    "list_overlays": {"config_entry_id": FRAME},
     "set_defaults": {
         "palette": select(["perceived", "pure"], "palette"),
         **SHARED,

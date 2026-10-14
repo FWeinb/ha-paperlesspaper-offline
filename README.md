@@ -132,6 +132,65 @@ show_up_next: true
 title: Kitchen                # optional
 ```
 
+## Text and entity overlays
+
+Overlays are text boxes drawn crisply on top of every photo a frame shows.
+They suit sensor values, the weather or the date. Edit them in the panel
+(*Settings* tab of a frame, section *Overlays*) with a live preview using
+current values, or with the overlay actions.
+
+The text and "show if" fields use Home Assistant's own code editor (as in
+*Developer tools → Template*), with Jinja highlighting and autocompletion for
+entity IDs and `mdi:` icons. If that editor isn't available, they fall back to
+plain text fields.
+
+- **Text** is markdown with Home Assistant templates:
+  - `# Heading`, `**bold**`, `*italic*`, `- list item`
+  - line breaks
+  - colours `{red}…{/red}` (black, white, red, green, blue, yellow)
+  - icons `:mdi:weather-sunny:` (any Material Design Icon)
+- **Helpers** for templates:
+  - `weather_icon(state)`: the icon for a weather condition;
+  - `entity_icon(entity_id)`: an icon set on an entity;
+  - `date_local(value, preset)`: dates in your language, with presets
+    `short`, `long`, `month_year`, `weekday` and `time`.
+- **Placement**: one of nine positions, a size from S to XL (scaled to the
+  panel), a width (fit to text or a percentage) and an alignment.
+- **Behind the text**: a box in any panel colour, an outline around the
+  letters, or nothing.
+- **Show if**: an optional template; the overlay is drawn only when it
+  renders to something truthy.
+- **Update**: *every wake when the text changed* (the default), or *only when
+  the photo changes*, to avoid extra panel refreshes for slowly changing
+  values.
+- **Per photo**: *Hide frame overlays on this photo* in the photo editor.
+
+Values are read when the frame wakes, so the frame shows them as of its last
+update. A broken template leaves only that box out; the panel shows the error.
+
+Examples:
+
+```text
+:mdi:thermometer: **{{ states('sensor.outdoor_temperature') }} °C**
+{{ weather_icon(states('weather.home')) }} {{ state_attr('weather.home', 'temperature') }} °
+{{ date_local(now(), 'long') }}
+```
+
+```yaml
+action: paperlessoffline.add_overlay
+data:
+  config_entry_id: 01J...
+  name: Rain warning
+  template: "{red}:mdi:weather-pouring: **Rain expected**{/red}"
+  show_if: "{{ states('sensor.rain_probability') | float(0) > 60 }}"
+  anchor: top_center
+  size: l
+```
+
+Other overlay actions: `update_overlay`, `remove_overlay`, `move_overlay`,
+`copy_overlays` (to another frame) and `list_overlays` (returns each overlay's
+last text and error).
+
 ## Bluetooth while the frame is in setup mode
 
 The frame can only be reached over Bluetooth in setup mode, right after a
@@ -260,7 +319,12 @@ Text on the frame (the "No photos yet" screen) is set in
 [Noto Sans](https://github.com/notofonts/latin-greek-cyrillic), © The Noto
 Project Authors. It is licensed under the SIL Open Font License 1.1 (see
 `custom_components/paperlessoffline/render/fonts/OFL.txt`) and bundled as a
-Latin subset.
+Latin subset. Arrows and maths symbols fall back to
+[Noto Sans Math](https://github.com/notofonts/math) (same licence, also
+subset). Overlay icons use the
+[Material Design Icons](https://pictogrammers.com/library/mdi/) webfont by
+Pictogrammers, under the Apache 2.0 licence (see
+`render/fonts/MaterialDesignIcons-LICENSE.txt`).
 
 ## Development
 

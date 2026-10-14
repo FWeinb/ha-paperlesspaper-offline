@@ -85,6 +85,7 @@ export interface Photo {
   enabled: boolean;
   added: string;
   overrides: PhotoSettings;
+  hide_frame_overlays: boolean;
   thumb_url: string;
   display_urls: Record<string, string>;
 }
@@ -103,4 +104,43 @@ export interface MediaItem {
   can_play: boolean;
   thumbnail: string | null;
   children?: MediaItem[];
+}
+
+export type Anchor =
+  | "top_left"
+  | "top_center"
+  | "top_right"
+  | "center_left"
+  | "center"
+  | "center_right"
+  | "bottom_left"
+  | "bottom_center"
+  | "bottom_right";
+export type PaletteColor = "black" | "white" | "red" | "green" | "blue" | "yellow";
+
+/** A text box drawn over every photo of a frame. */
+export interface Overlay {
+  overlay_id?: string;
+  name: string;
+  template: string;
+  enabled: boolean;
+  show_if: string | null;
+  anchor: Anchor;
+  margin: number;
+  width: number | null;
+  align: "left" | "center" | "right";
+  size: "s" | "m" | "l" | "xl";
+  text_color: PaletteColor;
+  backing: "box" | "halo" | "none";
+  backing_color: PaletteColor;
+  redraw: "change" | "photo";
+  last_text?: string | null;
+  last_error?: string | null;
+}
+
+export interface OverlayPreview {
+  image: string;
+  width: number;
+  height: number;
+  results: Record<string, { text: string | null; error: string | null }>;
 }

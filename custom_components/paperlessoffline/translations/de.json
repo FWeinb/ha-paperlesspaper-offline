@@ -187,6 +187,57 @@
       "options": {
         "auto": "Automatisch"
       }
+    },
+    "overlay_anchor": {
+      "options": {
+        "top_left": "Oben links",
+        "top_center": "Oben Mitte",
+        "top_right": "Oben rechts",
+        "center_left": "Mitte links",
+        "center": "Mitte",
+        "center_right": "Mitte rechts",
+        "bottom_left": "Unten links",
+        "bottom_center": "Unten Mitte",
+        "bottom_right": "Unten rechts"
+      }
+    },
+    "overlay_size": {
+      "options": {
+        "s": "Klein",
+        "m": "Mittel",
+        "l": "Groß",
+        "xl": "Sehr groß"
+      }
+    },
+    "overlay_align": {
+      "options": {
+        "left": "Links",
+        "center": "Mitte",
+        "right": "Rechts"
+      }
+    },
+    "overlay_color": {
+      "options": {
+        "black": "Schwarz",
+        "white": "Weiß",
+        "red": "Rot",
+        "green": "Grün",
+        "blue": "Blau",
+        "yellow": "Gelb"
+      }
+    },
+    "overlay_backing": {
+      "options": {
+        "box": "Box",
+        "halo": "Kontur um die Buchstaben",
+        "none": "Nichts"
+      }
+    },
+    "overlay_redraw": {
+      "options": {
+        "change": "Bei jedem Aufwachen, wenn sich der Text geändert hat",
+        "photo": "Nur wenn das Foto wechselt"
+      }
     }
   },
   "issues": {
@@ -338,6 +389,9 @@
     },
     "source_failed": {
       "message": "Bild konnte nicht abgerufen werden: {error}"
+    },
+    "overlay_not_found": {
+      "message": "Overlay {overlay_id} nicht gefunden."
     }
   },
   "services": {
@@ -500,6 +554,10 @@
         "crop": {
           "name": "Ausschnitt",
           "description": "Ausschnitt als [x, y, Breite, Höhe] in Anteilen des Fotos."
+        },
+        "hide_frame_overlays": {
+          "name": "Rahmen-Overlays ausblenden",
+          "description": "Die Overlays des Rahmens nicht auf diesem Foto zeichnen."
         }
       }
     },
@@ -700,6 +758,194 @@
         "reset": {
           "name": "Zurücksetzen",
           "description": "Einstellungen, die auf den geerbten Standard zurückgesetzt werden (oder „all“)."
+        }
+      }
+    },
+    "add_overlay": {
+      "name": "Overlay hinzufügen",
+      "description": "Fügt eine Textbox hinzu, die über jedes Foto eines Rahmens gezeichnet wird.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Im Panel angezeigter Name."
+        },
+        "template": {
+          "name": "Text",
+          "description": "Markdown mit Home-Assistant-Templates, z. B. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**."
+        },
+        "show_if": {
+          "name": "Anzeigen wenn",
+          "description": "Optionales Template; das Overlay wird nur gezeichnet, wenn es etwas Wahres ergibt."
+        },
+        "enabled": {
+          "name": "Aktiv",
+          "description": "Ob das Overlay gezeichnet wird."
+        },
+        "anchor": {
+          "name": "Position",
+          "description": "Wo die Box auf dem Rahmen sitzt."
+        },
+        "size": {
+          "name": "Textgröße",
+          "description": "Passt sich dem Panel an, damit es auf jedem Rahmen gleich aussieht."
+        },
+        "width": {
+          "name": "Breite",
+          "description": "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen."
+        },
+        "margin": {
+          "name": "Abstand",
+          "description": "Abstand zum Rand als Anteil der kurzen Rahmenseite."
+        },
+        "align": {
+          "name": "Ausrichtung",
+          "description": "Textausrichtung in der Box."
+        },
+        "text_color": {
+          "name": "Textfarbe",
+          "description": "Standard-Textfarbe; Farbmarkierungen überschreiben sie."
+        },
+        "backing": {
+          "name": "Hintergrund",
+          "description": "Was für die Lesbarkeit hinter dem Text liegt."
+        },
+        "backing_color": {
+          "name": "Boxfarbe",
+          "description": "Farbe der Box hinter dem Text."
+        },
+        "redraw": {
+          "name": "Aktualisieren",
+          "description": "Wann geänderte Werte an den Rahmen gesendet werden."
+        }
+      }
+    },
+    "update_overlay": {
+      "name": "Overlay bearbeiten",
+      "description": "Ändert ein Overlay.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "overlay_id": {
+          "name": "Overlay-ID",
+          "description": "ID des Overlays (siehe Aktion „Overlays auflisten“)."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Im Panel angezeigter Name."
+        },
+        "template": {
+          "name": "Text",
+          "description": "Markdown mit Home-Assistant-Templates, z. B. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**."
+        },
+        "show_if": {
+          "name": "Anzeigen wenn",
+          "description": "Optionales Template; das Overlay wird nur gezeichnet, wenn es etwas Wahres ergibt."
+        },
+        "enabled": {
+          "name": "Aktiv",
+          "description": "Ob das Overlay gezeichnet wird."
+        },
+        "anchor": {
+          "name": "Position",
+          "description": "Wo die Box auf dem Rahmen sitzt."
+        },
+        "size": {
+          "name": "Textgröße",
+          "description": "Passt sich dem Panel an, damit es auf jedem Rahmen gleich aussieht."
+        },
+        "width": {
+          "name": "Breite",
+          "description": "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen."
+        },
+        "margin": {
+          "name": "Abstand",
+          "description": "Abstand zum Rand als Anteil der kurzen Rahmenseite."
+        },
+        "align": {
+          "name": "Ausrichtung",
+          "description": "Textausrichtung in der Box."
+        },
+        "text_color": {
+          "name": "Textfarbe",
+          "description": "Standard-Textfarbe; Farbmarkierungen überschreiben sie."
+        },
+        "backing": {
+          "name": "Hintergrund",
+          "description": "Was für die Lesbarkeit hinter dem Text liegt."
+        },
+        "backing_color": {
+          "name": "Boxfarbe",
+          "description": "Farbe der Box hinter dem Text."
+        },
+        "redraw": {
+          "name": "Aktualisieren",
+          "description": "Wann geänderte Werte an den Rahmen gesendet werden."
+        }
+      }
+    },
+    "remove_overlay": {
+      "name": "Overlay entfernen",
+      "description": "Löscht ein Overlay.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "overlay_id": {
+          "name": "Overlay-ID",
+          "description": "ID des Overlays (siehe Aktion „Overlays auflisten“)."
+        }
+      }
+    },
+    "move_overlay": {
+      "name": "Overlay verschieben",
+      "description": "Ändert die Position eines Overlays in der Zeichenreihenfolge.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "overlay_id": {
+          "name": "Overlay-ID",
+          "description": "ID des Overlays (siehe Aktion „Overlays auflisten“)."
+        },
+        "position": {
+          "name": "Position",
+          "description": "Neue Position in der Zeichenreihenfolge (ab 0)."
+        }
+      }
+    },
+    "copy_overlays": {
+      "name": "Overlays in Rahmen kopieren",
+      "description": "Kopiert alle Overlays eines Rahmens in einen anderen Rahmen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "target_config_entry_id": {
+          "name": "Zielrahmen",
+          "description": "Rahmen, in den die Overlays kopiert werden."
+        },
+        "replace": {
+          "name": "Ersetzen",
+          "description": "Die Overlays des Zielrahmens ersetzen statt sie zu ergänzen."
+        }
+      }
+    },
+    "list_overlays": {
+      "name": "Overlays auflisten",
+      "description": "Gibt die Overlays eines Rahmens mit letztem Text und Fehler zurück.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
         }
       }
     }

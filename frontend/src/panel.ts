@@ -3,6 +3,7 @@ import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { errorMessage, fetchDefaults, fetchFrames, fetchPhotos, skipPhoto, subscribeChanges } from "./api";
 import "./library";
+import "./overlays";
 import { localizer, relativeTime } from "./localize";
 import "./photo-editor";
 import { resolveSettings } from "./render-settings";
@@ -264,11 +265,17 @@ export class PaperlessPanel extends LitElement {
             @edit-photo=${(e: CustomEvent<{ photo: Photo }>) => (this.editing = e.detail.photo)}
           ></pp-library>`
         : html`<pp-frame-settings
-            .hass=${this.hass}
-            .frame=${frame}
-            .photos=${this.photos}
-            .defaults=${this.defaults}
-          ></pp-frame-settings>`}
+              .hass=${this.hass}
+              .frame=${frame}
+              .photos=${this.photos}
+              .defaults=${this.defaults}
+            ></pp-frame-settings>
+            <pp-overlays
+              .hass=${this.hass}
+              .frame=${frame}
+              .frames=${this.frames}
+              .photos=${this.photos}
+            ></pp-overlays>`}
       ${this.editing && this.defaults
         ? html`<pp-photo-editor
             .hass=${this.hass}

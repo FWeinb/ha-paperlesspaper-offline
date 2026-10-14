@@ -15,7 +15,7 @@ import time
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, TemplateError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
@@ -66,10 +66,12 @@ from .const import (
 from .issues import async_update_issues, reprovision_reason
 from .render import (
     Canvas,
+    OverlayStyle,
     PlaceholderText,
     RenderOptions,
     RenderResult,
     canvas_for,
+    composite,
     make_thumbnail,
     render,
     render_placeholder,
@@ -78,7 +80,8 @@ from .render import (
 )
 from .schedule import parse_time, quiet_sleep
 from .settings import resolve
-from .store import FrameState, FrameStore, GlobalStore, Override, Photo
+from .store import FrameState, FrameStore, GlobalStore, OverlayDef, Override, Photo
+from .templates import is_truthy, render_text, template_variables
 from .urls import URL_HOST_AUTO, async_frame_base_url, frame_can_use_host, frame_urls
 
 if TYPE_CHECKING:
@@ -345,6 +348,7 @@ class FrameManager:
             st.last_wake = now
             st.wake_count += 1
             self._advance()
+            self._evaluate_overlays_for_wake()
             self._fire_wake()
         return is_wake
 
@@ -372,11 +376,17 @@ class FrameManager:
         async with self._lock:
             self._register_request(query, "image")
             self._note_origin(origin)
-            key, name = await self._async_current_render()
+            key, name, fresh = await self._async_current_render()
+            st = self.state
+            if fresh:
+                # A freshly rendered base: draw this wake's overlays on top.
+                st.served_base_key = key
+                draw = self._overlay_draw_list(self.overlays, st.overlay_texts)
+                if draw:
+                    key = await self._async_render_composite(key, draw)
             bmp = await self.hass.async_add_executor_job(self.cache.read_bmp, key)
             if bmp is None:
                 raise HomeAssistantError("Rendered image disappeared")
-            st = self.state
             if key != st.served_key:
                 st.served_lm = max(int(time.time()), st.served_lm + 1)
                 st.served_key = key
@@ -384,24 +394,29 @@ class FrameManager:
             self._changed()
             return bmp, dt_util.utc_from_timestamp(st.served_lm)
 
-    async def _async_current_render(self) -> tuple[str, str]:
-        """Render (or fetch from cache) what should be on screen now."""
+    async def _async_current_render(self) -> tuple[str, str, bool]:
+        """Render (or fetch) what should be on screen now.
+
+        Returns (key, name, fresh); ``fresh`` is False when the frame keeps the
+        image it already has (which already includes its overlays).
+        """
         st = self.state
         if st.current_kind == "override" and st.override is not None:
-            return await self._async_render_override(st.override), st.override.name
+            return await self._async_render_override(st.override), st.override.name, True
         if st.current_kind == "photo":
             if photo := self.get_photo(st.current_id):
-                return await self.async_render_photo(photo), photo.name
+                return await self.async_render_photo(photo), photo.name, True
             if await self._async_served_available():
                 # Deleted since the wake: keep what the frame already shows.
-                return str(st.served_key), st.served_name or ""
+                return str(st.served_key), st.served_name or "", False
             self._advance()
+            self._evaluate_overlays_for_wake()
             if st.current_kind == "photo" and (photo := self.get_photo(st.current_id)):
-                return await self.async_render_photo(photo), photo.name
+                return await self.async_render_photo(photo), photo.name, True
         # Empty rotation: keep the last photo, or show the (current) placeholder.
         if st.served_name != PLACEHOLDER_NAME and await self._async_served_available():
-            return str(st.served_key), st.served_name or ""
-        return await self._async_render_placeholder(), PLACEHOLDER_NAME
+            return str(st.served_key), st.served_name or "", False
+        return await self._async_render_placeholder(), PLACEHOLDER_NAME, True
 
     async def _async_served_available(self) -> bool:
         key = self.state.served_key
@@ -577,6 +592,9 @@ class FrameManager:
     def pending_changes(self) -> list[str]:
         """What the frame hasn't picked up yet."""
         pending = []
+        eval_base = self.state.overlay_eval_base or ""
+        if self.overlays and not eval_base.endswith("|" + self.overlay_defs_hash()):
+            pending.append("overlays")
         if self.state.fetched_device_hash != self.device_settings_hash():
             pending.append("settings")
         if self.state.queued_id and self.get_photo(self.state.queued_id):
@@ -656,12 +674,18 @@ class FrameManager:
             key = self.state.served_key
         else:
             kind, photo_id = self.up_next()
+            photo = self.get_photo(photo_id) if kind == "photo" else None
             if kind == "override" and self.state.override:
                 key = await self._async_render_override(self.state.override)
-            elif kind == "photo" and (photo := self.get_photo(photo_id)):
+            elif photo is not None:
                 key = await self.async_render_photo(photo)
             else:
                 key = await self._async_render_placeholder()
+            # Up next shows overlays with the values they'd have right now.
+            applicable = self._applicable_overlays(kind, photo)
+            texts = {o.id: self.evaluate_overlay(o)[0] for o in applicable}
+            if draw := self._overlay_draw_list(applicable, texts):
+                key = await self._async_render_composite(key, draw)
         if key is None:
             return None
         return await self.hass.async_add_executor_job(self.cache.read_png, key)
@@ -687,11 +711,213 @@ class FrameManager:
         except Exception:
             _LOGGER.exception("Pre-rendering for %s failed", self.client_id)
             return
-        keep: list[str | None] = [self.state.served_key]
+        keep: list[str | None] = [self.state.served_key, self.state.served_base_key]
         kind, photo_id = self.up_next()
         if kind == "photo" and (photo := self.get_photo(photo_id)):
             keep.append(self.photo_key(photo))
         await self.hass.async_add_executor_job(self.cache.prune, keep)
+
+    # -------------------------------------------------------------- overlays
+
+    @property
+    def overlays(self) -> list[OverlayDef]:
+        """Frame overlays, in drawing order."""
+        return self.store.overlays
+
+    def get_overlay(self, overlay_id: str) -> OverlayDef | None:
+        """Look up an overlay by id."""
+        return next((o for o in self.overlays if o.id == overlay_id), None)
+
+    def require_overlay(self, overlay_id: str) -> OverlayDef:
+        """Look up an overlay or raise a validation error."""
+        if (overlay := self.get_overlay(overlay_id)) is None:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="overlay_not_found",
+                translation_placeholders={"overlay_id": overlay_id},
+            )
+        return overlay
+
+    def overlay_defs_hash(self) -> str:
+        """Hash of all overlay definitions (edits invalidate evaluated texts)."""
+        return _hash([o.as_dict() for o in self.overlays])
+
+    def _applicable_overlays(self, kind: str | None, photo: Photo | None) -> list[OverlayDef]:
+        if kind not in ("photo", "override"):
+            return []  # the placeholder stays as it is
+        if photo is not None and photo.hide_frame_overlays:
+            return []
+        return [o for o in self.overlays if o.enabled]
+
+    def template_variables(self) -> dict[str, Any]:
+        """Variables for overlay templates on this frame."""
+        return template_variables(self.hass, self.entry.title)
+
+    def evaluate_overlay(
+        self, overlay: OverlayDef, variables: dict[str, Any] | None = None
+    ) -> tuple[str | None, str | None]:
+        """Evaluate an overlay now: (text or None if hidden/empty, error or None)."""
+        variables = variables if variables is not None else self.template_variables()
+        try:
+            if overlay.show_if and overlay.show_if.strip():
+                shown = render_text(self.hass, overlay.show_if, variables)
+                if not is_truthy(shown):
+                    return None, None
+            text = render_text(self.hass, overlay.template, variables).strip()
+        except TemplateError as err:
+            return None, str(err)
+        return text or None, None
+
+    @callback
+    def _evaluate_overlays_for_wake(self) -> None:
+        """Evaluate overlay texts once per wake, honouring each redraw policy."""
+        st = self.state
+        photo = self.get_photo(st.current_id) if st.current_kind == "photo" else None
+        applicable = self._applicable_overlays(st.current_kind, photo)
+        shown = (
+            st.override.sha256 if st.current_kind == "override" and st.override else st.current_id
+        )
+        ident = f"{st.current_kind}:{shown}|{self.overlay_defs_hash()}"
+        same_display = ident == st.overlay_eval_base
+        variables = self.template_variables()
+        texts: dict[str, str | None] = {}
+        errors: dict[str, str] = {}
+        for overlay in applicable:
+            if same_display and overlay.redraw == "photo" and overlay.id in st.overlay_texts:
+                texts[overlay.id] = st.overlay_texts[overlay.id]
+                continue
+            text, error = self.evaluate_overlay(overlay, variables)
+            texts[overlay.id] = text
+            if error:
+                errors[overlay.id] = error
+                _LOGGER.warning(
+                    "Overlay %r on %s left out: %s", overlay.name, self.entry.title, error
+                )
+        st.overlay_texts = texts
+        st.overlay_errors = errors
+        st.overlay_eval_base = ident
+
+    @staticmethod
+    def overlay_style(overlay: OverlayDef) -> OverlayStyle:
+        """Drawing style of an overlay."""
+        return OverlayStyle(
+            anchor=overlay.anchor,
+            margin=overlay.margin,
+            width=overlay.width,
+            align=overlay.align,
+            size=overlay.size,
+            text_color=overlay.text_color,
+            backing=overlay.backing,
+            backing_color=overlay.backing_color,
+        )
+
+    def _overlay_draw_list(
+        self, overlays: list[OverlayDef], texts: dict[str, str | None]
+    ) -> list[tuple[str, OverlayStyle]]:
+        draw: list[tuple[str, OverlayStyle]] = []
+        for overlay in overlays:
+            text = texts.get(overlay.id)
+            if text:
+                draw.append((text, self.overlay_style(overlay)))
+        return draw
+
+    async def _async_render_composite(
+        self, base_key: str, draw: list[tuple[str, OverlayStyle]]
+    ) -> str:
+        canvas = self.canvas
+        key = cache_key(
+            "composite:" + base_key,
+            {"overlays": [(text, asdict(style)) for text, style in draw]},
+            asdict(canvas),
+        )
+
+        def produce() -> RenderResult:
+            base = self.cache.read_bmp(base_key)
+            if base is None:
+                raise HomeAssistantError("Base image missing from cache")
+            return composite(base, draw, canvas)
+
+        return await self._async_render_cached(key, produce)
+
+    async def async_overlay_preview(
+        self, photo_id: str | None, overlays: list[OverlayDef] | None = None
+    ) -> tuple[bytes | None, dict[str, dict[str, str | None]]]:
+        """Preview a photo with (draft) overlays evaluated now.
+
+        Returns the PNG and, per overlay id, its evaluated text and error.
+        """
+        overlays = self.overlays if overlays is None else overlays
+        photo = self.get_photo(photo_id) if photo_id else None
+        if photo is None and self.photos:
+            photo = self.photos[0]
+        base = (
+            await self.async_render_photo(photo)
+            if photo
+            else await self._async_render_placeholder()
+        )
+        variables = self.template_variables()
+        results: dict[str, dict[str, str | None]] = {}
+        texts: dict[str, str | None] = {}
+        for overlay in overlays:
+            text, error = (
+                self.evaluate_overlay(overlay, variables) if overlay.enabled else (None, None)
+            )
+            results[overlay.id] = {"text": text, "error": error}
+            texts[overlay.id] = text
+        key = base
+        if draw := self._overlay_draw_list([o for o in overlays if o.enabled], texts):
+            key = await self._async_render_composite(base, draw)
+        png = await self.hass.async_add_executor_job(self.cache.read_png, key)
+        return png, results
+
+    @callback
+    def async_save_overlay(self, overlay: OverlayDef) -> OverlayDef:
+        """Create or replace an overlay (matched by id)."""
+        for index, existing in enumerate(self.overlays):
+            if existing.id == overlay.id:
+                self.store.overlays[index] = overlay
+                break
+        else:
+            self.store.overlays.append(overlay)
+        self._changed()
+        return overlay
+
+    @callback
+    def async_delete_overlay(self, overlay_id: str) -> None:
+        """Remove an overlay."""
+        overlay = self.require_overlay(overlay_id)
+        self.store.overlays.remove(overlay)
+        self._changed()
+
+    @callback
+    def async_reorder_overlays(self, order: list[str]) -> None:
+        """Reorder overlays; ids not listed keep their relative order at the end."""
+        by_id = {o.id: o for o in self.overlays}
+        ordered = [by_id[i] for i in dict.fromkeys(order) if i in by_id]
+        rest = [o for o in self.overlays if o.id not in set(order)]
+        self.store.overlays[:] = ordered + rest
+        self._changed()
+
+    @callback
+    def async_copy_overlays_to(self, target: FrameManager, replace: bool = False) -> int:
+        """Copy all overlays to another frame (new ids). Returns how many."""
+        copies = [
+            OverlayDef.from_dict({**o.as_dict(), "id": secrets.token_hex(6)}) for o in self.overlays
+        ]
+        if replace:
+            target.store.overlays[:] = copies
+        else:
+            target.store.overlays.extend(copies)
+        target._changed()
+        return len(copies)
+
+    @callback
+    def async_set_photo_hide_overlays(self, photo_id: str, hide: bool) -> Photo:
+        """Whether frame overlays are drawn on a photo."""
+        photo = self.require_photo(photo_id)
+        photo.hide_frame_overlays = hide
+        self._changed()
+        return photo
 
     # --------------------------------------------------------------- library
 

@@ -187,6 +187,57 @@
       "options": {
         "auto": "Automatic"
       }
+    },
+    "overlay_anchor": {
+      "options": {
+        "top_left": "Top left",
+        "top_center": "Top centre",
+        "top_right": "Top right",
+        "center_left": "Centre left",
+        "center": "Centre",
+        "center_right": "Centre right",
+        "bottom_left": "Bottom left",
+        "bottom_center": "Bottom centre",
+        "bottom_right": "Bottom right"
+      }
+    },
+    "overlay_size": {
+      "options": {
+        "s": "Small",
+        "m": "Medium",
+        "l": "Large",
+        "xl": "Extra large"
+      }
+    },
+    "overlay_align": {
+      "options": {
+        "left": "Left",
+        "center": "Centre",
+        "right": "Right"
+      }
+    },
+    "overlay_color": {
+      "options": {
+        "black": "Black",
+        "white": "White",
+        "red": "Red",
+        "green": "Green",
+        "blue": "Blue",
+        "yellow": "Yellow"
+      }
+    },
+    "overlay_backing": {
+      "options": {
+        "box": "Box",
+        "halo": "Outline around letters",
+        "none": "Nothing"
+      }
+    },
+    "overlay_redraw": {
+      "options": {
+        "change": "Every wake when the text changed",
+        "photo": "Only when the photo changes"
+      }
     }
   },
   "issues": {
@@ -338,6 +389,9 @@
     },
     "source_failed": {
       "message": "Couldn't get the image: {error}"
+    },
+    "overlay_not_found": {
+      "message": "Overlay {overlay_id} not found."
     }
   },
   "services": {
@@ -500,6 +554,10 @@
         "crop": {
           "name": "Crop",
           "description": "Crop box as [x, y, width, height] fractions of the photo."
+        },
+        "hide_frame_overlays": {
+          "name": "Hide frame overlays",
+          "description": "Don't draw the frame's overlays on this photo."
         }
       }
     },
@@ -700,6 +758,194 @@
         "reset": {
           "name": "Reset",
           "description": "Settings to reset to the inherited default (or 'all')."
+        }
+      }
+    },
+    "add_overlay": {
+      "name": "Add overlay",
+      "description": "Adds a text box drawn over every photo of a frame.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Name shown in the panel."
+        },
+        "template": {
+          "name": "Text",
+          "description": "Markdown with Home Assistant templates, e.g. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**."
+        },
+        "show_if": {
+          "name": "Show if",
+          "description": "Optional template; the overlay is only drawn when it renders to something truthy."
+        },
+        "enabled": {
+          "name": "Enabled",
+          "description": "Whether the overlay is drawn."
+        },
+        "anchor": {
+          "name": "Position",
+          "description": "Where the box sits on the frame."
+        },
+        "size": {
+          "name": "Text size",
+          "description": "Scaled to the panel, so it looks the same on every frame."
+        },
+        "width": {
+          "name": "Width",
+          "description": "Box width in percent of the frame; empty to fit the text."
+        },
+        "margin": {
+          "name": "Margin",
+          "description": "Distance from the edge, as a fraction of the frame's short side."
+        },
+        "align": {
+          "name": "Alignment",
+          "description": "Text alignment inside the box."
+        },
+        "text_color": {
+          "name": "Text colour",
+          "description": "Default text colour; colour spans override it."
+        },
+        "backing": {
+          "name": "Backing",
+          "description": "What sits behind the text for readability."
+        },
+        "backing_color": {
+          "name": "Box colour",
+          "description": "Colour of the box behind the text."
+        },
+        "redraw": {
+          "name": "Update",
+          "description": "When changed values are sent to the frame."
+        }
+      }
+    },
+    "update_overlay": {
+      "name": "Update overlay",
+      "description": "Changes an overlay.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "overlay_id": {
+          "name": "Overlay ID",
+          "description": "ID of the overlay (see the list overlays action)."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Name shown in the panel."
+        },
+        "template": {
+          "name": "Text",
+          "description": "Markdown with Home Assistant templates, e.g. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**."
+        },
+        "show_if": {
+          "name": "Show if",
+          "description": "Optional template; the overlay is only drawn when it renders to something truthy."
+        },
+        "enabled": {
+          "name": "Enabled",
+          "description": "Whether the overlay is drawn."
+        },
+        "anchor": {
+          "name": "Position",
+          "description": "Where the box sits on the frame."
+        },
+        "size": {
+          "name": "Text size",
+          "description": "Scaled to the panel, so it looks the same on every frame."
+        },
+        "width": {
+          "name": "Width",
+          "description": "Box width in percent of the frame; empty to fit the text."
+        },
+        "margin": {
+          "name": "Margin",
+          "description": "Distance from the edge, as a fraction of the frame's short side."
+        },
+        "align": {
+          "name": "Alignment",
+          "description": "Text alignment inside the box."
+        },
+        "text_color": {
+          "name": "Text colour",
+          "description": "Default text colour; colour spans override it."
+        },
+        "backing": {
+          "name": "Backing",
+          "description": "What sits behind the text for readability."
+        },
+        "backing_color": {
+          "name": "Box colour",
+          "description": "Colour of the box behind the text."
+        },
+        "redraw": {
+          "name": "Update",
+          "description": "When changed values are sent to the frame."
+        }
+      }
+    },
+    "remove_overlay": {
+      "name": "Remove overlay",
+      "description": "Deletes an overlay.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "overlay_id": {
+          "name": "Overlay ID",
+          "description": "ID of the overlay (see the list overlays action)."
+        }
+      }
+    },
+    "move_overlay": {
+      "name": "Move overlay",
+      "description": "Changes an overlay's place in the drawing order.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "overlay_id": {
+          "name": "Overlay ID",
+          "description": "ID of the overlay (see the list overlays action)."
+        },
+        "position": {
+          "name": "Position",
+          "description": "New 0-based position in the drawing order."
+        }
+      }
+    },
+    "copy_overlays": {
+      "name": "Copy overlays to frame",
+      "description": "Copies all overlays of a frame to another frame.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "target_config_entry_id": {
+          "name": "Target frame",
+          "description": "Frame to copy the overlays to."
+        },
+        "replace": {
+          "name": "Replace",
+          "description": "Replace the target frame's overlays instead of adding to them."
+        }
+      }
+    },
+    "list_overlays": {
+      "name": "List overlays",
+      "description": "Returns a frame's overlays with their last text and error.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
         }
       }
     }

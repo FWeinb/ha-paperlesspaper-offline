@@ -1,5 +1,8 @@
 # Overlays, Step A: engine and frame overlays
 
+**Status (2026-10-14):** A1 to A6 done, and A7 docs done. The check on a real
+frame is pending.
+
 Design: [DESIGN.md §16](DESIGN.md#16-text-and-entity-overlays-agreed-design).
 
 **Goal:** text, entity values and icons drawn on top of every photo a frame

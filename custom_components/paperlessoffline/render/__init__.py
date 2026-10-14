@@ -1,6 +1,7 @@
 """Image rendering for paperlesspaper frames (independent of Home Assistant)."""
 
 from .dither import DITHER_METHODS
+from .overlay import OverlayStyle
 from .pipeline import (
     FIT_MODES,
     MOUNTINGS,
@@ -8,6 +9,7 @@ from .pipeline import (
     RenderOptions,
     RenderResult,
     canvas_for,
+    composite,
     make_thumbnail,
     render,
     render_placeholder,
@@ -21,10 +23,12 @@ __all__ = [
     "FIT_MODES",
     "MOUNTINGS",
     "Canvas",
+    "OverlayStyle",
     "PlaceholderText",
     "RenderOptions",
     "RenderResult",
     "canvas_for",
+    "composite",
     "make_thumbnail",
     "render",
     "render_placeholder",

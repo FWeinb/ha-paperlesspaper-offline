@@ -28,7 +28,9 @@ from .const import (
 from .data import DATA_KEY, get_manager
 from .frame import SIGNAL_ANY_UPDATE, FrameManager
 from .issues import is_overdue
+from .overlay_schema import OVERLAY_SCHEMA, build_overlay
 from .render import MOUNTINGS
+from .services import overlay_dict
 from .settings import FRAME_DEFAULTS_SCHEMA, GLOBAL_DEFAULTS_SCHEMA, PHOTO_OVERRIDES_SCHEMA
 from .sources import async_fetch_source
 from .store import Photo
@@ -55,6 +57,7 @@ def photo_info(hass: HomeAssistant, manager: FrameManager, photo: Photo) -> dict
         "enabled": photo.enabled,
         "added": photo.added,
         "overrides": _jsonable(photo.overrides),
+        "hide_frame_overlays": photo.hide_frame_overlays,
         "thumb_url": async_sign_path(hass, base, SIGN_EXPIRY),
         # The editor needs larger images; one per rotation so crops map 1:1.
         "display_urls": {
@@ -127,6 +130,12 @@ def async_setup_websocket(hass: HomeAssistant) -> None:
         ws_preview,
         ws_defaults,
         ws_defaults_set,
+        ws_overlays,
+        ws_overlay_save,
+        ws_overlay_delete,
+        ws_overlay_reorder,
+        ws_overlays_copy,
+        ws_overlay_preview,
     ):
         websocket_api.async_register_command(hass, handler)
 
@@ -196,6 +205,7 @@ def ws_photos(
         vol.Optional("name"): cv.string,
         vol.Optional("enabled"): cv.boolean,
         vol.Optional("overrides"): PHOTO_OVERRIDES_SCHEMA,
+        vol.Optional("hide_frame_overlays"): cv.boolean,
     }
 )
 @callback
@@ -209,6 +219,8 @@ def ws_photo_update(
     )
     if "overrides" in msg:
         photo = manager.async_set_overrides(msg["photo_id"], msg["overrides"])
+    if "hide_frame_overlays" in msg:
+        photo = manager.async_set_photo_hide_overlays(msg["photo_id"], msg["hide_frame_overlays"])
     connection.send_result(msg["id"], photo_info(hass, manager, photo))
 
 
@@ -397,3 +409,113 @@ async def ws_defaults_set(
     for manager in data.entries.values():
         manager.async_options_updated()
     connection.send_result(msg["id"], {"defaults": data.global_store.defaults})
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/overlays", **_ENTRY})
+@callback
+def ws_overlays(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """List a frame's overlays with their last evaluated text and error."""
+    manager = get_manager(hass, msg["entry_id"])
+    connection.send_result(
+        msg["id"], {"overlays": [overlay_dict(manager, o) for o in manager.overlays]}
+    )
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/overlay/save", **_ENTRY, vol.Required("overlay"): dict}
+)
+@callback
+def ws_overlay_save(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Create (no id) or update (with id) an overlay."""
+    manager = get_manager(hass, msg["entry_id"])
+    data = OVERLAY_SCHEMA(msg["overlay"])
+    existing = manager.get_overlay(data["id"]) if data.get("id") else None
+    overlay = manager.async_save_overlay(build_overlay(data, existing))
+    connection.send_result(msg["id"], overlay_dict(manager, overlay))
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/overlay/delete", **_ENTRY, vol.Required("overlay_id"): str}
+)
+@callback
+def ws_overlay_delete(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Delete an overlay."""
+    get_manager(hass, msg["entry_id"]).async_delete_overlay(msg["overlay_id"])
+    connection.send_result(msg["id"])
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/overlay/reorder", **_ENTRY, vol.Required("order"): [str]}
+)
+@callback
+def ws_overlay_reorder(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Reorder overlays (drawing order)."""
+    get_manager(hass, msg["entry_id"]).async_reorder_overlays(msg["order"])
+    connection.send_result(msg["id"])
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/overlays/copy",
+        **_ENTRY,
+        vol.Required("target_entry_id"): str,
+        vol.Optional("replace", default=False): bool,
+    }
+)
+@callback
+def ws_overlays_copy(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Copy all overlays to another frame."""
+    source = get_manager(hass, msg["entry_id"])
+    target = get_manager(hass, msg["target_entry_id"])
+    connection.send_result(
+        msg["id"], {"copied": source.async_copy_overlays_to(target, msg["replace"])}
+    )
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): f"{DOMAIN}/overlay/preview",
+        **_ENTRY,
+        vol.Optional("photo_id"): vol.Any(None, str),
+        vol.Optional("overlays"): [dict],
+    }
+)
+@websocket_api.async_response
+async def ws_overlay_preview(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Render a photo with (draft) overlays evaluated now, plus each one's text or error."""
+    manager = get_manager(hass, msg["entry_id"])
+    drafts = None
+    if "overlays" in msg:
+        drafts = []
+        for raw in msg["overlays"]:
+            data = OVERLAY_SCHEMA(raw)
+            existing = manager.get_overlay(data["id"]) if data.get("id") else None
+            drafts.append(build_overlay(data, existing))
+    png, results = await manager.async_overlay_preview(msg.get("photo_id"), drafts)
+    connection.send_result(
+        msg["id"],
+        {
+            "image": "data:image/png;base64," + base64.b64encode(png or b"").decode(),
+            "width": manager.canvas.width,
+            "height": manager.canvas.height,
+            "results": results,
+        },
+    )
