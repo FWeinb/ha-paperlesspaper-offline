@@ -513,3 +513,113 @@ Bluetooth against real hardware still needs a manual test.
   same way.
 - This is enforced by `tests/test_style.py`, which fails if either character
   appears in a tracked text file.
+
+## 16. Text and entity overlays (agreed design)
+
+Render text, entity values and icons onto what the frame shows. Values are
+evaluated when the image is rendered at a wake, so on the wall they are a
+snapshot of that moment, not live.
+
+### Concepts
+
+- **Frame overlays**: text boxes defined per frame and drawn on every photo,
+  e.g. sensor values in a corner. Each photo has a "hide frame overlays"
+  switch.
+- **Photo overlays**: text that belongs to one photo, e.g. a caption.
+  `copy_photo` copies them along.
+- **Text cards**: a new kind of library item that is mostly text.
+  - Background: white, black, a panel colour, or a photo from the frame's
+    library (rendered with that photo's own settings).
+  - Presets to start from: "Info" (a title plus key values) and "Notice" (one
+    big message).
+  - Frame overlays are hidden on cards by default, with a per-card switch.
+  - Cards behave like photos everywhere: rotation order, shuffle, the eye
+    toggle, the "Up next" select, *Skip*, the media browser, and
+    `list_photos` (with a `kind: photo | card` field). They are marked with a
+    small badge.
+
+### Content
+
+- **Home Assistant templates (Jinja)** for all text.
+- **Template variables**:
+  - for photo overlays and for frame overlays on photos: `photo.name`,
+    `photo.date` (EXIF capture date, or none) and `photo.location`;
+  - everywhere: `frame.name`.
+- **`photo.location`**: an object with `latitude`, `longitude` and `altitude`
+  (each possibly missing). It renders as `48.1372, 11.5756` when used directly,
+  is none without GPS data, and works with HA's `distance()`, e.g.
+  `{{ distance(photo.location.latitude, photo.location.longitude) | round(0) }} km`.
+  Raw coordinates only; no reverse geocoding.
+- **Markdown subset**:
+  - headings (`#`, `##`, `###`)
+  - `**bold**` and `*italic*`
+  - bullet lists
+  - line breaks and paragraphs
+  - colour spans for the six panel colours, e.g. `{red}warning{/red}`
+
+  Not supported: images, tables, links, code blocks.
+- **Icons**: Material Design Icons inline as `:mdi:weather-sunny:`, sized and
+  coloured like the surrounding text. The MDI font is bundled (about 1.3 MB,
+  Apache 2.0).
+- **Template helpers**, passed in as functions:
+  - `weather_icon(state)`: an HA weather condition to its MDI icon;
+  - `entity_icon(entity_id)`: an icon explicitly set on an entity (device
+    class default icons are resolved by the frontend and are not available);
+  - `date_local(value, preset)`: dates with month and weekday names in HA's
+    language (English or German), presets `short`, `long`, `month_year`,
+    `weekday`, `time`.
+
+  Integrations can't register filters in HA's template engine, so these are
+  functions, e.g. `{{ date_local(photo.date, 'long') }}`, not filters.
+- **Fonts**: the Noto Sans subset gains `° ± × ÷ µ ² ³ ‰`, arrows, bullet,
+  currency and fraction characters, plus Italic and Bold Italic. No emoji.
+
+### Layout and look
+
+- Each frame, photo and card holds an **ordered list of named overlays**. Each
+  can be enabled or disabled and has an optional **"show if"** template.
+- **Box**: one of 9 anchor positions on the upright (mounted) canvas, a
+  margin, auto or percentage width, text alignment, and a size preset
+  (S / M / L / XL) scaled by the panel's short side.
+- **Backing**: a white box with black text by default. Alternatives: a box in
+  any panel colour, a contrasting halo around the letters, or nothing.
+- **Order**: photo or card overlays first, then frame overlays on top. No
+  automatic collision avoidance; the live preview shows overlaps.
+- **Crisp text**: overlays are always composited after dithering, in exact
+  panel colours and without anti-aliasing.
+
+### Freshness and errors
+
+- **Redraw policy per overlay**:
+  - *every wake where its rendered text changed* (default);
+  - *only when the photo changes anyway*.
+
+  Rounding in templates avoids needless panel refreshes.
+- **Errors**: a failing template leaves only that box out of the image and
+  logs a warning. The frame still gets its image. The panel's live preview
+  shows the error.
+
+### Editing and automation
+
+- **Panel**: an overlay editor for frame overlays (Settings tab), photo
+  overlays (photo editor) and cards ("Add card" in the library). It has a
+  template/markdown text field with an "insert entity" helper and an icon
+  hint, the layout and backing controls, and a live preview with real current
+  values on a real photo.
+- **Copying**: a frame's overlays can be copied to another frame, from the
+  panel or with an action.
+- **Actions**: `show_text` (a one-off card for N wakes or until cleared, the
+  counterpart of `show_image`) and actions to add, update, remove and copy
+  overlays and cards. `show_image` and `show_text` draw frame overlays by
+  default; `overlays: false` turns that off per call.
+
+### Delivery
+
+- **Step A**: the overlay engine, frame overlays, the panel overlay editor
+  with live preview, and the overlay actions (including copying). See
+  [STEP_A.md](STEP_A.md).
+- **Step B**: photo overlays with photo variables, text cards with
+  backgrounds and presets, `show_text`, and the overlay switch on one-off
+  images.
+
+Each step is tested on a real frame before the next.
