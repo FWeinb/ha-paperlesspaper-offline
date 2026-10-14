@@ -1,0 +1,39 @@
+{
+  "entity": {
+    "binary_sensor": { "in_sync": { "default": "mdi:sync", "state": { "off": "mdi:sync-alert" } } },
+    "button": { "skip": { "default": "mdi:skip-next" } },
+    "image": {
+      "preview_showing": { "default": "mdi:image-frame" },
+      "preview_up_next": { "default": "mdi:image-move" }
+    },
+    "number": { "interval": { "default": "mdi:timer-sand" } },
+    "select": {
+      "up_next": { "default": "mdi:image-multiple" },
+      "order": { "default": "mdi:shuffle-variant" }
+    },
+    "sensor": {
+      "last_seen": { "default": "mdi:clock-check-outline" },
+      "current_photo": { "default": "mdi:image" },
+      "pending_changes": { "default": "mdi:progress-clock" },
+      "photos": { "default": "mdi:image-multiple-outline" }
+    },
+    "switch": {
+      "motion_wakeup": { "default": "mdi:motion-sensor" },
+      "auto_rotation": { "default": "mdi:screen-rotation" },
+      "charger_mode": { "default": "mdi:battery-charging" }
+    }
+  },
+  "services": {
+    "add_photo": { "service": "mdi:image-plus" },
+    "remove_photo": { "service": "mdi:image-remove" },
+    "update_photo": { "service": "mdi:image-edit" },
+    "move_photo": { "service": "mdi:swap-vertical" },
+    "copy_photo": { "service": "mdi:content-copy" },
+    "show_photo": { "service": "mdi:image-check" },
+    "next_photo": { "service": "mdi:skip-next" },
+    "show_image": { "service": "mdi:image-sync" },
+    "clear_image": { "service": "mdi:image-off" },
+    "list_photos": { "service": "mdi:format-list-bulleted" },
+    "set_defaults": { "service": "mdi:tune" }
+  }
+}

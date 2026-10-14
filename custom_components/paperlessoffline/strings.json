@@ -1,0 +1,611 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "Add a paperlesspaper frame",
+        "description": "Enter the ID shown on the frame's screen (for example `epd7-3485188f1dc8`).",
+        "data": {
+          "client_id": "Frame ID",
+          "name": "Name"
+        }
+      },
+      "urls": {
+        "title": "Point the frame at Home Assistant",
+        "description": "In the official paperlesspaper web UI, set:\n\n**Settings URL:** `{settings_url}`\n\n**Image URL:** `{image_url}`\n\nThe frame must be able to reach Home Assistant at this address over plain HTTP."
+      },
+      "bluetooth_confirm": {
+        "title": "Set up {client_id}",
+        "description": "Home Assistant will configure the frame over Bluetooth to fetch its pictures from `{base_url}`. Keep the frame in setup mode (press its button once).",
+        "data": {
+          "name": "Name",
+          "provision": "Configure the frame over Bluetooth now"
+        }
+      }
+    },
+    "error": {
+      "invalid_client_id": "This doesn't look like a frame ID (epd7-… or epd13- followed by 12 hex digits).",
+      "provision_failed": "Couldn't configure the frame over Bluetooth. Press its button once and try again, or untick the option to set it up manually."
+    },
+    "abort": {
+      "already_configured": "This frame is already set up.",
+      "no_internal_url": "Home Assistant has no local network URL. Set one under Settings → System → Network.",
+      "not_supported": "This Bluetooth device isn't a supported frame."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Frame settings",
+        "description": "In the official paperlesspaper web UI, set:\n\n**Settings URL:** `{settings_url}`\n\n**Image URL:** `{image_url}`\n\nThe frame must be able to reach Home Assistant at this address over plain HTTP.",
+        "data": {
+          "interval": "Refresh interval",
+          "order": "Slideshow order",
+          "mounting": "Mounting",
+          "regenerate_token": "Generate new frame URLs"
+        },
+        "data_description": {
+          "interval": "How long the frame sleeps between updates (minutes). Applied at its next wake.",
+          "mounting": "How the frame hangs on the wall.",
+          "regenerate_token": "The old URLs stop working immediately; the frame must be set up again via Bluetooth or the web UI."
+        },
+        "sections": {
+          "quiet_hours": {
+            "name": "Quiet hours",
+            "description": "The frame sleeps through quiet hours instead of updating.",
+            "data": {
+              "quiet_enabled": "Enable quiet hours",
+              "quiet_start": "Start",
+              "quiet_end": "End",
+              "quiet_suppress_motion": "Disable motion wake-up during quiet hours"
+            }
+          },
+          "rendering": {
+            "name": "Rendering defaults for this frame",
+            "description": "Overrides the global defaults; photos can override these again.",
+            "data": {
+              "palette": "Palette",
+              "dither": "Dithering",
+              "serpentine": "Serpentine scanning",
+              "fit": "Fit",
+              "background": "Background",
+              "brightness": "Brightness",
+              "contrast": "Contrast",
+              "saturation": "Saturation"
+            },
+            "data_description": {
+              "brightness": "Leave empty to use the global default.",
+              "contrast": "Leave empty to use the global default.",
+              "saturation": "Leave empty to use the global default."
+            }
+          },
+          "authentication": {
+            "name": "HTTP authentication",
+            "description": "Require HTTP Basic credentials for the image URL. They are sent to the frame on its next wake.",
+            "data": {
+              "auth_enabled": "Require credentials",
+              "auth_user": "Username",
+              "auth_password": "Password"
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "auth_incomplete": "Enter both a username and a password."
+    }
+  },
+  "selector": {
+    "dither": {
+      "options": {
+        "default": "Use global default",
+        "floyd_steinberg": "Floyd–Steinberg",
+        "atkinson": "Atkinson",
+        "jarvis_judice_ninke": "Jarvis–Judice–Ninke",
+        "sierra2": "Sierra-2",
+        "bayer": "Ordered (Bayer)",
+        "none": "None (nearest colour)"
+      }
+    },
+    "fit": {
+      "options": {
+        "default": "Use global default",
+        "cover": "Fill and crop",
+        "contain": "Fit with borders",
+        "stretch": "Stretch"
+      }
+    },
+    "palette": {
+      "options": {
+        "default": "Use global default",
+        "perceived": "Perceived (as the panel looks)",
+        "pure": "Pure RGB"
+      }
+    },
+    "background": {
+      "options": {
+        "default": "Use global default",
+        "white": "White",
+        "black": "Black"
+      }
+    },
+    "serpentine": {
+      "options": {
+        "default": "Use global default",
+        "on": "On",
+        "off": "Off"
+      }
+    },
+    "order": {
+      "options": {
+        "sequential": "In order",
+        "shuffle": "Shuffle"
+      }
+    },
+    "mounting": {
+      "options": {
+        "landscape": "Landscape",
+        "portrait": "Portrait",
+        "landscape_flipped": "Landscape (upside down)",
+        "portrait_flipped": "Portrait (upside down)"
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "wake": "Frame woke up"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "in_sync": {
+        "name": "In sync"
+      }
+    },
+    "button": {
+      "skip": {
+        "name": "Skip photo"
+      }
+    },
+    "image": {
+      "preview_showing": {
+        "name": "Showing"
+      },
+      "preview_up_next": {
+        "name": "Up next"
+      }
+    },
+    "number": {
+      "interval": {
+        "name": "Refresh interval"
+      }
+    },
+    "select": {
+      "up_next": {
+        "name": "Up next"
+      },
+      "order": {
+        "name": "Slideshow order",
+        "state": {
+          "sequential": "In order",
+          "shuffle": "Shuffle"
+        }
+      }
+    },
+    "sensor": {
+      "last_seen": {
+        "name": "Last seen"
+      },
+      "current_photo": {
+        "name": "Current photo"
+      },
+      "pending_changes": {
+        "name": "Pending changes"
+      },
+      "photos": {
+        "name": "Photos in rotation"
+      }
+    },
+    "switch": {
+      "motion_wakeup": {
+        "name": "Motion wake-up"
+      },
+      "auto_rotation": {
+        "name": "Auto rotation"
+      },
+      "charger_mode": {
+        "name": "Charger mode"
+      }
+    }
+  },
+  "exceptions": {
+    "frame_not_loaded": {
+      "message": "Frame {entry_id} is not loaded."
+    },
+    "photo_not_found": {
+      "message": "Photo {photo_id} not found."
+    },
+    "image_too_large": {
+      "message": "The image is larger than 50 MB."
+    },
+    "invalid_image": {
+      "message": "The file is not a readable image: {error}"
+    },
+    "unsupported_format": {
+      "message": "Unsupported image format {format}; use JPEG, PNG, WebP or HEIC."
+    },
+    "exactly_one_source": {
+      "message": "Give exactly one of file path, URL, media or camera/image entity."
+    },
+    "path_not_allowed": {
+      "message": "{path} is not in an allowed directory (allowlist_external_dirs)."
+    },
+    "source_failed": {
+      "message": "Couldn't get the image: {error}"
+    }
+  },
+  "services": {
+    "add_photo": {
+      "name": "Add photo",
+      "description": "Adds an image to a frame's library. Give exactly one source.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "file_path": {
+          "name": "File path",
+          "description": "Local file (must be in an allowed directory)."
+        },
+        "url": {
+          "name": "URL",
+          "description": "Image URL to download."
+        },
+        "media_content_id": {
+          "name": "Media",
+          "description": "Image from a media source."
+        },
+        "image_entity_id": {
+          "name": "Camera or image entity",
+          "description": "Take the current image of a camera or image entity."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Display name."
+        },
+        "enabled": {
+          "name": "In rotation",
+          "description": "Whether the photo takes part in the slideshow."
+        },
+        "dither": {
+          "name": "Dithering",
+          "description": "Dithering algorithm."
+        },
+        "serpentine": {
+          "name": "Serpentine scanning",
+          "description": "Alternate the scan direction per row; reduces directional artefacts."
+        },
+        "fit": {
+          "name": "Fit",
+          "description": "How the photo is fitted to the frame."
+        },
+        "background": {
+          "name": "Background",
+          "description": "Border colour for 'fit with borders' and transparency."
+        },
+        "brightness": {
+          "name": "Brightness",
+          "description": "1 = unchanged."
+        },
+        "contrast": {
+          "name": "Contrast",
+          "description": "1 = unchanged."
+        },
+        "saturation": {
+          "name": "Saturation",
+          "description": "1 = unchanged. Values above 1 often look better on e-paper."
+        },
+        "rotation": {
+          "name": "Rotation",
+          "description": "Rotate the photo clockwise (degrees)."
+        },
+        "focal_x": {
+          "name": "Focal point X",
+          "description": "Horizontal point to keep when cropping (0 = left, 1 = right)."
+        },
+        "focal_y": {
+          "name": "Focal point Y",
+          "description": "Vertical point to keep when cropping (0 = top, 1 = bottom)."
+        },
+        "crop": {
+          "name": "Crop",
+          "description": "Crop box as [x, y, width, height] fractions of the photo."
+        }
+      }
+    },
+    "remove_photo": {
+      "name": "Remove photo",
+      "description": "Deletes a photo from a frame's library.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "photo_id": {
+          "name": "Photo ID",
+          "description": "ID of the photo (see the list photos action)."
+        }
+      }
+    },
+    "update_photo": {
+      "name": "Update photo",
+      "description": "Changes a photo's name, rotation membership or render settings.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "photo_id": {
+          "name": "Photo ID",
+          "description": "ID of the photo (see the list photos action)."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Display name."
+        },
+        "enabled": {
+          "name": "In rotation",
+          "description": "Whether the photo takes part in the slideshow."
+        },
+        "reset": {
+          "name": "Reset",
+          "description": "Settings to reset to the inherited default (or 'all')."
+        },
+        "dither": {
+          "name": "Dithering",
+          "description": "Dithering algorithm."
+        },
+        "serpentine": {
+          "name": "Serpentine scanning",
+          "description": "Alternate the scan direction per row; reduces directional artefacts."
+        },
+        "fit": {
+          "name": "Fit",
+          "description": "How the photo is fitted to the frame."
+        },
+        "background": {
+          "name": "Background",
+          "description": "Border colour for 'fit with borders' and transparency."
+        },
+        "brightness": {
+          "name": "Brightness",
+          "description": "1 = unchanged."
+        },
+        "contrast": {
+          "name": "Contrast",
+          "description": "1 = unchanged."
+        },
+        "saturation": {
+          "name": "Saturation",
+          "description": "1 = unchanged. Values above 1 often look better on e-paper."
+        },
+        "rotation": {
+          "name": "Rotation",
+          "description": "Rotate the photo clockwise (degrees)."
+        },
+        "focal_x": {
+          "name": "Focal point X",
+          "description": "Horizontal point to keep when cropping (0 = left, 1 = right)."
+        },
+        "focal_y": {
+          "name": "Focal point Y",
+          "description": "Vertical point to keep when cropping (0 = top, 1 = bottom)."
+        },
+        "crop": {
+          "name": "Crop",
+          "description": "Crop box as [x, y, width, height] fractions of the photo."
+        }
+      }
+    },
+    "move_photo": {
+      "name": "Move photo",
+      "description": "Moves a photo within the rotation order.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "photo_id": {
+          "name": "Photo ID",
+          "description": "ID of the photo (see the list photos action)."
+        },
+        "position": {
+          "name": "Position",
+          "description": "New 0-based position in the rotation."
+        }
+      }
+    },
+    "copy_photo": {
+      "name": "Copy photo to frame",
+      "description": "Copies a photo and its settings to another frame.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "photo_id": {
+          "name": "Photo ID",
+          "description": "ID of the photo (see the list photos action)."
+        },
+        "target_config_entry_id": {
+          "name": "Target frame",
+          "description": "Frame to copy the photo to."
+        }
+      }
+    },
+    "show_photo": {
+      "name": "Show photo next",
+      "description": "Shows this photo on the frame's next wake.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "photo_id": {
+          "name": "Photo ID",
+          "description": "ID of the photo (see the list photos action)."
+        }
+      }
+    },
+    "next_photo": {
+      "name": "Skip to next photo",
+      "description": "Skips the photo that is up next.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        }
+      }
+    },
+    "show_image": {
+      "name": "Show image",
+      "description": "Shows a one-off image instead of the slideshow, without adding it to the library.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "file_path": {
+          "name": "File path",
+          "description": "Local file (must be in an allowed directory)."
+        },
+        "url": {
+          "name": "URL",
+          "description": "Image URL to download."
+        },
+        "media_content_id": {
+          "name": "Media",
+          "description": "Image from a media source."
+        },
+        "image_entity_id": {
+          "name": "Camera or image entity",
+          "description": "Take the current image of a camera or image entity."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Display name."
+        },
+        "wakes": {
+          "name": "Wakes",
+          "description": "Show for this many wakes, then return to the slideshow. Empty = until cleared."
+        },
+        "dither": {
+          "name": "Dithering",
+          "description": "Dithering algorithm."
+        },
+        "serpentine": {
+          "name": "Serpentine scanning",
+          "description": "Alternate the scan direction per row; reduces directional artefacts."
+        },
+        "fit": {
+          "name": "Fit",
+          "description": "How the photo is fitted to the frame."
+        },
+        "background": {
+          "name": "Background",
+          "description": "Border colour for 'fit with borders' and transparency."
+        },
+        "brightness": {
+          "name": "Brightness",
+          "description": "1 = unchanged."
+        },
+        "contrast": {
+          "name": "Contrast",
+          "description": "1 = unchanged."
+        },
+        "saturation": {
+          "name": "Saturation",
+          "description": "1 = unchanged. Values above 1 often look better on e-paper."
+        },
+        "rotation": {
+          "name": "Rotation",
+          "description": "Rotate the photo clockwise (degrees)."
+        },
+        "focal_x": {
+          "name": "Focal point X",
+          "description": "Horizontal point to keep when cropping (0 = left, 1 = right)."
+        },
+        "focal_y": {
+          "name": "Focal point Y",
+          "description": "Vertical point to keep when cropping (0 = top, 1 = bottom)."
+        },
+        "crop": {
+          "name": "Crop",
+          "description": "Crop box as [x, y, width, height] fractions of the photo."
+        }
+      }
+    },
+    "clear_image": {
+      "name": "Clear shown image",
+      "description": "Returns to the slideshow on the next wake.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        }
+      }
+    },
+    "list_photos": {
+      "name": "List photos",
+      "description": "Returns the frame's photos and what is up next.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        }
+      }
+    },
+    "set_defaults": {
+      "name": "Set global defaults",
+      "description": "Sets render defaults shared by all frames.",
+      "fields": {
+        "palette": {
+          "name": "Palette",
+          "description": "Colours the dithering targets."
+        },
+        "dither": {
+          "name": "Dithering",
+          "description": "Dithering algorithm."
+        },
+        "serpentine": {
+          "name": "Serpentine scanning",
+          "description": "Alternate the scan direction per row; reduces directional artefacts."
+        },
+        "fit": {
+          "name": "Fit",
+          "description": "How the photo is fitted to the frame."
+        },
+        "background": {
+          "name": "Background",
+          "description": "Border colour for 'fit with borders' and transparency."
+        },
+        "brightness": {
+          "name": "Brightness",
+          "description": "1 = unchanged."
+        },
+        "contrast": {
+          "name": "Contrast",
+          "description": "1 = unchanged."
+        },
+        "saturation": {
+          "name": "Saturation",
+          "description": "1 = unchanged. Values above 1 often look better on e-paper."
+        },
+        "reset": {
+          "name": "Reset",
+          "description": "Settings to reset to the inherited default (or 'all')."
+        }
+      }
+    }
+  }
+}

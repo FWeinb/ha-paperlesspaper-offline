@@ -1,0 +1,7 @@
+pytest-homeassistant-custom-component
+pillow-heif>=0.18.0
+ruff
+mypy
+# Needed to import homeassistant.components.bluetooth in tests
+aiousbwatcher
+serialx

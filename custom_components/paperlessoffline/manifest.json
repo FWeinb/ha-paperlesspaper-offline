@@ -1,0 +1,34 @@
+{
+  "domain": "paperlessoffline",
+  "name": "paperlesspaper (offline firmware)",
+  "after_dependencies": [
+    "bluetooth",
+    "camera",
+    "image"
+  ],
+  "bluetooth": [
+    {
+      "local_name": "epd*",
+      "connectable": true
+    }
+  ],
+  "codeowners": [
+    "@fweinb"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "http",
+    "media_source"
+  ],
+  "documentation": "https://github.com/fweinb/ha-paperlessoffline",
+  "integration_type": "device",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/fweinb/ha-paperlessoffline/issues",
+  "loggers": [
+    "paperlessoffline"
+  ],
+  "requirements": [
+    "pillow-heif>=0.18.0"
+  ],
+  "version": "0.1.0"
+}

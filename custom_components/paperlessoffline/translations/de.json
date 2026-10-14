@@ -1,0 +1,611 @@
+{
+  "config": {
+    "flow_title": "{name}",
+    "step": {
+      "user": {
+        "title": "paperlesspaper-Rahmen hinzufügen",
+        "description": "Die auf dem Rahmen angezeigte ID eingeben (z. B. `epd7-3485188f1dc8`).",
+        "data": {
+          "client_id": "Rahmen-ID",
+          "name": "Name"
+        }
+      },
+      "urls": {
+        "title": "Rahmen auf Home Assistant zeigen lassen",
+        "description": "Im offiziellen paperlesspaper-Web-UI eintragen:\n\n**Settings-URL:** `{settings_url}`\n\n**Bild-URL:** `{image_url}`\n\nDer Rahmen muss Home Assistant unter dieser Adresse per HTTP erreichen können."
+      },
+      "bluetooth_confirm": {
+        "title": "{client_id} einrichten",
+        "description": "Home Assistant konfiguriert den Rahmen per Bluetooth, damit er seine Bilder von `{base_url}` abruft. Den Rahmen im Einrichtungsmodus halten (Taste einmal drücken).",
+        "data": {
+          "name": "Name",
+          "provision": "Rahmen jetzt per Bluetooth konfigurieren"
+        }
+      }
+    },
+    "error": {
+      "invalid_client_id": "Das sieht nicht nach einer Rahmen-ID aus (epd7-… oder epd13- gefolgt von 12 Hex-Ziffern).",
+      "provision_failed": "Der Rahmen konnte nicht per Bluetooth konfiguriert werden. Taste einmal drücken und erneut versuchen oder die Option abwählen, um ihn manuell einzurichten."
+    },
+    "abort": {
+      "already_configured": "Dieser Rahmen ist bereits eingerichtet.",
+      "no_internal_url": "Home Assistant hat keine lokale Netzwerk-URL. Unter Einstellungen → System → Netzwerk festlegen.",
+      "not_supported": "Dieses Bluetooth-Gerät ist kein unterstützter Rahmen."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Rahmeneinstellungen",
+        "description": "Im offiziellen paperlesspaper-Web-UI eintragen:\n\n**Settings-URL:** `{settings_url}`\n\n**Bild-URL:** `{image_url}`\n\nDer Rahmen muss Home Assistant unter dieser Adresse per HTTP erreichen können.",
+        "data": {
+          "interval": "Aktualisierungsintervall",
+          "order": "Reihenfolge der Diashow",
+          "mounting": "Ausrichtung",
+          "regenerate_token": "Neue Rahmen-URLs erzeugen"
+        },
+        "data_description": {
+          "interval": "Wie lange der Rahmen zwischen Aktualisierungen schläft (Minuten). Wird beim nächsten Aufwachen übernommen.",
+          "mounting": "Wie der Rahmen an der Wand hängt.",
+          "regenerate_token": "Die alten URLs funktionieren sofort nicht mehr; der Rahmen muss per Bluetooth oder Web-UI neu eingerichtet werden."
+        },
+        "sections": {
+          "quiet_hours": {
+            "name": "Ruhezeiten",
+            "description": "Der Rahmen schläft während der Ruhezeiten durch, statt zu aktualisieren.",
+            "data": {
+              "quiet_enabled": "Ruhezeiten aktivieren",
+              "quiet_start": "Beginn",
+              "quiet_end": "Ende",
+              "quiet_suppress_motion": "Aufwecken durch Bewegung während der Ruhezeiten deaktivieren"
+            }
+          },
+          "rendering": {
+            "name": "Darstellungsstandards für diesen Rahmen",
+            "description": "Überschreibt die globalen Standards; Fotos können diese erneut überschreiben.",
+            "data": {
+              "palette": "Palette",
+              "dither": "Dithering",
+              "serpentine": "Serpentinen-Abtastung",
+              "fit": "Einpassung",
+              "background": "Hintergrund",
+              "brightness": "Helligkeit",
+              "contrast": "Kontrast",
+              "saturation": "Sättigung"
+            },
+            "data_description": {
+              "brightness": "Leer lassen für den globalen Standard.",
+              "contrast": "Leer lassen für den globalen Standard.",
+              "saturation": "Leer lassen für den globalen Standard."
+            }
+          },
+          "authentication": {
+            "name": "HTTP-Authentifizierung",
+            "description": "HTTP-Basic-Zugangsdaten für die Bild-URL verlangen. Sie werden dem Rahmen beim nächsten Aufwachen übermittelt.",
+            "data": {
+              "auth_enabled": "Zugangsdaten verlangen",
+              "auth_user": "Benutzername",
+              "auth_password": "Passwort"
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "auth_incomplete": "Benutzername und Passwort eingeben."
+    }
+  },
+  "selector": {
+    "dither": {
+      "options": {
+        "default": "Globalen Standard verwenden",
+        "floyd_steinberg": "Floyd–Steinberg",
+        "atkinson": "Atkinson",
+        "jarvis_judice_ninke": "Jarvis–Judice–Ninke",
+        "sierra2": "Sierra-2",
+        "bayer": "Geordnet (Bayer)",
+        "none": "Keines (nächste Farbe)"
+      }
+    },
+    "fit": {
+      "options": {
+        "default": "Globalen Standard verwenden",
+        "cover": "Füllen und zuschneiden",
+        "contain": "Einpassen mit Rand",
+        "stretch": "Strecken"
+      }
+    },
+    "palette": {
+      "options": {
+        "default": "Globalen Standard verwenden",
+        "perceived": "Wahrgenommen (wie das Panel aussieht)",
+        "pure": "Reines RGB"
+      }
+    },
+    "background": {
+      "options": {
+        "default": "Globalen Standard verwenden",
+        "white": "Weiß",
+        "black": "Schwarz"
+      }
+    },
+    "serpentine": {
+      "options": {
+        "default": "Globalen Standard verwenden",
+        "on": "An",
+        "off": "Aus"
+      }
+    },
+    "order": {
+      "options": {
+        "sequential": "Der Reihe nach",
+        "shuffle": "Zufällig"
+      }
+    },
+    "mounting": {
+      "options": {
+        "landscape": "Querformat",
+        "portrait": "Hochformat",
+        "landscape_flipped": "Querformat (kopfüber)",
+        "portrait_flipped": "Hochformat (kopfüber)"
+      }
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "wake": "Rahmen ist aufgewacht"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "in_sync": {
+        "name": "Synchron"
+      }
+    },
+    "button": {
+      "skip": {
+        "name": "Foto überspringen"
+      }
+    },
+    "image": {
+      "preview_showing": {
+        "name": "Angezeigt"
+      },
+      "preview_up_next": {
+        "name": "Als Nächstes"
+      }
+    },
+    "number": {
+      "interval": {
+        "name": "Aktualisierungsintervall"
+      }
+    },
+    "select": {
+      "up_next": {
+        "name": "Als Nächstes"
+      },
+      "order": {
+        "name": "Reihenfolge der Diashow",
+        "state": {
+          "sequential": "Der Reihe nach",
+          "shuffle": "Zufällig"
+        }
+      }
+    },
+    "sensor": {
+      "last_seen": {
+        "name": "Zuletzt gesehen"
+      },
+      "current_photo": {
+        "name": "Aktuelles Foto"
+      },
+      "pending_changes": {
+        "name": "Ausstehende Änderungen"
+      },
+      "photos": {
+        "name": "Fotos in der Rotation"
+      }
+    },
+    "switch": {
+      "motion_wakeup": {
+        "name": "Aufwecken durch Bewegung"
+      },
+      "auto_rotation": {
+        "name": "Automatische Drehung"
+      },
+      "charger_mode": {
+        "name": "Lademodus"
+      }
+    }
+  },
+  "exceptions": {
+    "frame_not_loaded": {
+      "message": "Rahmen {entry_id} ist nicht geladen."
+    },
+    "photo_not_found": {
+      "message": "Foto {photo_id} nicht gefunden."
+    },
+    "image_too_large": {
+      "message": "Das Bild ist größer als 50 MB."
+    },
+    "invalid_image": {
+      "message": "Die Datei ist kein lesbares Bild: {error}"
+    },
+    "unsupported_format": {
+      "message": "Nicht unterstütztes Bildformat {format}; JPEG, PNG, WebP oder HEIC verwenden."
+    },
+    "exactly_one_source": {
+      "message": "Genau eine Quelle angeben: Dateipfad, URL, Medien oder Kamera-/Bild-Entität."
+    },
+    "path_not_allowed": {
+      "message": "{path} liegt nicht in einem erlaubten Verzeichnis (allowlist_external_dirs)."
+    },
+    "source_failed": {
+      "message": "Bild konnte nicht abgerufen werden: {error}"
+    }
+  },
+  "services": {
+    "add_photo": {
+      "name": "Foto hinzufügen",
+      "description": "Fügt der Bibliothek eines Rahmens ein Bild hinzu. Genau eine Quelle angeben.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "file_path": {
+          "name": "Dateipfad",
+          "description": "Lokale Datei (muss in einem erlaubten Verzeichnis liegen)."
+        },
+        "url": {
+          "name": "URL",
+          "description": "Bild-URL zum Herunterladen."
+        },
+        "media_content_id": {
+          "name": "Medien",
+          "description": "Bild aus einer Medienquelle."
+        },
+        "image_entity_id": {
+          "name": "Kamera- oder Bild-Entität",
+          "description": "Aktuelles Bild einer Kamera- oder Bild-Entität verwenden."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Anzeigename."
+        },
+        "enabled": {
+          "name": "In der Rotation",
+          "description": "Ob das Foto an der Diashow teilnimmt."
+        },
+        "dither": {
+          "name": "Dithering",
+          "description": "Dithering-Verfahren."
+        },
+        "serpentine": {
+          "name": "Serpentinen-Abtastung",
+          "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte."
+        },
+        "fit": {
+          "name": "Einpassung",
+          "description": "Wie das Foto in den Rahmen eingepasst wird."
+        },
+        "background": {
+          "name": "Hintergrund",
+          "description": "Randfarbe für „Einpassen mit Rand“ und Transparenz."
+        },
+        "brightness": {
+          "name": "Helligkeit",
+          "description": "1 = unverändert."
+        },
+        "contrast": {
+          "name": "Kontrast",
+          "description": "1 = unverändert."
+        },
+        "saturation": {
+          "name": "Sättigung",
+          "description": "1 = unverändert. Werte über 1 wirken auf E-Paper oft besser."
+        },
+        "rotation": {
+          "name": "Drehung",
+          "description": "Foto im Uhrzeigersinn drehen (Grad)."
+        },
+        "focal_x": {
+          "name": "Fokuspunkt X",
+          "description": "Horizontaler Punkt, der beim Zuschneiden erhalten bleibt (0 = links, 1 = rechts)."
+        },
+        "focal_y": {
+          "name": "Fokuspunkt Y",
+          "description": "Vertikaler Punkt, der beim Zuschneiden erhalten bleibt (0 = oben, 1 = unten)."
+        },
+        "crop": {
+          "name": "Ausschnitt",
+          "description": "Ausschnitt als [x, y, Breite, Höhe] in Anteilen des Fotos."
+        }
+      }
+    },
+    "remove_photo": {
+      "name": "Foto entfernen",
+      "description": "Löscht ein Foto aus der Bibliothek eines Rahmens.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "photo_id": {
+          "name": "Foto-ID",
+          "description": "ID des Fotos (siehe Aktion „Fotos auflisten“)."
+        }
+      }
+    },
+    "update_photo": {
+      "name": "Foto bearbeiten",
+      "description": "Ändert Name, Rotationsteilnahme oder Darstellungseinstellungen eines Fotos.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "photo_id": {
+          "name": "Foto-ID",
+          "description": "ID des Fotos (siehe Aktion „Fotos auflisten“)."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Anzeigename."
+        },
+        "enabled": {
+          "name": "In der Rotation",
+          "description": "Ob das Foto an der Diashow teilnimmt."
+        },
+        "reset": {
+          "name": "Zurücksetzen",
+          "description": "Einstellungen, die auf den geerbten Standard zurückgesetzt werden (oder „all“)."
+        },
+        "dither": {
+          "name": "Dithering",
+          "description": "Dithering-Verfahren."
+        },
+        "serpentine": {
+          "name": "Serpentinen-Abtastung",
+          "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte."
+        },
+        "fit": {
+          "name": "Einpassung",
+          "description": "Wie das Foto in den Rahmen eingepasst wird."
+        },
+        "background": {
+          "name": "Hintergrund",
+          "description": "Randfarbe für „Einpassen mit Rand“ und Transparenz."
+        },
+        "brightness": {
+          "name": "Helligkeit",
+          "description": "1 = unverändert."
+        },
+        "contrast": {
+          "name": "Kontrast",
+          "description": "1 = unverändert."
+        },
+        "saturation": {
+          "name": "Sättigung",
+          "description": "1 = unverändert. Werte über 1 wirken auf E-Paper oft besser."
+        },
+        "rotation": {
+          "name": "Drehung",
+          "description": "Foto im Uhrzeigersinn drehen (Grad)."
+        },
+        "focal_x": {
+          "name": "Fokuspunkt X",
+          "description": "Horizontaler Punkt, der beim Zuschneiden erhalten bleibt (0 = links, 1 = rechts)."
+        },
+        "focal_y": {
+          "name": "Fokuspunkt Y",
+          "description": "Vertikaler Punkt, der beim Zuschneiden erhalten bleibt (0 = oben, 1 = unten)."
+        },
+        "crop": {
+          "name": "Ausschnitt",
+          "description": "Ausschnitt als [x, y, Breite, Höhe] in Anteilen des Fotos."
+        }
+      }
+    },
+    "move_photo": {
+      "name": "Foto verschieben",
+      "description": "Verschiebt ein Foto in der Reihenfolge.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "photo_id": {
+          "name": "Foto-ID",
+          "description": "ID des Fotos (siehe Aktion „Fotos auflisten“)."
+        },
+        "position": {
+          "name": "Position",
+          "description": "Neue Position in der Rotation (ab 0)."
+        }
+      }
+    },
+    "copy_photo": {
+      "name": "Foto in Rahmen kopieren",
+      "description": "Kopiert ein Foto samt Einstellungen in einen anderen Rahmen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "photo_id": {
+          "name": "Foto-ID",
+          "description": "ID des Fotos (siehe Aktion „Fotos auflisten“)."
+        },
+        "target_config_entry_id": {
+          "name": "Zielrahmen",
+          "description": "Rahmen, in den das Foto kopiert wird."
+        }
+      }
+    },
+    "show_photo": {
+      "name": "Foto als Nächstes zeigen",
+      "description": "Zeigt dieses Foto beim nächsten Aufwachen des Rahmens.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "photo_id": {
+          "name": "Foto-ID",
+          "description": "ID des Fotos (siehe Aktion „Fotos auflisten“)."
+        }
+      }
+    },
+    "next_photo": {
+      "name": "Zum nächsten Foto springen",
+      "description": "Überspringt das als Nächstes geplante Foto.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        }
+      }
+    },
+    "show_image": {
+      "name": "Bild anzeigen",
+      "description": "Zeigt ein einmaliges Bild statt der Diashow, ohne es der Bibliothek hinzuzufügen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "file_path": {
+          "name": "Dateipfad",
+          "description": "Lokale Datei (muss in einem erlaubten Verzeichnis liegen)."
+        },
+        "url": {
+          "name": "URL",
+          "description": "Bild-URL zum Herunterladen."
+        },
+        "media_content_id": {
+          "name": "Medien",
+          "description": "Bild aus einer Medienquelle."
+        },
+        "image_entity_id": {
+          "name": "Kamera- oder Bild-Entität",
+          "description": "Aktuelles Bild einer Kamera- oder Bild-Entität verwenden."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Anzeigename."
+        },
+        "wakes": {
+          "name": "Aufwachvorgänge",
+          "description": "So viele Aufwachvorgänge anzeigen, dann zurück zur Diashow. Leer = bis zum Entfernen."
+        },
+        "dither": {
+          "name": "Dithering",
+          "description": "Dithering-Verfahren."
+        },
+        "serpentine": {
+          "name": "Serpentinen-Abtastung",
+          "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte."
+        },
+        "fit": {
+          "name": "Einpassung",
+          "description": "Wie das Foto in den Rahmen eingepasst wird."
+        },
+        "background": {
+          "name": "Hintergrund",
+          "description": "Randfarbe für „Einpassen mit Rand“ und Transparenz."
+        },
+        "brightness": {
+          "name": "Helligkeit",
+          "description": "1 = unverändert."
+        },
+        "contrast": {
+          "name": "Kontrast",
+          "description": "1 = unverändert."
+        },
+        "saturation": {
+          "name": "Sättigung",
+          "description": "1 = unverändert. Werte über 1 wirken auf E-Paper oft besser."
+        },
+        "rotation": {
+          "name": "Drehung",
+          "description": "Foto im Uhrzeigersinn drehen (Grad)."
+        },
+        "focal_x": {
+          "name": "Fokuspunkt X",
+          "description": "Horizontaler Punkt, der beim Zuschneiden erhalten bleibt (0 = links, 1 = rechts)."
+        },
+        "focal_y": {
+          "name": "Fokuspunkt Y",
+          "description": "Vertikaler Punkt, der beim Zuschneiden erhalten bleibt (0 = oben, 1 = unten)."
+        },
+        "crop": {
+          "name": "Ausschnitt",
+          "description": "Ausschnitt als [x, y, Breite, Höhe] in Anteilen des Fotos."
+        }
+      }
+    },
+    "clear_image": {
+      "name": "Angezeigtes Bild entfernen",
+      "description": "Kehrt beim nächsten Aufwachen zur Diashow zurück.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        }
+      }
+    },
+    "list_photos": {
+      "name": "Fotos auflisten",
+      "description": "Gibt die Fotos des Rahmens und das nächste Foto zurück.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        }
+      }
+    },
+    "set_defaults": {
+      "name": "Globale Standards setzen",
+      "description": "Setzt Darstellungsstandards für alle Rahmen.",
+      "fields": {
+        "palette": {
+          "name": "Palette",
+          "description": "Zielfarben des Ditherings."
+        },
+        "dither": {
+          "name": "Dithering",
+          "description": "Dithering-Verfahren."
+        },
+        "serpentine": {
+          "name": "Serpentinen-Abtastung",
+          "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte."
+        },
+        "fit": {
+          "name": "Einpassung",
+          "description": "Wie das Foto in den Rahmen eingepasst wird."
+        },
+        "background": {
+          "name": "Hintergrund",
+          "description": "Randfarbe für „Einpassen mit Rand“ und Transparenz."
+        },
+        "brightness": {
+          "name": "Helligkeit",
+          "description": "1 = unverändert."
+        },
+        "contrast": {
+          "name": "Kontrast",
+          "description": "1 = unverändert."
+        },
+        "saturation": {
+          "name": "Sättigung",
+          "description": "1 = unverändert. Werte über 1 wirken auf E-Paper oft besser."
+        },
+        "reset": {
+          "name": "Zurücksetzen",
+          "description": "Einstellungen, die auf den geerbten Standard zurückgesetzt werden (oder „all“)."
+        }
+      }
+    }
+  }
+}
