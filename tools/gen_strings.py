@@ -266,7 +266,7 @@ URL_DESC = t(
 )
 
 
-def build(lang: str) -> dict:
+def _build_base(lang: str) -> dict:
     L = lambda pair: pair[lang]  # noqa: E731
 
     def states(options: dict) -> dict:
@@ -280,6 +280,22 @@ def build(lang: str) -> dict:
         "serpentine": {"options": {k: L(v) for k, v in SERPENTINE.items()}},
         "order": {"options": {k: L(v) for k, v in ORDER.items()}},
         "mounting": {"options": {k: L(v) for k, v in MOUNTING.items()}},
+        "reprovision_method": {
+            "options": {
+                "bluetooth": L(
+                    t(
+                        "Over Bluetooth (press the frame's button once first)",
+                        "Per Bluetooth (zuerst die Taste am Rahmen einmal drücken)",
+                    )
+                ),
+                "manual": L(
+                    t(
+                        "I've entered the URLs in the web UI myself",
+                        "Ich habe die URLs selbst im Web-UI eingetragen",
+                    )
+                ),
+            }
+        },
     }
     render_section = {
         "name": L(
@@ -490,11 +506,114 @@ def build(lang: str) -> dict:
             },
         },
         "selector": selector,
+        "issues": {
+            "offline": {
+                "title": L(t("{name} hasn't checked in", "{name} hat sich nicht gemeldet")),
+                "description": L(
+                    t(
+                        "The frame {name} last contacted Home Assistant at {last_seen} and has missed several updates. Check that it has power (or battery) and WiFi, and that it can reach Home Assistant. Pressing its button twice forces an update. This notice disappears by itself once the frame checks in again.",
+                        "Der Rahmen {name} hat sich zuletzt um {last_seen} bei Home Assistant gemeldet und mehrere Aktualisierungen verpasst. Prüfen, ob er Strom (oder Akku) und WLAN hat und Home Assistant erreichen kann. Zweimaliges Drücken der Taste erzwingt eine Aktualisierung. Dieser Hinweis verschwindet von selbst, sobald sich der Rahmen wieder meldet.",
+                    )
+                ),
+            },
+            "reprovision_token": {
+                "title": L(t("{name} needs its new URLs", "{name} braucht die neuen URLs")),
+                "fix_flow": {
+                    "step": {
+                        "init": {
+                            "title": L(t("Update {name}'s URLs", "URLs von {name} aktualisieren")),
+                            "description": L(
+                                t(
+                                    "To update over Bluetooth, press the button on {name} once (it then stays in setup mode for about 30 seconds) and select Submit. A Bluetooth adapter or proxy must be near the frame.\n\nOr enter these in the official web UI:\n\n**Settings URL:** `{settings_url}`\n\n**Image URL:** `{image_url}`",
+                                    "Für die Aktualisierung per Bluetooth die Taste an {name} einmal drücken (der Rahmen bleibt dann etwa 30 Sekunden im Einrichtungsmodus) und Absenden wählen. Ein Bluetooth-Adapter oder -Proxy muss in der Nähe sein.\n\nOder diese im offiziellen Web-UI eintragen:\n\n**Settings-URL:** `{settings_url}`\n\n**Bild-URL:** `{image_url}`",
+                                )
+                            ),
+                            "data": {"method": L(t("How", "Wie"))},
+                        }
+                    },
+                    "error": {
+                        "not_found": L(
+                            t(
+                                "The frame wasn't found over Bluetooth. Press its button once and try again.",
+                                "Der Rahmen wurde per Bluetooth nicht gefunden. Taste einmal drücken und erneut versuchen.",
+                            )
+                        ),
+                        "ble_failed": L(
+                            t(
+                                "Couldn't update the frame over Bluetooth. Press its button once and try again.",
+                                "Der Rahmen konnte per Bluetooth nicht aktualisiert werden. Taste einmal drücken und erneut versuchen.",
+                            )
+                        ),
+                        "no_bluetooth": L(
+                            t(
+                                "Bluetooth isn't set up in Home Assistant.",
+                                "Bluetooth ist in Home Assistant nicht eingerichtet.",
+                            )
+                        ),
+                        "no_url": L(
+                            t(
+                                "Home Assistant has no local network URL. Set one under Settings → System → Network.",
+                                "Home Assistant hat keine lokale Netzwerk-URL. Unter Einstellungen → System → Netzwerk festlegen.",
+                            )
+                        ),
+                    },
+                },
+            },
+            "reprovision_url": {
+                "title": L(
+                    t("{name} can't reach Home Assistant", "{name} erreicht Home Assistant nicht")
+                ),
+                "fix_flow": {
+                    "step": {
+                        "init": {
+                            "title": L(t("Update {name}'s URLs", "URLs von {name} aktualisieren")),
+                            "description": L(
+                                t(
+                                    "To update over Bluetooth, press the button on {name} once (it then stays in setup mode for about 30 seconds) and select Submit. A Bluetooth adapter or proxy must be near the frame.\n\nOr enter these in the official web UI:\n\n**Settings URL:** `{settings_url}`\n\n**Image URL:** `{image_url}`",
+                                    "Für die Aktualisierung per Bluetooth die Taste an {name} einmal drücken (der Rahmen bleibt dann etwa 30 Sekunden im Einrichtungsmodus) und Absenden wählen. Ein Bluetooth-Adapter oder -Proxy muss in der Nähe sein.\n\nOder diese im offiziellen Web-UI eintragen:\n\n**Settings-URL:** `{settings_url}`\n\n**Bild-URL:** `{image_url}`",
+                                )
+                            ),
+                            "data": {"method": L(t("How", "Wie"))},
+                        }
+                    },
+                    "error": {
+                        "not_found": L(
+                            t(
+                                "The frame wasn't found over Bluetooth. Press its button once and try again.",
+                                "Der Rahmen wurde per Bluetooth nicht gefunden. Taste einmal drücken und erneut versuchen.",
+                            )
+                        ),
+                        "ble_failed": L(
+                            t(
+                                "Couldn't update the frame over Bluetooth. Press its button once and try again.",
+                                "Der Rahmen konnte per Bluetooth nicht aktualisiert werden. Taste einmal drücken und erneut versuchen.",
+                            )
+                        ),
+                        "no_bluetooth": L(
+                            t(
+                                "Bluetooth isn't set up in Home Assistant.",
+                                "Bluetooth ist in Home Assistant nicht eingerichtet.",
+                            )
+                        ),
+                        "no_url": L(
+                            t(
+                                "Home Assistant has no local network URL. Set one under Settings → System → Network.",
+                                "Home Assistant hat keine lokale Netzwerk-URL. Unter Einstellungen → System → Netzwerk festlegen.",
+                            )
+                        ),
+                    },
+                },
+            },
+        },
         "device_automation": {
             "trigger_type": {"wake": L(t("Frame woke up", "Rahmen ist aufgewacht"))}
         },
         "entity": {
-            "binary_sensor": {"in_sync": {"name": L(t("In sync", "Synchron"))}},
+            "binary_sensor": {
+                "in_sync": {"name": L(t("In sync", "Synchron"))},
+                "charging": {"name": L(t("Charging", "Lädt"))},
+                "usb_power": {"name": L(t("USB power", "USB-Strom"))},
+            },
             "button": {"skip": {"name": L(t("Skip photo", "Foto überspringen"))}},
             "image": {
                 "preview_showing": {"name": L(t("Showing", "Angezeigt"))},
@@ -513,6 +632,8 @@ def build(lang: str) -> dict:
                 "current_photo": {"name": L(t("Current photo", "Aktuelles Foto"))},
                 "pending_changes": {"name": L(t("Pending changes", "Ausstehende Änderungen"))},
                 "photos": {"name": L(t("Photos in rotation", "Fotos in der Rotation"))},
+                "battery_voltage": {"name": L(t("Battery voltage", "Akkuspannung"))},
+                "wifi_signal": {"name": L(t("WiFi signal", "WLAN-Signal"))},
             },
             "switch": {
                 "motion_wakeup": {"name": L(t("Motion wake-up", "Aufwecken durch Bewegung"))},
@@ -584,6 +705,162 @@ def build(lang: str) -> dict:
             for name, fields in SERVICE_FIELDS.items()
         },
     }
+
+
+def _phase3(lang: str) -> dict:
+    """Strings added in Phase 3 (Bluetooth extras), merged over the base."""
+    L = lambda pair: pair[lang]  # noqa: E731
+    return {
+        "config": {
+            "step": {
+                "bluetooth_confirm": {
+                    "sections": {
+                        "wifi": {
+                            "name": L(t("WiFi (optional)", "WLAN (optional)")),
+                            "description": L(
+                                t(
+                                    "Set the frame's WiFi network, e.g. for a new frame. Leave empty to keep its current network.",
+                                    "WLAN des Rahmens festlegen, z. B. bei einem neuen Rahmen. Leer lassen, um das aktuelle Netzwerk zu behalten.",
+                                )
+                            ),
+                            "data": {
+                                "wifi_ssid": L(t("Network name (SSID)", "Netzwerkname (SSID)")),
+                                "wifi_password": L(t("Password", "Passwort")),
+                            },
+                        }
+                    }
+                }
+            },
+            "error": {
+                "wifi_failed": L(
+                    t(
+                        "The frame couldn't join that WiFi network. Check the name and password, press the frame's button once, and try again.",
+                        "Der Rahmen konnte sich nicht mit diesem WLAN verbinden. Name und Passwort prüfen, Taste einmal drücken und erneut versuchen.",
+                    )
+                )
+            },
+        },
+        "options": {
+            "step": {
+                "init": {
+                    "data": {
+                        "ble_auto": L(
+                            t(
+                                "Update over Bluetooth in setup mode",
+                                "Im Einrichtungsmodus per Bluetooth aktualisieren",
+                            )
+                        )
+                    },
+                    "data_description": {
+                        "regenerate_token": L(
+                            t(
+                                "The old URLs stop working immediately. Afterwards, press the frame's button once and Home Assistant updates it over Bluetooth (or use the repair notice).",
+                                "Die alten URLs funktionieren sofort nicht mehr. Danach die Taste am Rahmen einmal drücken, dann aktualisiert Home Assistant ihn per Bluetooth (oder über den Reparaturhinweis).",
+                            )
+                        ),
+                        "ble_auto": L(
+                            t(
+                                "When you press the frame's button once, Home Assistant connects briefly to read battery and charging status and to send pending changes. Turn off if you use the official web UI at the same time.",
+                                "Wenn die Taste am Rahmen einmal gedrückt wird, verbindet sich Home Assistant kurz, liest Akku- und Ladestatus und überträgt ausstehende Änderungen. Ausschalten, wenn gleichzeitig das offizielle Web-UI genutzt wird.",
+                            )
+                        ),
+                    },
+                }
+            }
+        },
+        "selector": {
+            "reprovision_method": {
+                "options": {
+                    "bluetooth": L(
+                        t(
+                            "Over Bluetooth (press the frame's button once first)",
+                            "Per Bluetooth (zuerst die Taste am Rahmen einmal drücken)",
+                        )
+                    ),
+                    "manual": L(
+                        t(
+                            "I've entered the URLs in the web UI myself",
+                            "Ich habe die URLs selbst im Web-UI eingetragen",
+                        )
+                    ),
+                }
+            }
+        },
+        "entity": {
+            "binary_sensor": {
+                "charging": {"name": L(t("Charging", "Lädt"))},
+                "usb_power": {"name": L(t("USB power", "USB-Strom"))},
+            },
+            "sensor": {
+                "battery_voltage": {"name": L(t("Battery voltage", "Akkuspannung"))},
+                "wifi_signal": {"name": L(t("WiFi signal", "WLAN-Signal"))},
+            },
+        },
+    }
+
+
+def _url_host(lang: str) -> dict:
+    """Strings for choosing which address the frame's URLs use."""
+    L = lambda pair: pair[lang]  # noqa: E731
+    label = L(t("Address the frame uses", "Adresse für den Rahmen"))
+    help_text = L(
+        t(
+            "Which of Home Assistant's addresses goes into the frame's URLs. Automatic uses Home Assistant's local network URL. Pick another IP if Home Assistant is reachable on several networks, or type an IP or hostname the frame can resolve (no .local names).",
+            "Welche Adresse von Home Assistant in die URLs des Rahmens kommt. Automatisch verwendet die lokale Netzwerk-URL von Home Assistant. Eine andere IP wählen, wenn Home Assistant in mehreren Netzen erreichbar ist, oder eine IP bzw. einen Hostnamen eingeben, den der Rahmen auflösen kann (keine .local-Namen).",
+        )
+    )
+    errors = {
+        "invalid_host": L(
+            t(
+                "Enter an IP address or hostname, without http:// or a port.",
+                "Eine IP-Adresse oder einen Hostnamen ohne http:// und Port eingeben.",
+            )
+        ),
+        "unusable_host": L(
+            t(
+                "The frame can't use this address (loopback, localhost or a .local name). Choose a LAN IP address.",
+                "Der Rahmen kann diese Adresse nicht nutzen (Loopback, localhost oder ein .local-Name). Eine LAN-IP-Adresse wählen.",
+            )
+        ),
+    }
+    step = {"data": {"url_host": label}, "data_description": {"url_host": help_text}}
+    return {
+        "config": {
+            "step": {"user": step, "bluetooth_confirm": step},
+            "error": errors,
+        },
+        "options": {
+            "step": {
+                "init": {
+                    **step,
+                    "data_description": {
+                        "url_host": help_text
+                        + L(
+                            t(
+                                " After changing it, press the frame's button once so Home Assistant can give it the new URLs.",
+                                " Nach einer Änderung die Taste am Rahmen einmal drücken, damit Home Assistant ihm die neuen URLs geben kann.",
+                            )
+                        )
+                    },
+                }
+            },
+            "error": errors,
+        },
+        "selector": {"url_host": {"options": {"auto": L(t("Automatic", "Automatisch"))}}},
+    }
+
+
+def _merge(base: dict, extra: dict) -> dict:
+    for key, value in extra.items():
+        if isinstance(value, dict) and isinstance(base.get(key), dict):
+            _merge(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
+def build(lang: str) -> dict:
+    return _merge(_merge(_build_base(lang), _phase3(lang)), _url_host(lang))
 
 
 def main() -> None:

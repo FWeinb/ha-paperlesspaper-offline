@@ -74,6 +74,9 @@ export interface Frame {
   override: { name: string; wakes_remaining: number | null } | null;
   photo_count: number;
   enabled_count: number;
+  ble: { voltage?: number; usb?: boolean; charging?: boolean; rssi?: number; read_at: string | null };
+  overdue: boolean;
+  needs_reprovision: boolean;
 }
 
 export interface Photo {

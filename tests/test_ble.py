@@ -81,3 +81,60 @@ async def test_provision_errors(hass: HomeAssistant, client, mock_ble) -> None:
     mock_ble.return_value = None
     with pytest.raises(FrameBleError):
         await async_provision(hass, ADDRESS, {"timeout": 60})
+
+
+async def test_session_reads_status(hass: HomeAssistant, client, mock_ble) -> None:
+    from custom_components.paperlessoffline.ble import FrameSession
+    from custom_components.paperlessoffline.const import BLE_CHAR_SYSTEM_INFO, BLE_CHAR_WIFI_INFO
+
+    values = {
+        BLE_CHAR_SYSTEM_INFO: b'{"voltage": 3912, "usb": false, "charging": true}',
+        BLE_CHAR_WIFI_INFO: b'{"ip": "10.2.1.51", "rssi": -61}',
+    }
+    client.read_gatt_char.side_effect = lambda uuid: values[uuid]
+    async with FrameSession(hass, ADDRESS) as session:
+        status = await session.read_status()
+    assert status == {
+        "voltage": 3912,
+        "usb": False,
+        "charging": True,
+        "rssi": -61,
+        "ip": "10.2.1.51",
+    }
+    client.disconnect.assert_awaited()
+
+
+async def test_session_tolerates_garbage(hass: HomeAssistant, client, mock_ble) -> None:
+    from custom_components.paperlessoffline.ble import FrameSession
+
+    client.read_gatt_char.side_effect = lambda uuid: b"not json"
+    async with FrameSession(hass, ADDRESS) as session:
+        assert await session.read_status() == {}
+
+
+async def test_provision_with_wifi(hass: HomeAssistant, client, mock_ble) -> None:
+    from custom_components.paperlessoffline.const import (
+        BLE_CHAR_WIFI_PASSWORD,
+        BLE_CHAR_WIFI_SSID,
+    )
+
+    client.read_gatt_char.return_value = b"\x01"
+    with patch("custom_components.paperlessoffline.ble.WIFI_POLL", 0):
+        await async_provision(hass, ADDRESS, {"timeout": 60}, ("Home", "secret"))
+    writes = [(c.args[0], c.args[1]) for c in client.write_gatt_char.call_args_list]
+    assert writes[:2] == [(BLE_CHAR_WIFI_SSID, b"Home"), (BLE_CHAR_WIFI_PASSWORD, b"secret")]
+    assert (BLE_CHAR_COMMAND, b"SAVE_SETTINGS") in writes
+
+
+async def test_provision_wifi_failure(hass: HomeAssistant, client, mock_ble) -> None:
+    from custom_components.paperlessoffline.ble import WifiConnectError
+
+    client.read_gatt_char.return_value = b"\x00"
+    with (
+        patch("custom_components.paperlessoffline.ble.WIFI_POLL", 0),
+        patch("custom_components.paperlessoffline.ble.WIFI_TIMEOUT", 0.01),
+        pytest.raises(WifiConnectError),
+    ):
+        await async_provision(hass, ADDRESS, {"timeout": 60}, ("Home", "wrong"))
+    sent = [c.args[1] for c in client.write_gatt_char.call_args_list]
+    assert b"SAVE_SETTINGS" not in sent

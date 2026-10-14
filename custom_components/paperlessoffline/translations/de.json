@@ -7,7 +7,11 @@
         "description": "Die auf dem Rahmen angezeigte ID eingeben (z. B. `epd7-3485188f1dc8`).",
         "data": {
           "client_id": "Rahmen-ID",
-          "name": "Name"
+          "name": "Name",
+          "url_host": "Adresse für den Rahmen"
+        },
+        "data_description": {
+          "url_host": "Welche Adresse von Home Assistant in die URLs des Rahmens kommt. Automatisch verwendet die lokale Netzwerk-URL von Home Assistant. Eine andere IP wählen, wenn Home Assistant in mehreren Netzen erreichbar ist, oder eine IP bzw. einen Hostnamen eingeben, den der Rahmen auflösen kann (keine .local-Namen)."
         }
       },
       "urls": {
@@ -19,13 +23,30 @@
         "description": "Home Assistant konfiguriert den Rahmen per Bluetooth, damit er seine Bilder von `{base_url}` abruft. Den Rahmen im Einrichtungsmodus halten (Taste einmal drücken).",
         "data": {
           "name": "Name",
-          "provision": "Rahmen jetzt per Bluetooth konfigurieren"
+          "provision": "Rahmen jetzt per Bluetooth konfigurieren",
+          "url_host": "Adresse für den Rahmen"
+        },
+        "sections": {
+          "wifi": {
+            "name": "WLAN (optional)",
+            "description": "WLAN des Rahmens festlegen, z. B. bei einem neuen Rahmen. Leer lassen, um das aktuelle Netzwerk zu behalten.",
+            "data": {
+              "wifi_ssid": "Netzwerkname (SSID)",
+              "wifi_password": "Passwort"
+            }
+          }
+        },
+        "data_description": {
+          "url_host": "Welche Adresse von Home Assistant in die URLs des Rahmens kommt. Automatisch verwendet die lokale Netzwerk-URL von Home Assistant. Eine andere IP wählen, wenn Home Assistant in mehreren Netzen erreichbar ist, oder eine IP bzw. einen Hostnamen eingeben, den der Rahmen auflösen kann (keine .local-Namen)."
         }
       }
     },
     "error": {
       "invalid_client_id": "Das sieht nicht nach einer Rahmen-ID aus (epd7-… oder epd13- gefolgt von 12 Hex-Ziffern).",
-      "provision_failed": "Der Rahmen konnte nicht per Bluetooth konfiguriert werden. Taste einmal drücken und erneut versuchen oder die Option abwählen, um ihn manuell einzurichten."
+      "provision_failed": "Der Rahmen konnte nicht per Bluetooth konfiguriert werden. Taste einmal drücken und erneut versuchen oder die Option abwählen, um ihn manuell einzurichten.",
+      "wifi_failed": "Der Rahmen konnte sich nicht mit diesem WLAN verbinden. Name und Passwort prüfen, Taste einmal drücken und erneut versuchen.",
+      "invalid_host": "Eine IP-Adresse oder einen Hostnamen ohne http:// und Port eingeben.",
+      "unusable_host": "Der Rahmen kann diese Adresse nicht nutzen (Loopback, localhost oder ein .local-Name). Eine LAN-IP-Adresse wählen."
     },
     "abort": {
       "already_configured": "Dieser Rahmen ist bereits eingerichtet.",
@@ -42,12 +63,16 @@
           "interval": "Aktualisierungsintervall",
           "order": "Reihenfolge der Diashow",
           "mounting": "Ausrichtung",
-          "regenerate_token": "Neue Rahmen-URLs erzeugen"
+          "regenerate_token": "Neue Rahmen-URLs erzeugen",
+          "ble_auto": "Im Einrichtungsmodus per Bluetooth aktualisieren",
+          "url_host": "Adresse für den Rahmen"
         },
         "data_description": {
           "interval": "Wie lange der Rahmen zwischen Aktualisierungen schläft (Minuten). Wird beim nächsten Aufwachen übernommen.",
           "mounting": "Wie der Rahmen an der Wand hängt.",
-          "regenerate_token": "Die alten URLs funktionieren sofort nicht mehr; der Rahmen muss per Bluetooth oder Web-UI neu eingerichtet werden."
+          "regenerate_token": "Die alten URLs funktionieren sofort nicht mehr. Danach die Taste am Rahmen einmal drücken, dann aktualisiert Home Assistant ihn per Bluetooth (oder über den Reparaturhinweis).",
+          "ble_auto": "Wenn die Taste am Rahmen einmal gedrückt wird, verbindet sich Home Assistant kurz, liest Akku- und Ladestatus und überträgt ausstehende Änderungen. Ausschalten, wenn gleichzeitig das offizielle Web-UI genutzt wird.",
+          "url_host": "Welche Adresse von Home Assistant in die URLs des Rahmens kommt. Automatisch verwendet die lokale Netzwerk-URL von Home Assistant. Eine andere IP wählen, wenn Home Assistant in mehreren Netzen erreichbar ist, oder eine IP bzw. einen Hostnamen eingeben, den der Rahmen auflösen kann (keine .local-Namen). Nach einer Änderung die Taste am Rahmen einmal drücken, damit Home Assistant ihm die neuen URLs geben kann."
         },
         "sections": {
           "quiet_hours": {
@@ -92,7 +117,9 @@
       }
     },
     "error": {
-      "auth_incomplete": "Benutzername und Passwort eingeben."
+      "auth_incomplete": "Benutzername und Passwort eingeben.",
+      "invalid_host": "Eine IP-Adresse oder einen Hostnamen ohne http:// und Port eingeben.",
+      "unusable_host": "Der Rahmen kann diese Adresse nicht nutzen (Loopback, localhost oder ein .local-Name). Eine LAN-IP-Adresse wählen."
     }
   },
   "selector": {
@@ -149,6 +176,63 @@
         "landscape_flipped": "Querformat (kopfüber)",
         "portrait_flipped": "Hochformat (kopfüber)"
       }
+    },
+    "reprovision_method": {
+      "options": {
+        "bluetooth": "Per Bluetooth (zuerst die Taste am Rahmen einmal drücken)",
+        "manual": "Ich habe die URLs selbst im Web-UI eingetragen"
+      }
+    },
+    "url_host": {
+      "options": {
+        "auto": "Automatisch"
+      }
+    }
+  },
+  "issues": {
+    "offline": {
+      "title": "{name} hat sich nicht gemeldet",
+      "description": "Der Rahmen {name} hat sich zuletzt um {last_seen} bei Home Assistant gemeldet und mehrere Aktualisierungen verpasst. Prüfen, ob er Strom (oder Akku) und WLAN hat und Home Assistant erreichen kann. Zweimaliges Drücken der Taste erzwingt eine Aktualisierung. Dieser Hinweis verschwindet von selbst, sobald sich der Rahmen wieder meldet."
+    },
+    "reprovision_token": {
+      "title": "{name} braucht die neuen URLs",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "URLs von {name} aktualisieren",
+            "description": "Für die Aktualisierung per Bluetooth die Taste an {name} einmal drücken (der Rahmen bleibt dann etwa 30 Sekunden im Einrichtungsmodus) und Absenden wählen. Ein Bluetooth-Adapter oder -Proxy muss in der Nähe sein.\n\nOder diese im offiziellen Web-UI eintragen:\n\n**Settings-URL:** `{settings_url}`\n\n**Bild-URL:** `{image_url}`",
+            "data": {
+              "method": "Wie"
+            }
+          }
+        },
+        "error": {
+          "not_found": "Der Rahmen wurde per Bluetooth nicht gefunden. Taste einmal drücken und erneut versuchen.",
+          "ble_failed": "Der Rahmen konnte per Bluetooth nicht aktualisiert werden. Taste einmal drücken und erneut versuchen.",
+          "no_bluetooth": "Bluetooth ist in Home Assistant nicht eingerichtet.",
+          "no_url": "Home Assistant hat keine lokale Netzwerk-URL. Unter Einstellungen → System → Netzwerk festlegen."
+        }
+      }
+    },
+    "reprovision_url": {
+      "title": "{name} erreicht Home Assistant nicht",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "URLs von {name} aktualisieren",
+            "description": "Für die Aktualisierung per Bluetooth die Taste an {name} einmal drücken (der Rahmen bleibt dann etwa 30 Sekunden im Einrichtungsmodus) und Absenden wählen. Ein Bluetooth-Adapter oder -Proxy muss in der Nähe sein.\n\nOder diese im offiziellen Web-UI eintragen:\n\n**Settings-URL:** `{settings_url}`\n\n**Bild-URL:** `{image_url}`",
+            "data": {
+              "method": "Wie"
+            }
+          }
+        },
+        "error": {
+          "not_found": "Der Rahmen wurde per Bluetooth nicht gefunden. Taste einmal drücken und erneut versuchen.",
+          "ble_failed": "Der Rahmen konnte per Bluetooth nicht aktualisiert werden. Taste einmal drücken und erneut versuchen.",
+          "no_bluetooth": "Bluetooth ist in Home Assistant nicht eingerichtet.",
+          "no_url": "Home Assistant hat keine lokale Netzwerk-URL. Unter Einstellungen → System → Netzwerk festlegen."
+        }
+      }
     }
   },
   "device_automation": {
@@ -160,6 +244,12 @@
     "binary_sensor": {
       "in_sync": {
         "name": "Synchron"
+      },
+      "charging": {
+        "name": "Lädt"
+      },
+      "usb_power": {
+        "name": "USB-Strom"
       }
     },
     "button": {
@@ -204,6 +294,12 @@
       },
       "photos": {
         "name": "Fotos in der Rotation"
+      },
+      "battery_voltage": {
+        "name": "Akkuspannung"
+      },
+      "wifi_signal": {
+        "name": "WLAN-Signal"
       }
     },
     "switch": {

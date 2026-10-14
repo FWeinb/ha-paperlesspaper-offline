@@ -205,8 +205,8 @@ e-paper photo frames running the
    - tests and CI
    - an early real-device check of the image format and orientation
 2. **Panel and card** (done, v0.2.0; see §12).
-3. **BLE extras:** battery sensors, opportunistic push, WiFi onboarding,
-   repairs.
+3. **BLE extras** (done, v0.3.0; see §13): battery sensors, opportunistic
+   push, WiFi onboarding, repairs.
 
 ## 10. Risks to verify on hardware
 
@@ -391,3 +391,88 @@ rotation direction is assumed by symmetry with the 7".
   - saving global defaults
 - Checked by hand in a real browser against a real local Home Assistant
   (2026.10): the panel, editor, settings and card all work.
+
+## 13. Implementation notes (Phase 3: Bluetooth extras)
+
+### Firmware details used (from the code)
+
+- **WiFi credentials.** Write the SSID first, then the password. Writing the
+  password starts a connection test of up to 10 s. Credentials are stored only
+  if it succeeds. The result is reported through the "WiFi connected"
+  characteristic (one byte, 0/1).
+- **Status characteristics**, readable only in setup mode:
+  - system info `{"voltage": mV, "usb": bool, "charging": bool}`
+  - WiFi info `{"ip", "rssi"}`
+- **Setup mode** lasts about 30 s after one button press, or for as long as a
+  client is connected.
+
+### Design
+
+- **`ble.FrameSession`** is one connection per sync. It offers status reads,
+  WiFi setup with a connected check, settings writes, `SAVE_SETTINGS` and an
+  optional `EXIT_SETUP`. `async_provision` (the config flow) is built on it.
+- **Opportunistic sync.** A per-entry `bluetooth.async_register_callback`
+  matches the frame's local name (`epd7-…` / `epd13-…`). On each
+  advertisement, `FrameManager.async_ble_seen` starts at most one sync per
+  120 s. The sync:
+  1. reads status;
+  2. writes the effective settings if the user's settings changed since the
+     frame last fetched them;
+  3. writes new URLs too, but only when reprovisioning is needed.
+
+  It never sends `EXIT_SETUP`, so the frame stays usable for the official web
+  UI. There's a per-frame option to turn this off.
+- **Status entities** (battery voltage, charging, USB power, WiFi signal) are
+  restored from persisted state and carry a `last_read` attribute.
+- **Repairs** (`issues.py`, `repairs.py`):
+  - *Overdue*: no request by `last request + last sleep sent (includes quiet
+    hours) + 2 × interval + 5 min`. A never-seen frame counts from the entry's
+    creation time.
+  - *Provisioned* URL/token: entry data stores the token and base URL the frame
+    is known to use. They are set by the config flow and refreshed by every
+    successful request (from the request's origin).
+  - *Reprovision* is needed when the token was regenerated, or when HA's
+    current frame URL differs from the provisioned one *and* the frame is
+    overdue. Otherwise an overdue frame gets the *offline* notice.
+  - The fix flow either waits up to 45 s for the frame to advertise and writes
+    the URLs (then exits setup), or accepts "I updated it myself".
+  - Issues are rechecked every 5 minutes, after requests, BLE syncs and option
+    changes, and on core config updates. They're deleted when the entry is
+    removed.
+- **Frame base URL** (`urls.py`): HA's internal URL, with hosts the frame
+  can't use (`localhost`, loopback, unspecified or link-local IPs, `*.local`)
+  replaced by the machine's LAN IP. ESP32 `HTTPClient` has no mDNS resolver,
+  and loopback would point at the frame itself.
+  - Request origins with such hosts (e.g. behind a local reverse proxy) are not
+    recorded as the frame's provisioned URL.
+  - A provisioned URL with such a host counts as "needs new URLs" immediately,
+    so the next button press fixes it.
+  - Found in manual testing: the dev instance had `internal_url:
+    http://127.0.0.1:8124` and wrote that to the frame.
+- **Chosen frame address** (option `url_host`, default `auto`): replaces the
+  host of HA's internal URL, keeping its scheme and port.
+  - Offered in both setup paths and in the options. The choices are HA's IPv4
+    addresses from the network integration (adapters HA uses first, loopback
+    and link-local excluded), plus free text.
+  - Validated: a plain IP or DNS name, and not unusable for the frame.
+  - When an explicit choice differs from the provisioned URL, the frame counts
+    as "needs new URLs" immediately; the next button press or the repair flow
+    applies it.
+- **Entry migration**: v1.1 → v1.2 adds the provisioned token (the current
+  token) and base URL (unknown).
+- **Panel**: the frame header shows battery and charging status, and
+  "hasn't checked in" / "needs new URLs" chips.
+
+### Testing
+
+`tests/test_ble.py` and `tests/test_phase3.py`, with BLE mocked, cover:
+- status parsing
+- WiFi success and failure
+- the sync pushing pending settings and new URLs
+- cooldown and the opt-out
+- the offline / reprovision issue lifecycle
+- the fix flow (manual, Bluetooth, not found)
+- migration
+- the `.local` rewrite
+
+Bluetooth against real hardware still needs a manual test.

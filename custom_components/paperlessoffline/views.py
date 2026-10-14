@@ -69,7 +69,9 @@ class FrameImageView(HomeAssistantView):
             return web.Response(
                 status=401, headers={hdrs.WWW_AUTHENTICATE: 'Basic realm="paperlessoffline"'}
             )
-        bmp, last_modified = await manager.async_handle_image_request(dict(request.query))
+        bmp, last_modified = await manager.async_handle_image_request(
+            dict(request.query), str(request.url.origin())
+        )
         return web.Response(
             body=bmp,
             content_type="image/bmp",
@@ -97,7 +99,10 @@ class FrameSettingsView(HomeAssistantView):
             return web.Response(status=404)
         download_url = str(request.url.with_path(manager.image_path()).with_query(None))
         payload, last_modified = await manager.async_handle_settings_request(
-            dict(request.query), download_url, request.headers.get(hdrs.IF_MODIFIED_SINCE)
+            dict(request.query),
+            download_url,
+            request.headers.get(hdrs.IF_MODIFIED_SINCE),
+            str(request.url.origin()),
         )
         headers = {hdrs.LAST_MODIFIED: http_date(last_modified), hdrs.CACHE_CONTROL: "no-cache"}
         if payload is None:

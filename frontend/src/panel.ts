@@ -194,6 +194,20 @@ export class PaperlessPanel extends LitElement {
                 ${l("pending")}: ${frame.pending.map((p) => l(`pending_${p}` as never)).join(", ")}
               </span>`
             : html`<span class="chip ok">${l("in_sync")}</span>`}
+          ${frame.needs_reprovision
+            ? html`<span class="chip warn">${l("needs_urls")}</span>`
+            : frame.overdue
+              ? html`<span class="chip warn">${l("overdue")}</span>`
+              : nothing}
+          ${frame.ble?.voltage !== undefined
+            ? html`<span class="chip" title=${l("read_ago", { when: relativeTime(frame.ble.read_at, this.hass, l("never")) })}>
+                ${l("battery", { volts: (frame.ble.voltage / 1000).toFixed(2) })}${frame.ble.charging
+                  ? ` · ${l("charging")}`
+                  : frame.ble.usb
+                    ? ` · ${l("usb")}`
+                    : ""}
+              </span>`
+            : nothing}
           ${frame.override
             ? html`<span class="chip">
                 ${l("override")}: ${frame.override.name} ·

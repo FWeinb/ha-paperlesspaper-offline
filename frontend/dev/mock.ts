@@ -87,6 +87,7 @@ const frames: Frame[] = [
     last_seen: new Date(Date.now() - 7 * 60_000).toISOString(), last_wake: null, wake_count: 42,
     pending: ["photo"], current: { kind: "photo", photo_id: "pkitchen0", name: names[0] },
     up_next: { kind: "photo", photo_id: "pkitchen3", name: names[3] }, override: null, photo_count: 7, enabled_count: 6,
+    ble: { voltage: 3912, usb: false, charging: false, rssi: -61, read_at: new Date(Date.now() - 2 * 3600_000).toISOString() }, overdue: false, needs_reprovision: false,
   },
   {
     entry_id: "hall", title: "Hallway", client_id: "epd13-aabbccddeeff", device_id: "dev_hall",
@@ -95,6 +96,7 @@ const frames: Frame[] = [
     last_seen: new Date(Date.now() - 3 * 3600_000).toISOString(), last_wake: null, wake_count: 3,
     pending: [], current: { kind: "placeholder", photo_id: null, name: "placeholder" },
     up_next: { kind: "placeholder", photo_id: null, name: null }, override: null, photo_count: 0, enabled_count: 0,
+    ble: { read_at: null }, overdue: true, needs_reprovision: false,
   },
 ];
 const photos: Record<string, Photo[]> = { kitchen: names.map((_, i) => photoOf(i, "kitchen")), hall: [] };

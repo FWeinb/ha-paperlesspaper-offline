@@ -32,6 +32,12 @@ CONF_AUTH_ENABLED: Final = "auth_enabled"
 CONF_AUTH_USER: Final = "auth_user"
 CONF_AUTH_PASSWORD: Final = "auth_password"
 CONF_RENDER_DEFAULTS: Final = "render_defaults"
+CONF_BLE_AUTO: Final = "ble_auto"
+CONF_URL_HOST: Final = "url_host"  # "auto" or an IP/hostname for the frame's URLs
+
+# Config entry data: what the frame was last configured with (for repairs)
+CONF_PROVISIONED_TOKEN: Final = "provisioned_token"
+CONF_PROVISIONED_BASE: Final = "provisioned_base_url"
 
 ORDER_SEQUENTIAL: Final = "sequential"
 ORDER_SHUFFLE: Final = "shuffle"
@@ -44,6 +50,11 @@ DEFAULT_QUIET_START: Final = "22:00:00"
 DEFAULT_QUIET_END: Final = "07:00:00"
 
 WAKE_DEBOUNCE_SECONDS: Final = 60
+# Don't reconnect over BLE more often than this while a frame stays in setup mode.
+BLE_COOLDOWN_SECONDS: Final = 120
+# A frame is overdue after missing this many expected wakes.
+OFFLINE_MISSED_WAKES: Final = 3
+OFFLINE_GRACE_SECONDS: Final = 300
 # Frames that fetched settings within 2x their sleep + this are "settings frames".
 SETTINGS_GRACE_SECONDS: Final = 300
 MAX_UPLOAD_BYTES: Final = 50 * 1024 * 1024
@@ -77,6 +88,9 @@ GLOBAL_RENDER_DEFAULTS: Final[dict[str, object]] = {
 
 EVENT_FRAME_WAKE: Final = f"{DOMAIN}_frame_wake"
 
+IMAGE_PATH: Final = "/api/paperlessoffline/{token}/image.bmp"
+SETTINGS_PATH: Final = "/api/paperlessoffline/{token}/settings.json"
+
 # BLE
 BLE_CHAR_DOWNLOAD_URL: Final = "10000001-0000-0000-0000-000000000001"
 BLE_CHAR_IMAGE_MODE: Final = "10000002-0000-0000-0000-000000000001"
@@ -88,6 +102,11 @@ BLE_CHAR_MOTION_WAKEUP: Final = "10000009-0000-0000-0000-000000000001"
 BLE_CHAR_CHARGER_MODE: Final = "1000000a-0000-0000-0000-000000000001"
 BLE_CHAR_SETTINGS_URL: Final = "1000000b-0000-0000-0000-000000000001"
 BLE_CHAR_AUTO_ROTATION: Final = "1000000c-0000-0000-0000-000000000001"
+BLE_CHAR_WIFI_CONNECTED: Final = "4c578d4c-7b0e-11ed-a1eb-0242ac120002"
+BLE_CHAR_WIFI_INFO: Final = "4c578d4d-7b0e-11ed-a1eb-0242ac120002"
+BLE_CHAR_SYSTEM_INFO: Final = "60000001-7b0e-11ed-a1eb-0242ac120002"
+BLE_CHAR_WIFI_SSID: Final = "090b0ef2-7b0d-11ed-a1eb-0242ac120002"
+BLE_CHAR_WIFI_PASSWORD: Final = "a62eed84-7b0d-11ed-a1eb-0242ac120002"
 
 
 @dataclass(frozen=True)

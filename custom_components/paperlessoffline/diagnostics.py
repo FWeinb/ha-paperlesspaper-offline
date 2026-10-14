@@ -9,9 +9,9 @@ from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.core import HomeAssistant
 
 from . import PaperlessConfigEntry
-from .const import CONF_AUTH_PASSWORD, CONF_AUTH_USER, CONF_TOKEN
+from .const import CONF_AUTH_PASSWORD, CONF_AUTH_USER, CONF_PROVISIONED_TOKEN, CONF_TOKEN
 
-TO_REDACT = {CONF_TOKEN, CONF_AUTH_PASSWORD, CONF_AUTH_USER}
+TO_REDACT = {CONF_TOKEN, CONF_PROVISIONED_TOKEN, CONF_AUTH_PASSWORD, CONF_AUTH_USER}
 
 
 async def async_get_config_entry_diagnostics(

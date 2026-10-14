@@ -27,6 +27,7 @@ from .const import (
 )
 from .data import DATA_KEY, get_manager
 from .frame import SIGNAL_ANY_UPDATE, FrameManager
+from .issues import is_overdue
 from .render import MOUNTINGS
 from .settings import FRAME_DEFAULTS_SCHEMA, GLOBAL_DEFAULTS_SCHEMA, PHOTO_OVERRIDES_SCHEMA
 from .sources import async_fetch_source
@@ -102,6 +103,9 @@ def frame_info(hass: HomeAssistant, manager: FrameManager) -> dict[str, Any]:
         ),
         "photo_count": len(manager.photos),
         "enabled_count": len(manager.enabled_ids()),
+        "ble": {**st.ble_status, "read_at": _ts(st.ble_read_at)},
+        "overdue": is_overdue(manager),
+        "needs_reprovision": manager.needs_reprovision(),
     }
 
 

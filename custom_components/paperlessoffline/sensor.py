@@ -3,15 +3,23 @@
 from __future__ import annotations
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
-from homeassistant.const import EntityCategory
+from homeassistant.const import (
+    SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+    EntityCategory,
+    UnitOfElectricPotential,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
 
 from . import PaperlessConfigEntry
 from .entity import PaperlessEntity
+from .frame import FrameManager
 
 PARALLEL_UPDATES = 0
+
+# Entity key -> key in the BLE status
+BLE_VALUES = {"battery_voltage": "voltage", "wifi_signal": "rssi"}
 
 
 async def async_setup_entry(
@@ -27,6 +35,8 @@ async def async_setup_entry(
             CurrentPhotoSensor(manager, "current_photo"),
             PendingSensor(manager, "pending_changes"),
             PhotoCountSensor(manager, "photos"),
+            BleValueSensor(manager, "battery_voltage"),
+            BleValueSensor(manager, "wifi_signal"),
         ]
     )
 
@@ -86,3 +96,33 @@ class PhotoCountSensor(PaperlessEntity, SensorEntity):
     def _update_from_manager(self) -> None:
         self._attr_native_value = len(self.manager.enabled_ids())
         self._attr_extra_state_attributes = {"library": len(self.manager.photos)}
+
+
+class BleValueSensor(PaperlessEntity, SensorEntity):
+    """A value read over Bluetooth when the frame was last in setup mode."""
+
+    def __init__(self, manager: FrameManager, key: str) -> None:
+        """Initialise."""
+        self._status_key = BLE_VALUES[key]
+        if key == "battery_voltage":
+            self._attr_device_class = SensorDeviceClass.VOLTAGE
+            self._attr_native_unit_of_measurement = UnitOfElectricPotential.MILLIVOLT
+            self._attr_suggested_unit_of_measurement = UnitOfElectricPotential.VOLT
+            self._attr_suggested_display_precision = 2
+        else:
+            self._attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
+            self._attr_native_unit_of_measurement = SIGNAL_STRENGTH_DECIBELS_MILLIWATT
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+            self._attr_entity_registry_enabled_default = False
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+        super().__init__(manager, key)
+
+    @callback
+    def _update_from_manager(self) -> None:
+        st = self.manager.state
+        self._attr_native_value = st.ble_status.get(self._status_key)
+        self._attr_extra_state_attributes = {
+            "last_read": dt_util.utc_from_timestamp(st.ble_read_at).isoformat()
+            if st.ble_read_at
+            else None,
+        }

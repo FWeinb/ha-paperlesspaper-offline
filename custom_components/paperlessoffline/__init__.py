@@ -2,21 +2,34 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+import logging
 from pathlib import Path
 import shutil
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.const import EVENT_CORE_CONFIG_UPDATE, Platform
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
 
-from .const import CONF_CLIENT_ID, DOMAIN, STORAGE_DIR, STORAGE_VERSION, mac_from_client_id
+from .const import (
+    CONF_CLIENT_ID,
+    CONF_PROVISIONED_BASE,
+    CONF_PROVISIONED_TOKEN,
+    CONF_TOKEN,
+    DOMAIN,
+    STORAGE_DIR,
+    STORAGE_VERSION,
+    mac_from_client_id,
+)
 from .data import DATA_KEY, DomainData
 from .frame import FrameManager
 from .frontend import async_register_frontend
+from .issues import async_delete_issues
 from .services import async_setup_services
 from .store import GlobalStore
 from .views import (
@@ -39,6 +52,9 @@ PLATFORMS = [
 ]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+ISSUE_CHECK_INTERVAL = timedelta(minutes=5)
+
+_LOGGER = logging.getLogger(__name__)
 
 type PaperlessConfigEntry = ConfigEntry[FrameManager]
 
@@ -83,9 +99,62 @@ async def async_setup_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) ->
     )
 
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
+    _async_setup_bluetooth(hass, entry, manager)
+
+    async def _check(_now: object = None) -> None:
+        await manager.async_refresh_base_url()
+
+    entry.async_on_unload(async_track_time_interval(hass, _check, ISSUE_CHECK_INTERVAL))
+
+    @callback
+    def _core_config_updated(_event: Event) -> None:
+        entry.async_create_background_task(hass, _check(), f"{DOMAIN} url check")
+
+    entry.async_on_unload(hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, _core_config_updated))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     manager.async_options_updated()
+    manager.async_update_issues()
     async_dispatcher_send(hass, SIGNAL_FRAMES_CHANGED)
+    return True
+
+
+@callback
+def _async_setup_bluetooth(
+    hass: HomeAssistant, entry: PaperlessConfigEntry, manager: FrameManager
+) -> None:
+    """Watch for the frame advertising, which it only does in setup mode."""
+    if "bluetooth" not in hass.config.components:
+        return
+    # Imported lazily so the integration works on systems without Bluetooth.
+    from homeassistant.components import bluetooth  # noqa: PLC0415
+
+    @callback
+    def _seen(
+        service_info: bluetooth.BluetoothServiceInfoBleak, _change: bluetooth.BluetoothChange
+    ) -> None:
+        manager.async_ble_seen(service_info.address)
+
+    entry.async_on_unload(
+        bluetooth.async_register_callback(
+            hass,
+            _seen,
+            bluetooth.BluetoothCallbackMatcher(local_name=manager.client_id, connectable=True),
+            bluetooth.BluetoothScanningMode.ACTIVE,
+        )
+    )
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Migrate older entries."""
+    if entry.version > 1:
+        return False
+    if entry.minor_version < 2:
+        # Assume the frame was set up with the URLs it has now.
+        data = {**entry.data}
+        data.setdefault(CONF_PROVISIONED_TOKEN, data[CONF_TOKEN])
+        data.setdefault(CONF_PROVISIONED_BASE, None)
+        hass.config_entries.async_update_entry(entry, data=data, minor_version=2)
+        _LOGGER.debug("Migrated %s to version 1.2", entry.title)
     return True
 
 
@@ -98,6 +167,10 @@ async def _async_entry_updated(hass: HomeAssistant, entry: PaperlessConfigEntry)
             del data.tokens[token]
     data.tokens[manager.token] = manager
     manager.async_options_updated()
+    # The chosen URL host may have changed.
+    entry.async_create_background_task(
+        hass, manager.async_refresh_base_url(), f"{DOMAIN} url check"
+    )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) -> bool:
@@ -114,7 +187,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) -
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) -> None:
-    """Delete a removed frame's library and state."""
+    """Delete a removed frame's library, state and repair issues."""
+    async_delete_issues(hass, entry.entry_id)
     await Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry.entry_id}").async_remove()
     directory = Path(hass.config.path(STORAGE_DIR, entry.entry_id))
     await hass.async_add_executor_job(shutil.rmtree, directory, True)

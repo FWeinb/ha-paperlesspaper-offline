@@ -1,4 +1,4 @@
-import { s as A, i as E, n as d, r as l, a as M, l as m, A as n, d as c, f as st, b as o, g as V, h as it, j as rt, k as at, t as C, o as ot, p as nt, q as lt, u as pt, v as dt, w as ht, x as ct, y as ut, z as ft, B as mt, C as gt, c as B, D as vt, e as bt, E as $t } from "./chunk-Cxvkc_S1.js";
+import { s as A, i as E, n as d, r as l, a as M, l as g, A as n, d as c, f as st, b as o, g as V, h as it, j as rt, k as at, t as C, o as ot, p as nt, q as lt, u as pt, v as dt, w as ht, x as ct, y as ut, z as ft, B as gt, C as mt, c as N, D as vt, e as bt, E as $t } from "./chunk-B8cT98Y-.js";
 /**
  * @license
  * Copyright 2017 Google LLC
@@ -18,26 +18,26 @@ function xt(t, e) {
     } });
   };
 }
-const g = "paperlessoffline", G = (t) => t.callWS({ type: `${g}/frames` }).then((e) => e.frames), W = (t, e) => t.callWS({ type: `${g}/photos`, entry_id: e }).then((s) => s.photos), wt = (t, e) => t.connection.subscribeMessage((s) => e(s.entry_id), {
-  type: `${g}/subscribe`
-}), Q = (t, e, s, i) => t.callWS({ type: `${g}/photo/update`, entry_id: e, photo_id: s, ...i }), _t = (t, e, s) => t.callWS({ type: `${g}/photo/delete`, entry_id: e, photo_id: s }), kt = (t, e, s) => t.callWS({ type: `${g}/photo/reorder`, entry_id: e, order: s }), Pt = (t, e, s, i) => t.callWS({
-  type: `${g}/photo/copy`,
+const m = "paperlessoffline", G = (t) => t.callWS({ type: `${m}/frames` }).then((e) => e.frames), R = (t, e) => t.callWS({ type: `${m}/photos`, entry_id: e }).then((s) => s.photos), wt = (t, e) => t.connection.subscribeMessage((s) => e(s.entry_id), {
+  type: `${m}/subscribe`
+}), Q = (t, e, s, i) => t.callWS({ type: `${m}/photo/update`, entry_id: e, photo_id: s, ...i }), _t = (t, e, s) => t.callWS({ type: `${m}/photo/delete`, entry_id: e, photo_id: s }), kt = (t, e, s) => t.callWS({ type: `${m}/photo/reorder`, entry_id: e, order: s }), Pt = (t, e, s, i) => t.callWS({
+  type: `${m}/photo/copy`,
   entry_id: e,
   photo_id: s,
   target_entry_id: i
-}), Ot = (t, e, s) => t.callWS({ type: `${g}/photo/show`, entry_id: e, photo_id: s }), St = (t, e) => t.callWS({ type: `${g}/frame/skip`, entry_id: e }), Z = (t, e, s) => t.callWS({ type: `${g}/frame/update`, entry_id: e, ...s }), It = (t, e, s) => t.callWS({ type: `${g}/import`, entry_id: e, media_content_id: s }), tt = (t, e, s, i) => t.callWS({
-  type: `${g}/preview`,
+}), Ot = (t, e, s) => t.callWS({ type: `${m}/photo/show`, entry_id: e, photo_id: s }), St = (t, e) => t.callWS({ type: `${m}/frame/skip`, entry_id: e }), Z = (t, e, s) => t.callWS({ type: `${m}/frame/update`, entry_id: e, ...s }), It = (t, e, s) => t.callWS({ type: `${m}/import`, entry_id: e, media_content_id: s }), tt = (t, e, s, i) => t.callWS({
+  type: `${m}/preview`,
   entry_id: e,
   photo_id: s,
   ...i
-}), Dt = (t) => t.callWS({ type: `${g}/defaults` }), Et = (t, e) => t.callWS({ type: `${g}/defaults/set`, defaults: e }), Ct = (t, e) => t.callWS({
+}), Dt = (t) => t.callWS({ type: `${m}/defaults` }), Et = (t, e) => t.callWS({ type: `${m}/defaults/set`, defaults: e }), Ct = (t, e) => t.callWS({
   type: "media_source/browse_media",
   ...e ? { media_content_id: e } : {}
 });
 async function Tt(t, e, s) {
   const i = new FormData();
   for (const r of s) i.append("file", r, r.name);
-  const a = await t.fetchWithAuth(`/api/${g}/upload/${e}`, {
+  const a = await t.fetchWithAuth(`/api/${m}/upload/${e}`, {
     method: "POST",
     body: i
   });
@@ -93,7 +93,7 @@ let y = class extends M {
     this.dispatchEvent(new CustomEvent("closed", { bubbles: !0, composed: !0 }));
   }
   render() {
-    const t = m(this.hass), e = (this.item?.children ?? []).filter(
+    const t = g(this.hass), e = (this.item?.children ?? []).filter(
       (s) => !s.media_content_id.startsWith(At) && (s.can_expand || X(s))
     );
     return o`<div class="scrim" @click=${(s) => s.target === s.currentTarget && this.close()}>
@@ -280,7 +280,7 @@ var Ft = Object.defineProperty, zt = Object.getOwnPropertyDescriptor, w = (t, e,
     (p = t[r]) && (a = (i ? p(e, s, a) : p(a)) || a);
   return i && a && Ft(e, s, a), a;
 };
-const N = "application/x-paperlessoffline-photo";
+const q = "application/x-paperlessoffline-photo";
 let b = class extends M {
   constructor() {
     super(...arguments), this.photos = [], this.dropActive = !1, this.uploading = 0, this.uploadErrors = [], this.error = null, this.importOpen = !1, this.dragId = null, this.dragOverId = null;
@@ -310,13 +310,13 @@ let b = class extends M {
     t.dataTransfer?.types.includes("Files") && (t.preventDefault(), this.dropActive = !1, this.upload([...t.dataTransfer.files]));
   }
   onTileDragStart(t, e) {
-    this.dragId = e.photo_id, t.dataTransfer?.setData(N, e.photo_id), t.dataTransfer && (t.dataTransfer.effectAllowed = "move");
+    this.dragId = e.photo_id, t.dataTransfer?.setData(q, e.photo_id), t.dataTransfer && (t.dataTransfer.effectAllowed = "move");
   }
   onTileDragOver(t, e) {
-    !this.dragId || !t.dataTransfer?.types.includes(N) || (t.preventDefault(), this.dragOverId = e.photo_id);
+    !this.dragId || !t.dataTransfer?.types.includes(q) || (t.preventDefault(), this.dragOverId = e.photo_id);
   }
   async onTileDrop(t, e) {
-    const s = t.dataTransfer?.getData(N);
+    const s = t.dataTransfer?.getData(q);
     if (this.dragOverId = null, this.dragId = null, !s || s === e.photo_id) return;
     t.preventDefault(), t.stopPropagation();
     const i = this.photos.map((r) => r.photo_id).filter((r) => r !== s);
@@ -348,7 +348,7 @@ let b = class extends M {
     this.dispatchEvent(new CustomEvent("edit-photo", { detail: { photo: t }, bubbles: !0, composed: !0 }));
   }
   render() {
-    const t = m(this.hass), e = this.frame.current.kind === "photo" ? this.frame.current.photo_id : null, s = this.frame.up_next.kind === "photo" ? this.frame.up_next.photo_id : null;
+    const t = g(this.hass), e = this.frame.current.kind === "photo" ? this.frame.current.photo_id : null, s = this.frame.up_next.kind === "photo" ? this.frame.up_next.photo_id : null;
     return o`
       <div class="toolbar">
         <label class="btn primary">
@@ -619,8 +619,8 @@ let P = class extends M {
     if (!this.start || Math.hypot(t.clientX - this.start.px, t.clientY - this.start.py) < K) return;
     const e = this.point(t);
     if (this.start.mode === "move" && this.start.orig) {
-      const [F, et, Y, J] = this.start.orig;
-      this.draft = [D(F + e.x - this.start.x, 0, 1 - Y), D(et + e.y - this.start.y, 0, 1 - J), Y, J];
+      const [F, et, J, B] = this.start.orig;
+      this.draft = [D(F + e.x - this.start.x, 0, 1 - J), D(et + e.y - this.start.y, 0, 1 - B), J, B];
       return;
     }
     let s = Math.abs(e.x - this.start.x), i = Math.abs(e.y - this.start.y);
@@ -628,8 +628,8 @@ let P = class extends M {
       const F = this.aspect * e.r.height / e.r.width;
       s / i > F ? s = i * F : i = s / F;
     }
-    const a = e.x < this.start.x ? this.start.x - s : this.start.x, r = e.y < this.start.y ? this.start.y - i : this.start.y, p = D(a, 0, 1 - s), L = D(r, 0, 1 - i);
-    this.draft = [p, L, Math.min(s, 1 - p), Math.min(i, 1 - L)];
+    const a = e.x < this.start.x ? this.start.x - s : this.start.x, r = e.y < this.start.y ? this.start.y - i : this.start.y, p = D(a, 0, 1 - s), Y = D(r, 0, 1 - i);
+    this.draft = [p, Y, Math.min(s, 1 - p), Math.min(i, 1 - Y)];
   }
   onUp(t) {
     if (!this.start) return;
@@ -732,7 +732,7 @@ var Wt = Object.defineProperty, Rt = Object.getOwnPropertyDescriptor, z = (t, e,
     (p = t[r]) && (a = (i ? p(e, s, a) : p(a)) || a);
   return i && a && Wt(e, s, a), a;
 };
-const q = {
+const W = {
   dither: ["floyd_steinberg", "atkinson", "jarvis_judice_ninke", "sierra2", "bayer", "none"],
   fit: ["cover", "contain", "stretch"],
   background: ["white", "black"],
@@ -747,8 +747,8 @@ let T = class extends M {
     return this.withPalette && t.push("palette"), t.push("dither", "serpentine", "fit", "background", ...Ut), t;
   }
   label(t, e) {
-    const s = m(this.hass);
-    return typeof e == "boolean" ? s(e ? "on" : "off") : typeof e == "number" ? e.toFixed(2) : q[t] ? s(`${t}_${e}`) : String(e);
+    const s = g(this.hass);
+    return typeof e == "boolean" ? s(e ? "on" : "off") : typeof e == "number" ? e.toFixed(2) : W[t] ? s(`${t}_${e}`) : String(e);
   }
   emit(t) {
     this.dispatchEvent(new CustomEvent("value-changed", { detail: { value: t }, bubbles: !0, composed: !0 }));
@@ -761,14 +761,14 @@ let T = class extends M {
     this.emit({ ...this.value, [t]: e });
   }
   control(t, e, s) {
-    const i = m(this.hass);
-    if (q[t])
+    const i = g(this.hass);
+    if (W[t])
       return o`<select
         .value=${String(e)}
         ?disabled=${s}
         @change=${(r) => this.setField(t, r.target.value)}
       >
-        ${q[t].map(
+        ${W[t].map(
         (r) => o`<option value=${r} ?selected=${r === e}>${i(`${t}_${r}`)}</option>`
       )}
       </select>`;
@@ -796,7 +796,7 @@ let T = class extends M {
   }
   render() {
     if (!this.inherited) return n;
-    const t = m(this.hass);
+    const t = g(this.hass);
     return o`${this.fields.map((e) => {
       const s = this.value[e] !== void 0, i = s ? this.value[e] : this.inherited[e];
       return o`<div class="row">
@@ -881,7 +881,7 @@ z([
 T = z([
   C("pp-render-settings")
 ], T);
-function R(t, ...e) {
+function U(t, ...e) {
   const s = { ...t };
   for (const i of e)
     for (const [a, r] of Object.entries(i ?? {}))
@@ -910,7 +910,7 @@ let f = class extends M {
     t.has("photo") && this.photo && (this.draft = structuredClone(this.photo.overrides ?? {}), this.name = this.photo.name, this.enabled = this.photo.enabled, this.lockAspect = !0, this.schedulePreview(0));
   }
   get resolved() {
-    return R(this.inherited, this.draft);
+    return U(this.inherited, this.draft);
   }
   get rotation() {
     return this.draft.rotation ?? 0;
@@ -973,7 +973,7 @@ let f = class extends M {
     }
   }
   async deleteClicked() {
-    const t = m(this.hass);
+    const t = g(this.hass);
     if (confirm(t("delete_confirm", { name: this.photo.name })))
       try {
         await _t(this.hass, this.frame.entry_id, this.photo.photo_id), this.close();
@@ -983,7 +983,7 @@ let f = class extends M {
   }
   async showNext() {
     try {
-      await Ot(this.hass, this.frame.entry_id, this.photo.photo_id), this.notice = m(this.hass)("pending");
+      await Ot(this.hass, this.frame.entry_id, this.photo.photo_id), this.notice = g(this.hass)("pending");
     } catch (t) {
       this.error = u(t);
     }
@@ -992,7 +992,7 @@ let f = class extends M {
     const e = t.target, s = this.frames.find((i) => i.entry_id === e.value);
     if (e.value = "", !!s)
       try {
-        await Pt(this.hass, this.frame.entry_id, this.photo.photo_id, s.entry_id), this.notice = m(this.hass)("copied", { frame: s.title });
+        await Pt(this.hass, this.frame.entry_id, this.photo.photo_id, s.entry_id), this.notice = g(this.hass)("copied", { frame: s.title });
       } catch (i) {
         this.error = u(i);
       }
@@ -1002,7 +1002,7 @@ let f = class extends M {
   }
   render() {
     if (!this.photo) return n;
-    const t = m(this.hass), e = this.resolved.fit === "cover", s = this.frames.filter((r) => r.entry_id !== this.frame.entry_id), i = {};
+    const t = g(this.hass), e = this.resolved.fit === "cover", s = this.frames.filter((r) => r.entry_id !== this.frame.entry_id), i = {};
     for (const r of H)
       this.draft[r] !== void 0 && (i[r] = this.draft[r]);
     const a = `aspect-ratio:${this.frame.canvas.width}/${this.frame.canvas.height}`;
@@ -1093,7 +1093,7 @@ let f = class extends M {
           <button class="btn danger" @click=${this.deleteClicked}>${c(ut)} ${t("delete")}</button>
           <button class="btn" @click=${this.showNext}>${c(ft)} ${t("show_next")}</button>
           ${s.length ? o`<label class="copy">
-                ${c(mt)}
+                ${c(gt)}
                 <select @change=${this.copyTo} aria-label=${t("copy_to")}>
                   <option value="">${t("copy_to")}</option>
                   ${s.map((r) => o`<option value=${r.entry_id}>${r.title}</option>`)}
@@ -1292,7 +1292,7 @@ var Bt = Object.defineProperty, Gt = Object.getOwnPropertyDescriptor, h = (t, e,
     (p = t[r]) && (a = (i ? p(e, s, a) : p(a)) || a);
   return i && a && Bt(e, s, a), a;
 };
-const Xt = 400, Kt = ["portrait", "landscape", "portrait_flipped", "landscape_flipped"], U = class U extends M {
+const Xt = 400, Kt = ["portrait", "landscape", "portrait_flipped", "landscape_flipped"], L = class L extends M {
   constructor() {
     super(...arguments), this.preview = null, this.previewAspect = "5 / 3", this.rendering = !1, this.error = null, this.status = null, this.seq = 0;
   }
@@ -1320,7 +1320,7 @@ const Xt = 400, Kt = ["portrait", "landscape", "portrait_flipped", "landscape_fl
     }
   }
   renderPreviewPane(e) {
-    const s = m(this.hass);
+    const s = g(this.hass);
     return o`<div class="preview-pane">
       <div class="pane-head">
         <span class="h">${s("preview")}</span>
@@ -1334,7 +1334,7 @@ const Xt = 400, Kt = ["portrait", "landscape", "portrait_flipped", "landscape_fl
     </div>`;
   }
 };
-U.styles = [
+L.styles = [
   A,
   E`
       :host {
@@ -1402,7 +1402,7 @@ U.styles = [
       }
     `
 ];
-let x = U;
+let x = L;
 h([
   d({ attribute: !1 })
 ], x.prototype, "hass", 2);
@@ -1451,7 +1451,7 @@ let O = class extends x {
   }
   render() {
     if (!this.defaults) return n;
-    const t = m(this.hass), e = R(this.defaults.builtin, this.defaults.defaults), s = this.photos.length ? o`<label class="field">
+    const t = g(this.hass), e = U(this.defaults.builtin, this.defaults.defaults), s = this.photos.length ? o`<label class="field">
           <span class="muted">${t("sample_photo")}</span>
           <select
             @change=${(i) => {
@@ -1540,7 +1540,7 @@ let S = class extends x {
     t.has("defaults") && this.defaults && !t.get("defaults") && (this.draft = structuredClone(this.defaults.defaults ?? {})), t.has("frames") && !this.sampleFrameId && this.frames.length && this.pickFrame(this.frames.find((e) => e.photo_count)?.entry_id ?? this.frames[0].entry_id);
   }
   async pickFrame(t) {
-    this.sampleFrameId = t, this.samplePhotos = await W(this.hass, t), this.samplePhotoId = this.samplePhotos[0]?.photo_id ?? null, this.schedulePreview(0);
+    this.sampleFrameId = t, this.samplePhotos = await R(this.hass, t), this.samplePhotoId = this.samplePhotos[0]?.photo_id ?? null, this.schedulePreview(0);
   }
   get dirty() {
     return JSON.stringify(this.draft) !== JSON.stringify(this.defaults?.defaults ?? {});
@@ -1560,7 +1560,7 @@ let S = class extends x {
   }
   render() {
     if (!this.defaults) return n;
-    const t = m(this.hass), e = o`<div class="sample">
+    const t = g(this.hass), e = o`<div class="sample">
       <select
         aria-label=${t("frames")}
         @change=${(s) => this.pickFrame(s.target.value)}
@@ -1687,7 +1687,7 @@ let $ = class extends M {
     const t = new Set(this.dirtyEntries);
     this.dirtyEntries.clear();
     try {
-      this.frames = await G(this.hass), this.selected && this.selected !== k && (this.frames.some((e) => e.entry_id === this.selected) ? (t.has(this.selected) || t.has(null)) && (this.photos = await W(this.hass, this.selected)) : await this.select(this.frames[0]?.entry_id ?? k));
+      this.frames = await G(this.hass), this.selected && this.selected !== k && (this.frames.some((e) => e.entry_id === this.selected) ? (t.has(this.selected) || t.has(null)) && (this.photos = await R(this.hass, this.selected)) : await this.select(this.frames[0]?.entry_id ?? k));
     } catch (e) {
       this.error = u(e);
     }
@@ -1698,7 +1698,7 @@ let $ = class extends M {
       return;
     }
     try {
-      this.photos = await W(this.hass, t);
+      this.photos = await R(this.hass, t);
     } catch (e) {
       this.error = u(e);
     }
@@ -1718,7 +1718,7 @@ let $ = class extends M {
     this.dispatchEvent(new CustomEvent("hass-toggle-menu", { bubbles: !0, composed: !0 }));
   }
   renderNav() {
-    const t = m(this.hass);
+    const t = g(this.hass);
     return this.narrow ? o`<div class="nav-narrow">
         <select @change=${(e) => this.select(e.target.value)}>
           ${(this.frames ?? []).map(
@@ -1733,10 +1733,10 @@ let $ = class extends M {
           class="nav-item ${e.entry_id === this.selected ? "active" : ""}"
           @click=${() => this.select(e.entry_id)}
         >
-          ${c(gt)}
+          ${c(mt)}
           <span class="nav-text">
             <span>${e.title}</span>
-            <span class="muted small">${B(e.last_seen, this.hass, t("never"))}</span>
+            <span class="muted small">${N(e.last_seen, this.hass, t("never"))}</span>
           </span>
           ${e.pending.length ? o`<span class="dot" title=${t("pending")}></span>` : n}
         </button>`
@@ -1751,7 +1751,7 @@ let $ = class extends M {
     </nav>`;
   }
   renderStatus(t) {
-    const e = m(this.hass), s = this.previewUrl(t, "preview_showing"), i = this.previewUrl(t, "preview_up_next"), a = t.up_next.kind === "override" ? e("override") : t.up_next.kind === "placeholder" ? e("placeholder") : t.up_next.name ?? "–";
+    const e = g(this.hass), s = this.previewUrl(t, "preview_showing"), i = this.previewUrl(t, "preview_up_next"), a = t.up_next.kind === "override" ? e("override") : t.up_next.kind === "placeholder" ? e("placeholder") : t.up_next.name ?? "–";
     return o`<div class="status card">
       <figure>
         <div class="pic" style="aspect-ratio:${t.canvas.width}/${t.canvas.height}">
@@ -1769,12 +1769,16 @@ let $ = class extends M {
         <h1>${t.title}</h1>
         <div class="muted">${t.panel.model} · ${t.client_id}</div>
         <div>
-          ${e("last_seen")}: <strong>${B(t.last_seen, this.hass, e("never"))}</strong>
+          ${e("last_seen")}: <strong>${N(t.last_seen, this.hass, e("never"))}</strong>
         </div>
         <div class="chips">
           ${t.pending.length ? o`<span class="chip warn">
                 ${e("pending")}: ${t.pending.map((r) => e(`pending_${r}`)).join(", ")}
               </span>` : o`<span class="chip ok">${e("in_sync")}</span>`}
+          ${t.needs_reprovision ? o`<span class="chip warn">${e("needs_urls")}</span>` : t.overdue ? o`<span class="chip warn">${e("overdue")}</span>` : n}
+          ${t.ble?.voltage !== void 0 ? o`<span class="chip" title=${e("read_ago", { when: N(t.ble.read_at, this.hass, e("never")) })}>
+                ${e("battery", { volts: (t.ble.voltage / 1e3).toFixed(2) })}${t.ble.charging ? ` · ${e("charging")}` : t.ble.usb ? ` · ${e("usb")}` : ""}
+              </span>` : n}
           ${t.override ? o`<span class="chip">
                 ${e("override")}: ${t.override.name} ·
                 ${t.override.wakes_remaining === null ? e("until_cleared") : e("wakes_left", { n: t.override.wakes_remaining })}
@@ -1793,7 +1797,7 @@ let $ = class extends M {
     </div>`;
   }
   renderMain() {
-    const t = m(this.hass);
+    const t = g(this.hass);
     if (this.frames === null) return o`<p class="muted">${t("loading")}</p>`;
     if (this.selected === k)
       return o`<pp-global-settings
@@ -1832,13 +1836,13 @@ let $ = class extends M {
             .frame=${e}
             .frames=${this.frames}
             .photo=${this.editing}
-            .inherited=${R(this.defaults.builtin, this.defaults.defaults, e.render_defaults)}
+            .inherited=${U(this.defaults.builtin, this.defaults.defaults, e.render_defaults)}
             @closed=${() => this.editing = null}
           ></pp-photo-editor>` : n}
     ` : o`<p class="muted empty">${t("no_frames")}</p>`;
   }
   render() {
-    const t = m(this.hass);
+    const t = g(this.hass);
     return o`
       <header class="toolbar">
         ${this.narrow ? o`<button class="icon-btn" title="Menu" @click=${this.toggleMenu}>${c($t)}</button>` : n}

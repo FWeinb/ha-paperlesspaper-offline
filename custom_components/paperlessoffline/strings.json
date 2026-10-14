@@ -7,7 +7,11 @@
         "description": "Enter the ID shown on the frame's screen (for example `epd7-3485188f1dc8`).",
         "data": {
           "client_id": "Frame ID",
-          "name": "Name"
+          "name": "Name",
+          "url_host": "Address the frame uses"
+        },
+        "data_description": {
+          "url_host": "Which of Home Assistant's addresses goes into the frame's URLs. Automatic uses Home Assistant's local network URL. Pick another IP if Home Assistant is reachable on several networks, or type an IP or hostname the frame can resolve (no .local names)."
         }
       },
       "urls": {
@@ -19,13 +23,30 @@
         "description": "Home Assistant will configure the frame over Bluetooth to fetch its pictures from `{base_url}`. Keep the frame in setup mode (press its button once).",
         "data": {
           "name": "Name",
-          "provision": "Configure the frame over Bluetooth now"
+          "provision": "Configure the frame over Bluetooth now",
+          "url_host": "Address the frame uses"
+        },
+        "sections": {
+          "wifi": {
+            "name": "WiFi (optional)",
+            "description": "Set the frame's WiFi network, e.g. for a new frame. Leave empty to keep its current network.",
+            "data": {
+              "wifi_ssid": "Network name (SSID)",
+              "wifi_password": "Password"
+            }
+          }
+        },
+        "data_description": {
+          "url_host": "Which of Home Assistant's addresses goes into the frame's URLs. Automatic uses Home Assistant's local network URL. Pick another IP if Home Assistant is reachable on several networks, or type an IP or hostname the frame can resolve (no .local names)."
         }
       }
     },
     "error": {
       "invalid_client_id": "This doesn't look like a frame ID (epd7-… or epd13- followed by 12 hex digits).",
-      "provision_failed": "Couldn't configure the frame over Bluetooth. Press its button once and try again, or untick the option to set it up manually."
+      "provision_failed": "Couldn't configure the frame over Bluetooth. Press its button once and try again, or untick the option to set it up manually.",
+      "wifi_failed": "The frame couldn't join that WiFi network. Check the name and password, press the frame's button once, and try again.",
+      "invalid_host": "Enter an IP address or hostname, without http:// or a port.",
+      "unusable_host": "The frame can't use this address (loopback, localhost or a .local name). Choose a LAN IP address."
     },
     "abort": {
       "already_configured": "This frame is already set up.",
@@ -42,12 +63,16 @@
           "interval": "Refresh interval",
           "order": "Slideshow order",
           "mounting": "Mounting",
-          "regenerate_token": "Generate new frame URLs"
+          "regenerate_token": "Generate new frame URLs",
+          "ble_auto": "Update over Bluetooth in setup mode",
+          "url_host": "Address the frame uses"
         },
         "data_description": {
           "interval": "How long the frame sleeps between updates (minutes). Applied at its next wake.",
           "mounting": "How the frame hangs on the wall.",
-          "regenerate_token": "The old URLs stop working immediately; the frame must be set up again via Bluetooth or the web UI."
+          "regenerate_token": "The old URLs stop working immediately. Afterwards, press the frame's button once and Home Assistant updates it over Bluetooth (or use the repair notice).",
+          "ble_auto": "When you press the frame's button once, Home Assistant connects briefly to read battery and charging status and to send pending changes. Turn off if you use the official web UI at the same time.",
+          "url_host": "Which of Home Assistant's addresses goes into the frame's URLs. Automatic uses Home Assistant's local network URL. Pick another IP if Home Assistant is reachable on several networks, or type an IP or hostname the frame can resolve (no .local names). After changing it, press the frame's button once so Home Assistant can give it the new URLs."
         },
         "sections": {
           "quiet_hours": {
@@ -92,7 +117,9 @@
       }
     },
     "error": {
-      "auth_incomplete": "Enter both a username and a password."
+      "auth_incomplete": "Enter both a username and a password.",
+      "invalid_host": "Enter an IP address or hostname, without http:// or a port.",
+      "unusable_host": "The frame can't use this address (loopback, localhost or a .local name). Choose a LAN IP address."
     }
   },
   "selector": {
@@ -149,6 +176,63 @@
         "landscape_flipped": "Landscape (upside down)",
         "portrait_flipped": "Portrait (upside down)"
       }
+    },
+    "reprovision_method": {
+      "options": {
+        "bluetooth": "Over Bluetooth (press the frame's button once first)",
+        "manual": "I've entered the URLs in the web UI myself"
+      }
+    },
+    "url_host": {
+      "options": {
+        "auto": "Automatic"
+      }
+    }
+  },
+  "issues": {
+    "offline": {
+      "title": "{name} hasn't checked in",
+      "description": "The frame {name} last contacted Home Assistant at {last_seen} and has missed several updates. Check that it has power (or battery) and WiFi, and that it can reach Home Assistant. Pressing its button twice forces an update. This notice disappears by itself once the frame checks in again."
+    },
+    "reprovision_token": {
+      "title": "{name} needs its new URLs",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Update {name}'s URLs",
+            "description": "To update over Bluetooth, press the button on {name} once (it then stays in setup mode for about 30 seconds) and select Submit. A Bluetooth adapter or proxy must be near the frame.\n\nOr enter these in the official web UI:\n\n**Settings URL:** `{settings_url}`\n\n**Image URL:** `{image_url}`",
+            "data": {
+              "method": "How"
+            }
+          }
+        },
+        "error": {
+          "not_found": "The frame wasn't found over Bluetooth. Press its button once and try again.",
+          "ble_failed": "Couldn't update the frame over Bluetooth. Press its button once and try again.",
+          "no_bluetooth": "Bluetooth isn't set up in Home Assistant.",
+          "no_url": "Home Assistant has no local network URL. Set one under Settings → System → Network."
+        }
+      }
+    },
+    "reprovision_url": {
+      "title": "{name} can't reach Home Assistant",
+      "fix_flow": {
+        "step": {
+          "init": {
+            "title": "Update {name}'s URLs",
+            "description": "To update over Bluetooth, press the button on {name} once (it then stays in setup mode for about 30 seconds) and select Submit. A Bluetooth adapter or proxy must be near the frame.\n\nOr enter these in the official web UI:\n\n**Settings URL:** `{settings_url}`\n\n**Image URL:** `{image_url}`",
+            "data": {
+              "method": "How"
+            }
+          }
+        },
+        "error": {
+          "not_found": "The frame wasn't found over Bluetooth. Press its button once and try again.",
+          "ble_failed": "Couldn't update the frame over Bluetooth. Press its button once and try again.",
+          "no_bluetooth": "Bluetooth isn't set up in Home Assistant.",
+          "no_url": "Home Assistant has no local network URL. Set one under Settings → System → Network."
+        }
+      }
     }
   },
   "device_automation": {
@@ -160,6 +244,12 @@
     "binary_sensor": {
       "in_sync": {
         "name": "In sync"
+      },
+      "charging": {
+        "name": "Charging"
+      },
+      "usb_power": {
+        "name": "USB power"
       }
     },
     "button": {
@@ -204,6 +294,12 @@
       },
       "photos": {
         "name": "Photos in rotation"
+      },
+      "battery_voltage": {
+        "name": "Battery voltage"
+      },
+      "wifi_signal": {
+        "name": "WiFi signal"
       }
     },
     "switch": {

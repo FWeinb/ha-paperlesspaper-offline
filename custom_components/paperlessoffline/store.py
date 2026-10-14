@@ -62,6 +62,9 @@ class FrameState:
     fetched_device_hash: str | None = None
     last_settings_fetch: float | None = None
     last_timeout: int | None = None
+    ble_status: dict[str, Any] = field(default_factory=dict)
+    ble_read_at: float | None = None
+    ble_error: str | None = None
     telemetry: dict[str, str] = field(default_factory=dict)
 
     @classmethod

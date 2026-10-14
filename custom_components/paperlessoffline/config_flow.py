@@ -13,26 +13,29 @@ from homeassistant.config_entries import (
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import section
 from homeassistant.helpers import selector
-from homeassistant.helpers.network import NoURLAvailableError, get_url
 import probatio as vol
 
-from .ble import FrameBleError, async_provision
+from .ble import FrameBleError, WifiConnectError, async_provision
 from .const import (
     CLIENT_ID_RE,
     CONF_AUTH_ENABLED,
     CONF_AUTH_PASSWORD,
     CONF_AUTH_USER,
+    CONF_BLE_AUTO,
     CONF_CLIENT_ID,
     CONF_INTERVAL,
     CONF_MOUNTING,
     CONF_ORDER,
     CONF_PANEL,
+    CONF_PROVISIONED_BASE,
+    CONF_PROVISIONED_TOKEN,
     CONF_QUIET_ENABLED,
     CONF_QUIET_END,
     CONF_QUIET_START,
     CONF_QUIET_SUPPRESS_MOTION,
     CONF_RENDER_DEFAULTS,
     CONF_TOKEN,
+    CONF_URL_HOST,
     DEFAULT_INTERVAL,
     DEFAULT_QUIET_END,
     DEFAULT_QUIET_START,
@@ -44,15 +47,26 @@ from .const import (
     PALETTES,
     PANELS,
 )
-from .frame import IMAGE_PATH, SETTINGS_PATH, new_token
+from .frame import new_token
 from .render import DITHER_METHODS, FIT_MODES, MOUNTINGS
 from .render.pipeline import BACKGROUNDS
+from .urls import (
+    URL_HOST_AUTO,
+    async_frame_base_url,
+    async_ha_addresses,
+    frame_can_use_host,
+    frame_urls,
+    valid_host,
+)
 
 if TYPE_CHECKING:
     from homeassistant.components.bluetooth import BluetoothServiceInfoBleak
 
 CONF_NAME = "name"
 CONF_PROVISION = "provision"
+CONF_WIFI_SSID = "wifi_ssid"
+CONF_WIFI_PASSWORD = "wifi_password"
+SECTION_WIFI = "wifi"
 CONF_REGENERATE = "regenerate_token"
 SECTION_QUIET = "quiet_hours"
 SECTION_AUTH = "authentication"
@@ -70,16 +84,37 @@ def _select(options: list[str] | tuple[str, ...], key: str) -> selector.SelectSe
     )
 
 
-def _base_url(hass: Any) -> str:
-    return get_url(hass, allow_external=False, allow_cloud=False, prefer_external=False)
+async def _host_selector(hass: Any, current: str | None) -> selector.SelectSelector:
+    """Choose "automatic", one of HA's IPv4 addresses, or type a host."""
+    options = [URL_HOST_AUTO, *await async_ha_addresses(hass)]
+    if current and current not in options:
+        options.append(current)
+    return selector.SelectSelector(
+        selector.SelectSelectorConfig(
+            options=options,
+            custom_value=True,
+            translation_key=CONF_URL_HOST,
+            mode=selector.SelectSelectorMode.DROPDOWN,
+        )
+    )
 
 
-def frame_urls(base_url: str, token: str) -> dict[str, str]:
-    """Image and settings URLs for a token."""
-    return {
-        "image_url": base_url + IMAGE_PATH.format(token=token),
-        "settings_url": base_url + SETTINGS_PATH.format(token=token),
-    }
+def _host_error(host: str | None) -> str | None:
+    """Validate a chosen URL host; returns an error key."""
+    host = (host or "").strip()
+    if not host or host == URL_HOST_AUTO:
+        return None
+    if not valid_host(host):
+        return "invalid_host"
+    if not frame_can_use_host(host):
+        return "unusable_host"
+    return None
+
+
+def _host_value(host: str | None) -> str | None:
+    """Normalise a chosen host for storage (None = automatic)."""
+    host = (host or "").strip()
+    return None if not host or host == URL_HOST_AUTO else host
 
 
 def initial_device_settings(urls: dict[str, str]) -> dict[str, object]:
@@ -97,6 +132,7 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
     """Add a frame."""
 
     VERSION = 1
+    MINOR_VERSION = 2
 
     def __init__(self) -> None:
         """Initialise."""
@@ -104,6 +140,8 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
         self._address: str | None = None
         self._name: str | None = None
         self._token = new_token()
+        self._base_url: str | None = None
+        self._url_host: str | None = None
 
     @staticmethod
     @callback
@@ -117,6 +155,9 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_CLIENT_ID: self._client_id,
             CONF_PANEL: self._client_id.split("-", 1)[0],
             CONF_TOKEN: self._token,
+            # The frame is given (or shown) these, so remember them for repairs.
+            CONF_PROVISIONED_TOKEN: self._token,
+            CONF_PROVISIONED_BASE: self._base_url,
         }
 
     def _default_options(self) -> dict[str, Any]:
@@ -126,6 +167,7 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
             CONF_INTERVAL: DEFAULT_INTERVAL,
             CONF_ORDER: ORDER_SEQUENTIAL,
             CONF_MOUNTING: panel.default_mounting,
+            CONF_URL_HOST: self._url_host or URL_HOST_AUTO,
         }
 
     def _create(self) -> ConfigFlowResult:
@@ -142,13 +184,15 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
             client_id = user_input[CONF_CLIENT_ID].strip().lower()
             if not CLIENT_ID_RE.match(client_id):
                 errors[CONF_CLIENT_ID] = "invalid_client_id"
+            elif host_error := _host_error(user_input.get(CONF_URL_HOST)):
+                errors[CONF_URL_HOST] = host_error
             else:
                 await self.async_set_unique_id(client_id)
                 self._abort_if_unique_id_configured()
-                try:
-                    _base_url(self.hass)
-                except NoURLAvailableError:
+                self._url_host = _host_value(user_input.get(CONF_URL_HOST))
+                if (base_url := await async_frame_base_url(self.hass, self._url_host)) is None:
                     return self.async_abort(reason="no_internal_url")
+                self._base_url = base_url
                 self._client_id = client_id
                 self._name = user_input.get(CONF_NAME) or client_id
                 return await self.async_step_urls()
@@ -159,6 +203,9 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
                     {
                         vol.Required(CONF_CLIENT_ID): str,
                         vol.Optional(CONF_NAME): str,
+                        vol.Required(CONF_URL_HOST, default=URL_HOST_AUTO): await _host_selector(
+                            self.hass, None
+                        ),
                     }
                 ),
                 user_input,
@@ -170,9 +217,10 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
         """Show the URLs to enter in the official web UI."""
         if user_input is not None:
             return self._create()
+        assert self._base_url is not None
         return self.async_show_form(
             step_id="urls",
-            description_placeholders=frame_urls(_base_url(self.hass), self._token),
+            description_placeholders=frame_urls(self._base_url, self._token),
         )
 
     async def async_step_bluetooth(
@@ -192,38 +240,71 @@ class PaperlessConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_bluetooth_confirm(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Name the frame and write the URLs to it."""
+        """Name the frame, optionally set its WiFi, and write the URLs to it."""
         assert self._client_id is not None
         errors: dict[str, str] = {}
-        try:
-            base_url = _base_url(self.hass)
-        except NoURLAvailableError:
+        if user_input is not None and (host_error := _host_error(user_input.get(CONF_URL_HOST))):
+            errors[CONF_URL_HOST] = host_error
+            user_input = {**user_input, "_invalid": True}
+        if user_input is not None and "_invalid" not in user_input:
+            self._url_host = _host_value(user_input.get(CONF_URL_HOST))
+        if (base_url := await async_frame_base_url(self.hass, self._url_host)) is None:
             return self.async_abort(reason="no_internal_url")
-        if user_input is not None:
+        self._base_url = base_url
+        if user_input is not None and "_invalid" not in user_input:
             self._name = user_input.get(CONF_NAME) or self._client_id
             if not user_input.get(CONF_PROVISION, True):
                 return await self.async_step_urls()
             assert self._address is not None
+            wifi_input = user_input.get(SECTION_WIFI) or {}
+            ssid = (wifi_input.get(CONF_WIFI_SSID) or "").strip()
+            wifi = (ssid, wifi_input.get(CONF_WIFI_PASSWORD) or "") if ssid else None
             try:
                 await async_provision(
                     self.hass,
                     self._address,
                     initial_device_settings(frame_urls(base_url, self._token)),
+                    wifi,
                 )
+            except WifiConnectError:
+                errors["base"] = "wifi_failed"
             except FrameBleError:
                 errors["base"] = "provision_failed"
             else:
                 return self._create()
+        suggested = dict(user_input or {CONF_NAME: self._client_id})
+        suggested.pop("_invalid", None)
+        if SECTION_WIFI in suggested:
+            # Never echo the password back into the form.
+            suggested[SECTION_WIFI] = {
+                k: v for k, v in suggested[SECTION_WIFI].items() if k != CONF_WIFI_PASSWORD
+            }
         return self.async_show_form(
             step_id="bluetooth_confirm",
             data_schema=self.add_suggested_values_to_schema(
                 vol.Schema(
                     {
                         vol.Optional(CONF_NAME): str,
+                        vol.Required(CONF_URL_HOST, default=URL_HOST_AUTO): await _host_selector(
+                            self.hass, self._url_host
+                        ),
                         vol.Required(CONF_PROVISION, default=True): bool,
+                        vol.Required(SECTION_WIFI): section(
+                            vol.Schema(
+                                {
+                                    vol.Optional(CONF_WIFI_SSID): str,
+                                    vol.Optional(CONF_WIFI_PASSWORD): selector.TextSelector(
+                                        selector.TextSelectorConfig(
+                                            type=selector.TextSelectorType.PASSWORD
+                                        )
+                                    ),
+                                }
+                            ),
+                            {"collapsed": True},
+                        ),
                     }
                 ),
-                user_input or {CONF_NAME: self._client_id},
+                suggested,
             ),
             description_placeholders={"client_id": self._client_id, "base_url": base_url},
             errors=errors,
@@ -286,6 +367,8 @@ class PaperlessOptionsFlow(OptionsFlow):
                 auth.get(CONF_AUTH_USER) and auth.get(CONF_AUTH_PASSWORD)
             ):
                 errors["base"] = "auth_incomplete"
+            if host_error := _host_error(user_input.get(CONF_URL_HOST)):
+                errors[CONF_URL_HOST] = host_error
             if not errors:
                 if user_input.get(CONF_REGENERATE):
                     self.hass.config_entries.async_update_entry(
@@ -304,6 +387,8 @@ class PaperlessOptionsFlow(OptionsFlow):
                     CONF_AUTH_USER: auth.get(CONF_AUTH_USER, ""),
                     CONF_AUTH_PASSWORD: auth.get(CONF_AUTH_PASSWORD, ""),
                     CONF_RENDER_DEFAULTS: _render_from_input(user_input[SECTION_RENDER]),
+                    CONF_BLE_AUTO: user_input[CONF_BLE_AUTO],
+                    CONF_URL_HOST: _host_value(user_input.get(CONF_URL_HOST)) or URL_HOST_AUTO,
                 }
                 return self.async_create_entry(data=new)
         else:
@@ -373,13 +458,20 @@ class PaperlessOptionsFlow(OptionsFlow):
                     ),
                     {"collapsed": True},
                 ),
+                vol.Required(
+                    CONF_URL_HOST, default=opts.get(CONF_URL_HOST) or URL_HOST_AUTO
+                ): await _host_selector(self.hass, opts.get(CONF_URL_HOST)),
+                vol.Required(CONF_BLE_AUTO, default=opts.get(CONF_BLE_AUTO, True)): bool,
                 vol.Required(CONF_REGENERATE, default=False): bool,
             }
         )
-        try:
-            urls = frame_urls(_base_url(self.hass), entry.data[CONF_TOKEN])
-        except NoURLAvailableError:
-            urls = {"image_url": "-", "settings_url": "-"}
+        current_host = _host_value(opts.get(CONF_URL_HOST))
+        base_url = await async_frame_base_url(self.hass, current_host)
+        urls = (
+            frame_urls(base_url, entry.data[CONF_TOKEN])
+            if base_url
+            else {"image_url": "-", "settings_url": "-"}
+        )
         return self.async_show_form(
             step_id="init", data_schema=schema, errors=errors, description_placeholders=urls
         )

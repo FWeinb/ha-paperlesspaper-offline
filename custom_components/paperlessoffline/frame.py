@@ -19,15 +19,19 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
+from yarl import URL
 
 from . import slideshow
+from .ble import FrameBleError, FrameSession
 from .cache import RenderCache, cache_key
 from .const import (
     ALLOWED_FORMATS,
+    BLE_COOLDOWN_SECONDS,
     CONF_AUTH_ENABLED,
     CONF_AUTH_PASSWORD,
     CONF_AUTH_USER,
     CONF_AUTO_ROTATION,
+    CONF_BLE_AUTO,
     CONF_CHARGER_MODE,
     CONF_CLIENT_ID,
     CONF_INTERVAL,
@@ -35,25 +39,31 @@ from .const import (
     CONF_MOUNTING,
     CONF_ORDER,
     CONF_PANEL,
+    CONF_PROVISIONED_BASE,
+    CONF_PROVISIONED_TOKEN,
     CONF_QUIET_ENABLED,
     CONF_QUIET_END,
     CONF_QUIET_START,
     CONF_QUIET_SUPPRESS_MOTION,
     CONF_RENDER_DEFAULTS,
     CONF_TOKEN,
+    CONF_URL_HOST,
     DEFAULT_INTERVAL,
     DEFAULT_QUIET_END,
     DEFAULT_QUIET_START,
     DOMAIN,
     EVENT_FRAME_WAKE,
+    IMAGE_PATH,
     MAX_UPLOAD_BYTES,
     ORDER_SEQUENTIAL,
     PANELS,
     SETTINGS_GRACE_SECONDS,
+    SETTINGS_PATH,
     STORAGE_DIR,
     WAKE_DEBOUNCE_SECONDS,
     PanelSpec,
 )
+from .issues import async_update_issues, reprovision_reason
 from .render import (
     Canvas,
     RenderOptions,
@@ -68,14 +78,13 @@ from .render import (
 from .schedule import parse_time, quiet_sleep
 from .settings import resolve
 from .store import FrameState, FrameStore, GlobalStore, Override, Photo
+from .urls import URL_HOST_AUTO, async_frame_base_url, frame_can_use_host, frame_urls
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
-IMAGE_PATH = "/api/paperlessoffline/{token}/image.bmp"
-SETTINGS_PATH = "/api/paperlessoffline/{token}/settings.json"
 MAX_TELEMETRY_KEYS = 16
 
 
@@ -114,6 +123,10 @@ class FrameManager:
         self._lock = asyncio.Lock()
         self._render_lock = asyncio.Lock()
         self._prerender_task: asyncio.Task[None] | None = None
+        self._ble_task: asyncio.Task[bool] | None = None
+        self._ble_last_attempt = 0.0
+        # HA's URL as the frame should use it; refreshed periodically.
+        self.base_url: str | None = None
 
     # ------------------------------------------------------------------ setup
 
@@ -121,6 +134,7 @@ class FrameManager:
         """Load state and prepare directories."""
         await self.store.async_load()
         await self.hass.async_add_executor_job(self._make_dirs)
+        self.base_url = await async_frame_base_url(self.hass, self.url_host)
 
     def _make_dirs(self) -> None:
         self.originals.mkdir(parents=True, exist_ok=True)
@@ -130,6 +144,8 @@ class FrameManager:
         """Flush state."""
         if self._prerender_task:
             self._prerender_task.cancel()
+        if self._ble_task:
+            self._ble_task.cancel()
         await self.store.async_save()
 
     # ------------------------------------------------------------ properties
@@ -347,10 +363,13 @@ class FrameManager:
             },
         )
 
-    async def async_handle_image_request(self, query: dict[str, str]) -> tuple[bytes, datetime]:
+    async def async_handle_image_request(
+        self, query: dict[str, str], origin: str | None = None
+    ) -> tuple[bytes, datetime]:
         """Return (bmp, last-modified) for the frame's image request."""
         async with self._lock:
             self._register_request(query, "image")
+            self._note_origin(origin)
             key, name = await self._async_current_render()
             bmp = await self.hass.async_add_executor_job(self.cache.read_bmp, key)
             if bmp is None:
@@ -423,11 +442,16 @@ class FrameManager:
         return data
 
     async def async_handle_settings_request(
-        self, query: dict[str, str], download_url: str, if_modified_since: str | None
+        self,
+        query: dict[str, str],
+        download_url: str,
+        if_modified_since: str | None,
+        origin: str | None = None,
     ) -> tuple[dict[str, Any] | None, datetime]:
         """Return (settings or None for 304, last-modified)."""
         async with self._lock:
             self._register_request(query, "settings")
+            self._note_origin(origin)
             payload = self.effective_settings(download_url, dt_util.utcnow())
             st = self.state
             digest = _hash(payload)
@@ -442,6 +466,109 @@ class FrameManager:
         if if_modified_since and if_modified_since.strip() == http_date(last_modified):
             return None, last_modified
         return payload, last_modified
+
+    # ------------------------------------------------- provisioning / repairs
+
+    @callback
+    def _note_origin(self, origin: str | None) -> None:
+        """A request with our token arrived: the frame has working URLs."""
+        host = URL(origin).host if origin else None
+        # Behind a local reverse proxy the origin can be loopback; don't record that.
+        self.mark_provisioned(origin if host and frame_can_use_host(host) else None)
+        self.async_update_issues()
+
+    @callback
+    def mark_provisioned(self, base_url: str | None) -> None:
+        """Record which base URL and token the frame is known to use."""
+        data = self.entry.data
+        new = {**data, CONF_PROVISIONED_TOKEN: self.token}
+        if base_url:
+            new[CONF_PROVISIONED_BASE] = base_url
+        if new != dict(data):
+            self.hass.config_entries.async_update_entry(self.entry, data=new)
+
+    @property
+    def url_host(self) -> str | None:
+        """Host chosen for the frame's URLs, or None for automatic."""
+        host = self.options.get(CONF_URL_HOST)
+        return None if not host or host == URL_HOST_AUTO else str(host)
+
+    async def async_refresh_base_url(self) -> None:
+        """Re-evaluate HA's local URL and the repair issues."""
+        self.base_url = await async_frame_base_url(self.hass, self.url_host)
+        self.async_update_issues()
+
+    @callback
+    def async_update_issues(self) -> None:
+        """Create or clear repair issues for this frame."""
+        async_update_issues(self.hass, self, self.base_url)
+
+    def needs_reprovision(self) -> bool:
+        """Whether the frame should be given new URLs."""
+        return reprovision_reason(self, self.base_url) is not None
+
+    def provision_settings(self, base_url: str) -> dict[str, Any]:
+        """Everything to write over BLE so the frame uses ``base_url``."""
+        urls = frame_urls(base_url, self.token)
+        data = self.effective_settings(urls["image_url"], dt_util.utcnow())
+        data["settingsUrl"] = urls["settings_url"]
+        return data
+
+    # ------------------------------------------------------------------ BLE
+
+    @callback
+    def async_ble_seen(self, address: str) -> None:
+        """The frame is advertising (setup mode): read status, push changes."""
+        if not self.options.get(CONF_BLE_AUTO, True):
+            return
+        if self._ble_task and not self._ble_task.done():
+            return
+        now = time.time()
+        if now - self._ble_last_attempt < BLE_COOLDOWN_SECONDS:
+            return
+        self._ble_last_attempt = now
+        self._ble_task = self.hass.async_create_background_task(
+            self.async_ble_sync(address), f"{DOMAIN} ble {self.client_id}"
+        )
+
+    async def async_ble_sync(
+        self, address: str, *, exit_setup: bool = False, force_provision: bool = False
+    ) -> bool:
+        """Connect, read status and write pending settings / new URLs.
+
+        Returns True if the frame now has HA's current settings.
+        """
+        st = self.state
+        reprovision = (force_provision or self.needs_reprovision()) and self.base_url is not None
+        pending = st.fetched_device_hash != self.device_settings_hash()
+        written = False
+        try:
+            async with FrameSession(self.hass, address) as session:
+                st.ble_status = await session.read_status()
+                st.ble_read_at = time.time()
+                if reprovision or pending:
+                    if reprovision and self.base_url:
+                        settings = self.provision_settings(self.base_url)
+                    else:
+                        settings = self.effective_settings(None, dt_util.utcnow())
+                    await session.write_settings(settings)
+                    await session.save()
+                    written = True
+                if exit_setup:
+                    await session.exit_setup()
+        except FrameBleError as err:
+            _LOGGER.debug("Bluetooth sync with %s failed: %s", self.client_id, err)
+            st.ble_error = str(err)
+            self._changed(prerender=False)
+            return False
+        st.ble_error = None
+        if written:
+            st.fetched_device_hash = self.device_settings_hash()
+            if reprovision:
+                self.mark_provisioned(self.base_url)
+        self._changed(prerender=False)
+        self.async_update_issues()
+        return True
 
     # ---------------------------------------------------------------- status
 

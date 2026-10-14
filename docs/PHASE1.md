@@ -14,7 +14,7 @@
 | M7 BLE discovery and provisioning | Done (mocked tests; untested with hardware) |
 | M8 Docs and release | README done; ready for `v0.1.0` |
 
-Tests: 74 passing. ruff and mypy are clean.
+Tests: 74 passing at the end of Phase 1 (98 after Phase 3). ruff and mypy are clean.
 
 The design is in [DESIGN.md](DESIGN.md).
 

@@ -103,6 +103,12 @@ const en = {
   back: "Back",
   manage: "Manage",
   photos_count: "{enabled} of {total} photos in rotation",
+  battery: "Battery {volts} V",
+  charging: "charging",
+  usb: "USB",
+  read_ago: "read {when}",
+  overdue: "Hasn't checked in",
+  needs_urls: "Needs new URLs – see Repairs",
 };
 
 type Key = keyof typeof en;
@@ -210,6 +216,12 @@ const de: Record<Key, string> = {
   back: "Zurück",
   manage: "Verwalten",
   photos_count: "{enabled} von {total} Fotos in der Rotation",
+  battery: "Akku {volts} V",
+  charging: "lädt",
+  usb: "USB",
+  read_ago: "gelesen {when}",
+  overdue: "Hat sich nicht gemeldet",
+  needs_urls: "Braucht neue URLs – siehe Reparaturen",
 };
 
 export type Localize = (key: Key, vars?: Record<string, string | number>) => string;

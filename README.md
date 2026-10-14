@@ -10,8 +10,8 @@ enhancement and dithering onto the six Spectra 6 colours) and serves the frame
 a ready-to-display image. You choose the dithering per photo, with a per-frame
 and a global default.
 
-> **Status:** Phases 1 (core) and 2 (sidebar panel and dashboard card) are
-> done. Phase 3 (Bluetooth extras: battery, WiFi onboarding, repairs) is next.
+> **Status:** all three planned phases are done: core, sidebar panel and
+> dashboard card, and Bluetooth extras (battery, WiFi onboarding, repairs).
 > See [docs/DESIGN.md](docs/DESIGN.md).
 
 ## How it works
@@ -51,8 +51,24 @@ what hasn't been picked up yet. Press the frame's button twice to force a wake.
    Bluetooth proxy) and offers to set it up.
 3. Confirm. Home Assistant writes its URLs to the frame.
 
-The frame's WiFi must already be configured; WiFi onboarding from Home
-Assistant is planned for Phase 3.
+For a new frame, open the **WiFi (optional)** section and enter your network.
+Home Assistant sets it first and checks that the frame really connects (the
+firmware only keeps credentials that work) before writing the URLs. The frame
+stays in setup mode for only about 30 seconds after the button press; if setup
+fails, press the button again and retry.
+
+Home Assistant's local URL must be reachable by the frame. If it is
+`localhost`, a loopback address (`127.0.0.1`) or a `*.local` name, Home
+Assistant gives the frame its LAN IP address instead: loopback would point at
+the frame itself, and the frame can't resolve mDNS names.
+
+**Address the frame uses.** If Home Assistant is reachable on several
+networks or IPs (e.g. a separate IoT VLAN), choose which one goes into the
+frame's URLs. You can pick it during setup and change it later in the frame's
+options. The list offers *Automatic* plus every IPv4 address of the Home
+Assistant host, and you can also type an IP or a hostname the frame can
+resolve. After changing it, press the frame's button once: Home Assistant
+gives the frame the new URLs over Bluetooth (or use the repair notice).
 
 **Manually.**
 
@@ -116,6 +132,34 @@ show_up_next: true
 title: Kitchen                # optional
 ```
 
+## Bluetooth while the frame is in setup mode
+
+The frame can only be reached over Bluetooth in setup mode, right after a
+**single** button press. Whenever Home Assistant sees a known frame
+advertising, it connects for a few seconds and:
+
+- reads **battery voltage, charging and USB power** (and WiFi signal);
+- sends **pending changes** immediately, instead of waiting for the next wake;
+- gives the frame **new URLs** if they changed (see *Repairs* below).
+
+So pressing the button once is also a way to refresh the battery reading or
+apply changes right away. This needs a Bluetooth adapter or an ESPHome
+Bluetooth proxy near the frame. Turn it off per frame in the options (*Update
+over Bluetooth in setup mode*) if you want to use the official web UI while
+the frame is in setup mode.
+
+## Repairs
+
+Home Assistant raises a repair notice (*Settings → System → Repairs*) when:
+
+- **a frame hasn't checked in.** It missed its expected wake and two more
+  intervals (quiet hours are taken into account). The notice clears itself
+  when the frame checks in again.
+- **a frame needs new URLs.** Either you generated new URLs in the options,
+  or Home Assistant's local URL changed while the frame is overdue. The fix
+  dialog updates the frame over Bluetooth (press its button once first), or
+  shows the URLs to enter in the web UI.
+
 ## Entities (per frame)
 
 | Entity | Purpose |
@@ -128,6 +172,8 @@ title: Kitchen                # optional
 | Switches | Motion wake-up, auto rotation, charger mode |
 | Sensors | Last seen, current photo, pending changes, photos in rotation |
 | Binary sensor *In sync* | Off while the frame still has changes to pick up |
+| Sensor *Battery voltage*, binary sensors *Charging* and *USB power* | Read over Bluetooth when the frame was last in setup mode (see `last_read`) |
+| Sensor *WiFi signal* | Same; disabled by default |
 
 There is also a **device trigger**, *Frame woke up*, and the
 `paperlessoffline_frame_wake` event, whose data includes the photo that was

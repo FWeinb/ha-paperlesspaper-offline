@@ -69,10 +69,8 @@ async def test_manual_flow_duplicate(hass: HomeAssistant, loaded_entry) -> None:
 async def test_manual_flow_no_internal_url(hass: HomeAssistant) -> None:
     hass.config.internal_url = None
     with patch(
-        "custom_components.paperlessoffline.config_flow.get_url",
-        side_effect=__import__(
-            "homeassistant.helpers.network", fromlist=["NoURLAvailableError"]
-        ).NoURLAvailableError,
+        "custom_components.paperlessoffline.config_flow.async_frame_base_url",
+        return_value=None,
     ):
         result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
         result = await hass.config_entries.flow.async_configure(
@@ -89,14 +87,15 @@ async def test_bluetooth_flow_provisions(hass: HomeAssistant, ble_info) -> None:
     with patch("custom_components.paperlessoffline.config_flow.async_provision") as provision:
         provision.side_effect = [FrameBleError("gone"), None]
         result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {"name": "Hall", "provision": True}
+            result["flow_id"], {"name": "Hall", "provision": True, "wifi": {}}
         )
         assert result["errors"] == {"base": "provision_failed"}
         result = await hass.config_entries.flow.async_configure(
-            result["flow_id"], {"name": "Hall", "provision": True}
+            result["flow_id"], {"name": "Hall", "provision": True, "wifi": {}}
         )
     assert result["type"] is FlowResultType.CREATE_ENTRY
-    address, settings = provision.call_args.args[1:]
+    address, settings, wifi = provision.call_args.args[1:]
+    assert wifi is None
     assert address == ble_info.address
     token = result["data"][CONF_TOKEN]
     assert settings["settingsUrl"] == (
@@ -110,7 +109,7 @@ async def test_bluetooth_flow_manual_fallback(hass: HomeAssistant, ble_info) -> 
         DOMAIN, context={"source": SOURCE_BLUETOOTH}, data=ble_info
     )
     result = await hass.config_entries.flow.async_configure(
-        result["flow_id"], {"name": "Hall", "provision": False}
+        result["flow_id"], {"name": "Hall", "provision": False, "wifi": {}}
     )
     assert result["step_id"] == "urls"
 
@@ -170,3 +169,40 @@ async def test_options_flow(hass: HomeAssistant, loaded_entry) -> None:
     from custom_components.paperlessoffline.data import DATA_KEY
 
     assert set(hass.data[DATA_KEY].tokens) == {loaded_entry.data[CONF_TOKEN]}
+
+
+async def test_bluetooth_flow_with_wifi(hass: HomeAssistant, ble_info) -> None:
+    from custom_components.paperlessoffline.ble import WifiConnectError
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_BLUETOOTH}, data=ble_info
+    )
+    with patch("custom_components.paperlessoffline.config_flow.async_provision") as provision:
+        provision.side_effect = [WifiConnectError("nope"), None]
+        form = {
+            "name": "Hall",
+            "provision": True,
+            "wifi": {"wifi_ssid": "Home", "wifi_password": "pw"},
+        }
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], form)
+        assert result["errors"] == {"base": "wifi_failed"}
+        result = await hass.config_entries.flow.async_configure(result["flow_id"], form)
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert provision.call_args.args[3] == ("Home", "pw")
+    assert result["data"]["provisioned_token"] == result["data"][CONF_TOKEN]
+    assert result["data"]["provisioned_base_url"] == "http://192.168.1.10:8123"
+
+
+async def test_manual_flow_with_url_host(hass: HomeAssistant) -> None:
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_CLIENT_ID: CLIENT_ID, "url_host": "localhost"}
+    )
+    assert result["errors"] == {"url_host": "unusable_host"}
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_CLIENT_ID: CLIENT_ID, "url_host": "10.0.0.7"}
+    )
+    assert result["description_placeholders"]["settings_url"].startswith("http://10.0.0.7:8123/")
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    assert result["options"]["url_host"] == "10.0.0.7"
+    assert result["data"]["provisioned_base_url"] == "http://10.0.0.7:8123"
