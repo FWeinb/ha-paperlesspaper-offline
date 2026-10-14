@@ -1,6 +1,6 @@
 [project]
 name = "ha-paperlessoffline"
-version = "0.3.0"
+version = "0.3.1"
 description = "Home Assistant integration for paperlesspaper frames running the offline firmware"
 requires-python = ">=3.13"
 readme = "README.md"
