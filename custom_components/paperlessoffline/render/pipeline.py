@@ -156,6 +156,11 @@ def finish(positions: np.ndarray, canvas: Canvas) -> RenderResult:
     return RenderResult(bmp=bmp, preview_png=buf.getvalue(), canvas=canvas)
 
 
+def render_preview(data: bytes, opts: RenderOptions, canvas: Canvas) -> bytes:
+    """Render only the preview PNG (no BMP). Blocking; run in an executor."""
+    return render(data, opts, canvas).preview_png
+
+
 def render(data: bytes, opts: RenderOptions, canvas: Canvas) -> RenderResult:
     """Render encoded image bytes for a canvas. Blocking; run in an executor."""
     background = BACKGROUNDS.get(opts.background, BACKGROUNDS["white"])
@@ -197,11 +202,13 @@ def validate_image(data: bytes) -> tuple[str, int, int]:
     return (img.format or "unknown", img.width, img.height)
 
 
-def make_thumbnail(source: Path, target: Path, size: int = 320) -> bytes:
-    """Create (or read) a cached JPEG thumbnail of an original."""
+def make_thumbnail(source: Path, target: Path, size: int = 320, rotation: int = 0) -> bytes:
+    """Create (or read) a cached JPEG of an original, optionally rotated clockwise."""
     if target.is_file() and target.stat().st_mtime >= source.stat().st_mtime:
         return target.read_bytes()
     img = to_rgb(load_image(source.read_bytes()), BACKGROUNDS["white"])
+    if rotation % 360:
+        img = img.rotate(-(rotation % 360), expand=True)
     img.thumbnail((size, size), Image.Resampling.LANCZOS)
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=85)

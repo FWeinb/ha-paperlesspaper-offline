@@ -195,7 +195,7 @@ e-paper photo frames running the
 
 ## 9. Phases
 
-1. **Core**
+1. **Core** (done, v0.1.0)
    - config flow (manual and BLE provisioning)
    - HTTP views
    - render and dither pipeline with BMP output
@@ -204,7 +204,7 @@ e-paper photo frames running the
    - entities, actions, events, device trigger, media source, diagnostics
    - tests and CI
    - an early real-device check of the image format and orientation
-2. **Panel and card.**
+2. **Panel and card** (done, v0.2.0; see §12).
 3. **BLE extras:** battery sensors, opportunistic push, WiFi onboarding,
    repairs.
 
@@ -324,3 +324,70 @@ from this result and then confirmed end to end with `tools/hw_spike.py --panel
 **13" frames have not been tested on hardware** (none available). Their buffer
 size comes from the firmware code and hardware run 1's log; the "landscape"
 rotation direction is assumed by symmetry with the 7".
+
+## 12. Implementation notes (Phase 2: panel and card)
+
+### Backend
+
+- **Websocket API** (`websocket.py`). Every command requires an admin.
+  - `paperlessoffline/frames`, `/photos`, `/subscribe`
+  - `/photo/update` (`overrides` replaces all of a photo's overrides),
+    `/photo/delete`, `/photo/reorder`, `/photo/copy`, `/photo/show`
+  - `/frame/skip`, `/frame/update` (order, mounting, interval and rendering
+    defaults, stored in the entry options)
+  - `/import` (from a media source)
+  - `/preview`: a dithered PNG rendered with *unsaved* photo, frame or global
+    settings; not cached
+  - `/defaults`, `/defaults/set`
+  - `subscribe` pushes `{entry_id}` whenever a frame changes, and when frames
+    are added or removed; the panel then refetches.
+- **Upload**: `POST /api/paperlessoffline/upload/{entry_id}` (multipart,
+  admins only, one or more `file` fields). Each file is validated like the
+  `add_photo` action; per-file errors are reported without failing the batch.
+- **Editor images**: the thumbnail view accepts `?size=320|1280&rotation=0..270`
+  and caches each variant. Crop coordinates are fractions of the *rotated*
+  image, so the editor shows the server-rotated version and crops map 1:1. The
+  focal point is relative to the crop box, exactly as the renderer applies it.
+  Image URLs in websocket responses are signed (12 h), because `<img>` tags
+  can't send an auth header.
+- **Registration** (`frontend.py`): the bundles are served from
+  `/paperlessoffline_static/`.
+  - The sidebar panel (`paperlessoffline-panel`, admin-only) is registered with
+    `panel_custom`.
+  - The card is auto-loaded via `frontend.add_extra_js_url`.
+  - A content hash of the bundles is used as the `?v=` cache buster.
+  - `frontend` and `panel_custom` are `after_dependencies`; the panel is
+    skipped when the frontend isn't loaded (e.g. in tests).
+
+### Frontend (`frontend/`)
+
+- Lit 3 + TypeScript, built by Vite in library mode into
+  `custom_components/paperlessoffline/frontend/`: two entry points (panel and
+  card) plus a shared Lit chunk, about 14 kB gzipped each.
+- The panel uses its own small components and native form controls styled with
+  Home Assistant's CSS variables, rather than HA's internal `ha-*` elements,
+  which aren't guaranteed to be loaded inside a custom panel. The card uses
+  `ha-card`, which is always available on dashboards.
+- Layered settings are edited with one component (`pp-render-settings`) at all
+  three levels. Each field is either "Default: …", showing the inherited value,
+  or set explicitly.
+- The card finds the frame's entities through `hass.entities` (device id +
+  translation key) and needs only a `device_id` in its config. Its editor
+  comes from `getConfigForm`.
+- Strings are in English and German (`localize.ts`), chosen from
+  `hass.language`.
+
+### Testing
+
+- Python: websocket commands, upload (including rejected files), signed
+  rotated editor images, admin-only enforcement, subscription events and
+  panel/card registration (`tests/test_websocket.py`).
+- Frontend: `npm run e2e` drives the mock harness with Puppeteer. It covers:
+  - a crop locked to the frame's shape, saved with a focal point and a
+    dithering override
+  - live preview re-renders
+  - drag-to-reorder
+  - the rotation toggle
+  - saving global defaults
+- Checked by hand in a real browser against a real local Home Assistant
+  (2026.10): the panel, editor, settings and card all work.

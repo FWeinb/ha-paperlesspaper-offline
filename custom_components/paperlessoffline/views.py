@@ -1,4 +1,4 @@
-"""HTTP endpoints polled by the frames."""
+"""HTTP endpoints: polled by the frames, and used by the panel."""
 
 from __future__ import annotations
 
@@ -6,12 +6,20 @@ import base64
 import binascii
 import hmac
 import json
+from pathlib import Path
 from typing import TYPE_CHECKING
 
-from aiohttp import hdrs, web
-from homeassistant.components.http import KEY_HASS, HomeAssistantView
+from aiohttp import BodyPartReader, hdrs, web
+from homeassistant.components.http import KEY_HASS, KEY_HASS_USER, HomeAssistantView
+from homeassistant.exceptions import HomeAssistantError
 
-from .const import CONF_AUTH_ENABLED, CONF_AUTH_PASSWORD, CONF_AUTH_USER, DOMAIN
+from .const import (
+    CONF_AUTH_ENABLED,
+    CONF_AUTH_PASSWORD,
+    CONF_AUTH_USER,
+    DOMAIN,
+    MAX_UPLOAD_BYTES,
+)
 from .data import DATA_KEY
 from .frame import IMAGE_PATH, http_date
 
@@ -133,5 +141,51 @@ class PhotoThumbView(HomeAssistantView):
         manager = data.entries.get(entry_id) if data else None
         if manager is None or manager.get_photo(photo_id) is None:
             return web.Response(status=404)
-        jpeg = await manager.async_thumbnail(photo_id)
+        try:
+            size = int(request.query.get("size", 320))
+            rotation = int(request.query.get("rotation", 0))
+        except ValueError:
+            return web.Response(status=400)
+        jpeg = await manager.async_thumbnail(photo_id, size, rotation)
         return web.Response(body=jpeg, content_type="image/jpeg")
+
+
+class PhotoUploadView(HomeAssistantView):
+    """Accept multipart photo uploads from the panel (admins only)."""
+
+    url = "/api/paperlessoffline/upload/{entry_id}"
+    name = f"api:{DOMAIN}:upload"
+    requires_auth = True
+
+    async def post(self, request: web.Request, entry_id: str) -> web.StreamResponse:
+        """Store every uploaded file field as a photo."""
+        hass = request.app[KEY_HASS]
+        if not request[KEY_HASS_USER].is_admin:
+            return web.Response(status=403)
+        data = hass.data.get(DATA_KEY)
+        manager = data.entries.get(entry_id) if data else None
+        if manager is None:
+            return web.Response(status=404)
+        reader = await request.multipart()
+        added: list[dict[str, str]] = []
+        errors: list[dict[str, str]] = []
+        while (part := await reader.next()) is not None:
+            if not isinstance(part, BodyPartReader) or not part.filename:
+                continue
+            buf = bytearray()
+            too_large = False
+            while chunk := await part.read_chunk(65536):
+                buf.extend(chunk)
+                if len(buf) > MAX_UPLOAD_BYTES:
+                    too_large = True
+                    break
+            if too_large:
+                errors.append({"file": part.filename, "error": "larger than 50 MB"})
+                continue
+            try:
+                photo = await manager.async_add_photo(bytes(buf), Path(part.filename).stem)
+            except HomeAssistantError as err:
+                errors.append({"file": part.filename, "error": str(err)})
+                continue
+            added.append({"photo_id": photo.id, "name": photo.name})
+        return self.json({"added": added, "errors": errors})

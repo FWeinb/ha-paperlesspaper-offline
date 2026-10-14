@@ -62,6 +62,7 @@ from .render import (
     make_thumbnail,
     render,
     render_placeholder,
+    render_preview,
     validate_image,
 )
 from .schedule import parse_time, quiet_sleep
@@ -81,6 +82,10 @@ MAX_TELEMETRY_KEYS = 16
 def signal_update(entry_id: str) -> str:
     """Dispatcher signal fired whenever a frame's state changes."""
     return f"{DOMAIN}_{entry_id}_update"
+
+
+SIGNAL_ANY_UPDATE = f"{DOMAIN}_any_update"
+THUMB_SIZES = (320, 1280)
 
 
 def new_token() -> str:
@@ -213,6 +218,7 @@ class FrameManager:
     def _changed(self, prerender: bool = True) -> None:
         self.store.schedule_save()
         async_dispatcher_send(self.hass, signal_update(self.entry.entry_id))
+        async_dispatcher_send(self.hass, SIGNAL_ANY_UPDATE, self.entry.entry_id)
         if prerender:
             self._schedule_prerender()
 
@@ -613,7 +619,8 @@ class FrameManager:
 
     def _delete_photo_files(self, photo: Photo) -> None:
         (self.originals / photo.filename).unlink(missing_ok=True)
-        (self.directory / "thumbs" / f"{photo.id}.jpg").unlink(missing_ok=True)
+        for thumb in (self.directory / "thumbs").glob(f"{photo.id}_*.jpg"):
+            thumb.unlink(missing_ok=True)
 
     @callback
     def async_update_photo(
@@ -656,12 +663,57 @@ class FrameManager:
         data = await self.hass.async_add_executor_job((self.originals / photo.filename).read_bytes)
         return await target.async_add_photo(data, photo.name, dict(photo.overrides), photo.enabled)
 
-    async def async_thumbnail(self, photo_id: str) -> bytes:
-        """Small JPEG thumbnail of a photo's original (cached)."""
+    async def async_thumbnail(self, photo_id: str, size: int = 320, rotation: int = 0) -> bytes:
+        """JPEG of a photo's original at a fixed size, optionally rotated (cached)."""
         photo = self.require_photo(photo_id)
+        if size not in THUMB_SIZES:
+            size = THUMB_SIZES[0]
+        rotation %= 360
         source = self.originals / photo.filename
-        target = self.directory / "thumbs" / f"{photo.id}.jpg"
-        return await self.hass.async_add_executor_job(make_thumbnail, source, target)
+        target = self.directory / "thumbs" / f"{photo.id}_{size}_{rotation}.jpg"
+        return await self.hass.async_add_executor_job(
+            make_thumbnail, source, target, size, rotation
+        )
+
+    async def async_render_preview(
+        self,
+        photo_id: str,
+        overrides: dict[str, Any] | None,
+        frame_defaults: dict[str, Any] | None = None,
+        global_defaults: dict[str, Any] | None = None,
+    ) -> bytes:
+        """Preview PNG of a photo with unsaved settings (not cached)."""
+        photo = self.require_photo(photo_id)
+        if global_defaults is None:
+            global_defaults = self.global_store.defaults
+        if frame_defaults is None:
+            frame_defaults = self.options.get(CONF_RENDER_DEFAULTS, {})
+        opts = resolve(
+            global_defaults, frame_defaults, photo.overrides if overrides is None else overrides
+        )
+        path = self.originals / photo.filename
+        canvas = self.canvas
+        async with self._render_lock:
+            return await self.hass.async_add_executor_job(
+                lambda: render_preview(path.read_bytes(), opts, canvas)
+            )
+
+    @callback
+    def async_reorder(self, order: list[str]) -> None:
+        """Reorder the library; ids not listed keep their relative order at the end."""
+        by_id = {p.id: p for p in self.photos}
+        ordered = [by_id[i] for i in dict.fromkeys(order) if i in by_id]
+        rest = [p for p in self.photos if p.id not in set(order)]
+        self.store.photos[:] = ordered + rest
+        self._changed()
+
+    @callback
+    def async_set_overrides(self, photo_id: str, overrides: dict[str, Any]) -> Photo:
+        """Replace all render overrides of a photo."""
+        photo = self.require_photo(photo_id)
+        photo.overrides = dict(overrides)
+        self._changed()
+        return photo
 
     async def async_read_original(self, photo_id: str) -> bytes:
         """Return the original bytes of a photo."""

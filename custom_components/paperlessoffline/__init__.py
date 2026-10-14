@@ -9,15 +9,24 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv, device_registry as dr
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
 
 from .const import CONF_CLIENT_ID, DOMAIN, STORAGE_DIR, STORAGE_VERSION, mac_from_client_id
 from .data import DATA_KEY, DomainData
 from .frame import FrameManager
+from .frontend import async_register_frontend
 from .services import async_setup_services
 from .store import GlobalStore
-from .views import FrameImageView, FrameSettingsView, PhotoPreviewView, PhotoThumbView
+from .views import (
+    FrameImageView,
+    FrameSettingsView,
+    PhotoPreviewView,
+    PhotoThumbView,
+    PhotoUploadView,
+)
+from .websocket import SIGNAL_FRAMES_CHANGED, async_setup_websocket
 
 PLATFORMS = [
     Platform.BINARY_SENSOR,
@@ -43,7 +52,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     hass.http.register_view(FrameSettingsView())
     hass.http.register_view(PhotoPreviewView())
     hass.http.register_view(PhotoThumbView())
+    hass.http.register_view(PhotoUploadView())
     async_setup_services(hass)
+    async_setup_websocket(hass)
+    await async_register_frontend(hass)
     return True
 
 
@@ -73,6 +85,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) ->
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     manager.async_options_updated()
+    async_dispatcher_send(hass, SIGNAL_FRAMES_CHANGED)
     return True
 
 
@@ -96,6 +109,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) -
         data = hass.data[DATA_KEY]
         data.entries.pop(entry.entry_id, None)
         data.tokens.pop(manager.token, None)
+        async_dispatcher_send(hass, SIGNAL_FRAMES_CHANGED)
     return unloaded
 
 

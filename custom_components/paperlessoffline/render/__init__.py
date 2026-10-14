@@ -11,6 +11,7 @@ from .pipeline import (
     make_thumbnail,
     render,
     render_placeholder,
+    render_preview,
     validate_image,
 )
 
@@ -25,5 +26,6 @@ __all__ = [
     "make_thumbnail",
     "render",
     "render_placeholder",
+    "render_preview",
     "validate_image",
 ]

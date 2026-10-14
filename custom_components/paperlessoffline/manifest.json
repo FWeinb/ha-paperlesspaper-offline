@@ -4,7 +4,9 @@
   "after_dependencies": [
     "bluetooth",
     "camera",
-    "image"
+    "frontend",
+    "image",
+    "panel_custom"
   ],
   "bluetooth": [
     {
@@ -18,7 +20,8 @@
   "config_flow": true,
   "dependencies": [
     "http",
-    "media_source"
+    "media_source",
+    "websocket_api"
   ],
   "documentation": "https://github.com/fweinb/ha-paperlessoffline",
   "integration_type": "device",
@@ -30,5 +33,5 @@
   "requirements": [
     "pillow-heif>=0.18.0"
   ],
-  "version": "0.1.0"
+  "version": "0.2.0"
 }

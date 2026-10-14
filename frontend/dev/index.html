@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>paperlessoffline panel (dev)</title>
+    <style>
+      body { margin: 0; font-family: Roboto, system-ui, sans-serif; }
+      body.dark {
+        --primary-background-color: #111111;
+        --card-background-color: #1c1c1c;
+        --primary-text-color: #e1e1e1;
+        --secondary-text-color: #9b9b9b;
+        --divider-color: rgba(225, 225, 225, 0.12);
+        --app-header-background-color: #1c1c1c;
+      }
+      #cards { display: grid; grid-template-columns: repeat(2, 380px); gap: 16px; padding: 16px; background: var(--primary-background-color, #f5f5f5); }
+      ha-card { display: block; background: var(--card-background-color, #fff); border-radius: 12px; border: 1px solid var(--divider-color, #e0e0e0); }
+    </style>
+  </head>
+  <body>
+    <script type="module" src="./mock.ts"></script>
+  </body>
+</html>
