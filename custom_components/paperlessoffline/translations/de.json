@@ -126,9 +126,9 @@
     "dither": {
       "options": {
         "default": "Globalen Standard verwenden",
-        "floyd_steinberg": "Floyd–Steinberg",
+        "floyd_steinberg": "Floyd-Steinberg",
         "atkinson": "Atkinson",
-        "jarvis_judice_ninke": "Jarvis–Judice–Ninke",
+        "jarvis_judice_ninke": "Jarvis-Judice-Ninke",
         "sierra2": "Sierra-2",
         "bayer": "Geordnet (Bayer)",
         "none": "Keines (nächste Farbe)"

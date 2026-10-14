@@ -168,13 +168,13 @@ export class PaperlessPanel extends LitElement {
         ? l("override")
         : frame.up_next.kind === "placeholder"
           ? l("placeholder")
-          : (frame.up_next.name ?? "–");
+          : (frame.up_next.name ?? "");
     return html`<div class="status card">
       <figure>
         <div class="pic" style="aspect-ratio:${frame.canvas.width}/${frame.canvas.height}">
           ${showing ? html`<img src=${showing} alt="" />` : nothing}
         </div>
-        <figcaption><span class="muted">${l("showing")}</span> ${frame.current.name ?? "–"}</figcaption>
+        <figcaption><span class="muted">${l("showing")}</span> ${frame.current.name ?? ""}</figcaption>
       </figure>
       <figure>
         <div class="pic" style="aspect-ratio:${frame.canvas.width}/${frame.canvas.height}">

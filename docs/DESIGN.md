@@ -1,4 +1,4 @@
-# paperlessoffline — Home Assistant integration design
+# paperlessoffline: Home Assistant integration design
 
 Home Assistant custom integration (domain `paperlessoffline`) for paperlesspaper
 e-paper photo frames running the
@@ -22,7 +22,7 @@ e-paper photo frames running the
   - Device colour indices: `0` black, `1` blue, `2` green, `3` red, `5` yellow,
     `6` white.
 - **Image formats accepted.**
-  - JPEG and 24-bit BMP: dithered on the device with Floyd–Steinberg only.
+  - JPEG and 24-bit BMP: dithered on the device with Floyd-Steinberg only.
     JPEGs are stretched without keeping the aspect ratio. The 13" on-device
     path looks broken.
   - Pre-dithered top-down 4-bit BMP whose nibbles are device indices.
@@ -114,7 +114,7 @@ e-paper photo frames running the
   | Palette (perceived / pure)                   | ✓      | ✓     |       |
   | Mounting orientation (landscape / portrait / flipped) |  | ✓   |       |
 
-- **Dithering algorithms:** Floyd–Steinberg, Atkinson, Jarvis–Judice–Ninke,
+- **Dithering algorithms:** Floyd-Steinberg, Atkinson, Jarvis-Judice-Ninke,
   Sierra-2, ordered/Bayer, and none (nearest colour), each with optional
   serpentine scanning. Implemented in numpy.
 - **Pipeline:**
@@ -260,7 +260,7 @@ e-paper photo frames running the
   - Error diffusion without serpentine runs as numpy batches along
     anti-diagonal wavefronts (`t = x + 3y`). The output is identical to a
     raster scan, which the tests check.
-  - On an M-series Mac, a 13" render takes about 0.6 s for Floyd–Steinberg and
+  - On an M-series Mac, a 13" render takes about 0.6 s for Floyd-Steinberg and
     1.2 s for JJN.
   - Serpentine uses a scalar loop, about 0.5 s for 7" and about 2.5 s for 13".
   - A Raspberry Pi will be several times slower. Renders run in the executor
@@ -503,3 +503,13 @@ Bluetooth against real hardware still needs a manual test.
   the placeholder gets the current version at its next wake (e.g. after a
   rename). A frame that has shown a photo keeps that photo when its rotation
   becomes empty, as before.
+
+## 15. Writing conventions
+
+- **Never use the en dash (U+2013)** in any text: UI strings, translations,
+  messages, code comments, docs or commit messages. Rephrase the sentence
+  instead, e.g. with a comma, colon, "to" (`0 to 3`) or a plain hyphen for
+  compound names (`Floyd-Steinberg`). The em dash (U+2014) is avoided the
+  same way.
+- This is enforced by `tests/test_style.py`, which fails if either character
+  appears in a tracked text file.

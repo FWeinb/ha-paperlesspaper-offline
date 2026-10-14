@@ -14,9 +14,9 @@ def t(en: str, de: str) -> dict[str, str]:
 
 
 DITHER = {
-    "floyd_steinberg": t("Floyd–Steinberg", "Floyd–Steinberg"),
+    "floyd_steinberg": t("Floyd-Steinberg", "Floyd-Steinberg"),
     "atkinson": t("Atkinson", "Atkinson"),
-    "jarvis_judice_ninke": t("Jarvis–Judice–Ninke", "Jarvis–Judice–Ninke"),
+    "jarvis_judice_ninke": t("Jarvis-Judice-Ninke", "Jarvis-Judice-Ninke"),
     "sierra2": t("Sierra-2", "Sierra-2"),
     "bayer": t("Ordered (Bayer)", "Geordnet (Bayer)"),
     "none": t("None (nearest colour)", "Keines (nächste Farbe)"),

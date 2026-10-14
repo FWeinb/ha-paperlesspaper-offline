@@ -1,4 +1,4 @@
-import { s as A, i as E, n as d, r as l, a as M, l as g, A as n, d as c, f as st, b as o, g as V, h as it, j as rt, k as at, t as C, o as ot, p as nt, q as lt, u as pt, v as dt, w as ht, x as ct, y as ut, z as ft, B as gt, C as mt, c as N, D as vt, e as bt, E as $t } from "./chunk-B8cT98Y-.js";
+import { s as A, i as E, n as d, r as l, a as M, l as g, A as n, d as c, f as st, b as o, g as V, h as it, j as rt, k as at, t as C, o as ot, p as nt, q as lt, u as pt, v as dt, w as ht, x as ct, y as ut, z as ft, B as gt, C as mt, c as N, D as vt, e as bt, E as $t } from "./chunk-CVXmZojm.js";
 /**
  * @license
  * Copyright 2017 Google LLC
@@ -1751,13 +1751,13 @@ let $ = class extends M {
     </nav>`;
   }
   renderStatus(t) {
-    const e = g(this.hass), s = this.previewUrl(t, "preview_showing"), i = this.previewUrl(t, "preview_up_next"), a = t.up_next.kind === "override" ? e("override") : t.up_next.kind === "placeholder" ? e("placeholder") : t.up_next.name ?? "–";
+    const e = g(this.hass), s = this.previewUrl(t, "preview_showing"), i = this.previewUrl(t, "preview_up_next"), a = t.up_next.kind === "override" ? e("override") : t.up_next.kind === "placeholder" ? e("placeholder") : t.up_next.name ?? "";
     return o`<div class="status card">
       <figure>
         <div class="pic" style="aspect-ratio:${t.canvas.width}/${t.canvas.height}">
           ${s ? o`<img src=${s} alt="" />` : n}
         </div>
-        <figcaption><span class="muted">${e("showing")}</span> ${t.current.name ?? "–"}</figcaption>
+        <figcaption><span class="muted">${e("showing")}</span> ${t.current.name ?? ""}</figcaption>
       </figure>
       <figure>
         <div class="pic" style="aspect-ratio:${t.canvas.width}/${t.canvas.height}">

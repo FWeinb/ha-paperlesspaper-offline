@@ -112,7 +112,7 @@ export class FrameCard extends LitElement {
               ? html`<img src=${showing.attributes.entity_picture} alt=${l("showing")} />`
               : nothing}
           </div>
-          <figcaption><span class="muted">${l("showing")}</span> ${current?.state ?? "–"}</figcaption>
+          <figcaption><span class="muted">${l("showing")}</span> ${current?.state ?? ""}</figcaption>
         </figure>
         ${this.config.show_up_next && upNext
           ? html`<figure class="next">
@@ -122,7 +122,7 @@ export class FrameCard extends LitElement {
                   : nothing}
               </div>
               <figcaption>
-                <span class="muted">${l("up_next")}</span> ${nextSelect?.state ?? "–"}
+                <span class="muted">${l("up_next")}</span> ${nextSelect?.state ?? ""}
               </figcaption>
             </figure>`
           : nothing}

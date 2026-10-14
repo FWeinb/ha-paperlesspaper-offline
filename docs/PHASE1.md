@@ -1,4 +1,4 @@
-# Phase 1 plan — Core
+# Phase 1 plan: Core
 
 ## Status (2026-10-14)
 
@@ -64,7 +64,7 @@ hacs.json  pyproject.toml  requirements_test.txt  .github/workflows/{validate,te
 
 The milestones are ordered by dependency. Each one ends with green tests.
 
-### M0 — Hardware spike (do first; it settles the risks below)
+### M0: Hardware spike (do first; it settles the risks below)
 
 - **What it is:** `tools/hw_spike.py`, a tiny aiohttp server that runs outside
   HA.
@@ -86,21 +86,21 @@ The milestones are ordered by dependency. Each one ends with green tests.
 - **Needs:** you to point a frame at the spike URL (via the official web UI)
   and report what the glass shows.
 
-### M1 — Skeleton and CI
+### M1: Skeleton and CI
 
 - `manifest.json`, `hacs.json`, `pyproject.toml` (ruff and mypy config), and
   test requirements.
 - GitHub workflows: hassfest, HACS action, ruff, mypy, pytest.
 - An empty integration that loads and unloads cleanly, with a smoke test.
 
-### M2 — Render pipeline (pure Python; no HA needed)
+### M2: Render pipeline (pure Python; no HA needed)
 
 - `palette.py`: perceived palette (`#1f2226`, `#d6d6d6`, `#416ce1`,
   `#067406`, `#ea4843`, `#dbd529`) and the pure palette, mapped to device
   indices 0/1/2/3/5/6.
 - `dither.py`:
   - Error diffusion through a generic kernel walker (one loop over rows; the
-    inner loop is vectorised where possible). Kernels for Floyd–Steinberg,
+    inner loop is vectorised where possible). Kernels for Floyd-Steinberg,
     Atkinson, JJN and Sierra-2, with optional serpentine.
   - Bayer as fully vectorised ordered dithering.
   - None: nearest colour.
@@ -109,7 +109,7 @@ The milestones are ordered by dependency. Each one ends with green tests.
     executor.
   - Benchmark early.
   - Fallback if too slow: Pillow's C `quantize(dither=FLOYDSTEINBERG)` for
-    Floyd–Steinberg, with a documented note that the other kernels are slower.
+    Floyd-Steinberg, with a documented note that the other kernels are slower.
 - `pipeline.py`:
   1. EXIF transpose (and load HEIC through `pillow-heif`)
   2. photo rotation
@@ -124,7 +124,7 @@ The milestones are ordered by dependency. Each one ends with green tests.
   - correct BMP size and header
   - orientation maths
 
-### M3 — Storage and library
+### M3: Storage and library
 
 - **Global store:** default render settings.
 - **Per-frame store:**
@@ -147,7 +147,7 @@ The milestones are ordered by dependency. Each one ends with green tests.
     stays stable across restarts.
   - Stale renders are pruned.
 
-### M4 — HTTP and slideshow core
+### M4: HTTP and slideshow core
 
 - `slideshow.py`: sequential, and shuffle-bag with no repeats.
 - `schedule.py`:
@@ -178,7 +178,7 @@ The milestones are ordered by dependency. Each one ends with green tests.
   doesn't advance; the 304 path; quiet-hours maths around midnight and DST;
   Basic auth.
 
-### M5 — Config flow (manual) and options
+### M5: Config flow (manual) and options
 
 - **Manual step:** Client ID (validated against `^epd(7|13)-[0-9a-f]{12}$`,
   which also gives the panel type) and a name.
@@ -199,7 +199,7 @@ The milestones are ordered by dependency. Each one ends with green tests.
   over in Phase 2.
 - **Tests:** a full flow, duplicate abort, invalid ID, options round-trip.
 
-### M6 — Entities, actions, events
+### M6: Entities, actions, events
 
 - **Entities** as listed in DESIGN.md §7, except battery and charging, which
   are Phase 3. Each frame is one device: model "Paper 7" or "Paper L", and its
@@ -227,7 +227,7 @@ The milestones are ordered by dependency. Each one ends with green tests.
 - **Tests:** service schemas and their effects; entity state after a simulated
   wake; device trigger.
 
-### M7 — BLE discovery and provisioning in the config flow
+### M7: BLE discovery and provisioning in the config flow
 
 - `manifest.json` gets a `bluetooth` matcher: `{"local_name": "epd*",
   "connectable": true}`.
@@ -241,7 +241,7 @@ The milestones are ordered by dependency. Each one ends with green tests.
 - **Tests:** a mocked `BleakClient` with the write sequence asserted; a
   discovery flow, including dedupe against an existing entry.
 
-### M8 — Docs and release prep
+### M8: Docs and release prep
 
 - README:
   - installation through HACS

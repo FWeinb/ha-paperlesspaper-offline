@@ -638,9 +638,9 @@ const X = {
   palette: "Palette",
   on: "On",
   off: "Off",
-  dither_floyd_steinberg: "Floyd–Steinberg",
+  dither_floyd_steinberg: "Floyd-Steinberg",
   dither_atkinson: "Atkinson",
-  dither_jarvis_judice_ninke: "Jarvis–Judice–Ninke",
+  dither_jarvis_judice_ninke: "Jarvis-Judice-Ninke",
   dither_sierra2: "Sierra-2",
   dither_bayer: "Ordered (Bayer)",
   dither_none: "None (nearest colour)",
@@ -678,7 +678,7 @@ const X = {
   usb: "USB",
   read_ago: "read {when}",
   overdue: "Hasn't checked in",
-  needs_urls: "Needs new URLs – see Repairs"
+  needs_urls: "Needs new URLs, see Repairs"
 }, Pe = {
   title: "Bilderrahmen",
   frames: "Rahmen",
@@ -747,9 +747,9 @@ const X = {
   palette: "Palette",
   on: "An",
   off: "Aus",
-  dither_floyd_steinberg: "Floyd–Steinberg",
+  dither_floyd_steinberg: "Floyd-Steinberg",
   dither_atkinson: "Atkinson",
-  dither_jarvis_judice_ninke: "Jarvis–Judice–Ninke",
+  dither_jarvis_judice_ninke: "Jarvis-Judice-Ninke",
   dither_sierra2: "Sierra-2",
   dither_bayer: "Geordnet (Bayer)",
   dither_none: "Keines (nächste Farbe)",
@@ -787,7 +787,7 @@ const X = {
   usb: "USB",
   read_ago: "gelesen {when}",
   overdue: "Hat sich nicht gemeldet",
-  needs_urls: "Braucht neue URLs – siehe Reparaturen"
+  needs_urls: "Braucht neue URLs, siehe Reparaturen"
 };
 function nt(n) {
   const e = n?.language?.startsWith("de") ? Pe : X;

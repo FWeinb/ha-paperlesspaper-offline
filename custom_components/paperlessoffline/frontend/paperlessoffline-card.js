@@ -1,4 +1,4 @@
-import { s as $, i as C, n as S, r as O, a as j, A as o, l as P, b as r, c as k, d as g, m as z, e as E, t as F } from "./chunk-B8cT98Y-.js";
+import { s as $, i as C, n as S, r as O, a as j, A as o, l as P, b as r, c as k, d as g, m as z, e as E, t as F } from "./chunk-CVXmZojm.js";
 var D = Object.defineProperty, I = Object.getOwnPropertyDescriptor, u = (e, n, a, s) => {
   for (var i = s > 1 ? void 0 : s ? I(n, a) : n, t = e.length - 1, p; t >= 0; t--)
     (p = e[t]) && (i = (s ? p(n, a, i) : p(i)) || i);
@@ -59,14 +59,14 @@ let c = class extends j {
           <div class="pic ${i.attributes.entity_picture ? "" : "empty"}">
             ${i.attributes.entity_picture ? r`<img src=${i.attributes.entity_picture} alt=${e("showing")} />` : o}
           </div>
-          <figcaption><span class="muted">${e("showing")}</span> ${w?.state ?? "–"}</figcaption>
+          <figcaption><span class="muted">${e("showing")}</span> ${w?.state ?? ""}</figcaption>
         </figure>
         ${this.config.show_up_next && t ? r`<figure class="next">
               <div class="pic ${t.attributes.entity_picture ? "" : "empty"}">
                 ${t.attributes.entity_picture ? r`<img src=${t.attributes.entity_picture} alt=${e("up_next")} />` : o}
               </div>
               <figcaption>
-                <span class="muted">${e("up_next")}</span> ${v?.state ?? "–"}
+                <span class="muted">${e("up_next")}</span> ${v?.state ?? ""}
               </figcaption>
             </figure>` : o}
       </div>

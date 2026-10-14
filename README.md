@@ -209,10 +209,10 @@ Render settings are layered: **global default → frame default → photo overri
 | `serpentine` | true / false | all levels |
 | `fit` | `cover` (crop), `contain` (borders), `stretch` | all levels |
 | `background` | `white`, `black` | all levels |
-| `brightness`, `contrast`, `saturation` | 0–3 (1 = unchanged) | all levels |
+| `brightness`, `contrast`, `saturation` | 0 to 3 (1 = unchanged) | all levels |
 | `palette` | `perceived` (default; matches what the panel really shows), `pure` | global and frame |
 | `rotation` | 0 / 90 / 180 / 270 | photo |
-| `focal_x`, `focal_y` | 0–1, the point kept when cropping | photo |
+| `focal_x`, `focal_y` | 0 to 1, the point kept when cropping | photo |
 | `crop` | `[x, y, width, height]` as fractions | photo |
 
 Example: show the doorbell camera for one wake.
