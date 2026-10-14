@@ -14,12 +14,14 @@ from .pipeline import (
     render_preview,
     validate_image,
 )
+from .placeholder import PlaceholderText
 
 __all__ = [
     "DITHER_METHODS",
     "FIT_MODES",
     "MOUNTINGS",
     "Canvas",
+    "PlaceholderText",
     "RenderOptions",
     "RenderResult",
     "canvas_for",

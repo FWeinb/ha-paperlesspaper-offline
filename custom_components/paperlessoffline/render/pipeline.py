@@ -8,11 +8,12 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageEnhance, ImageFont, ImageOps
+from PIL import Image, ImageEnhance, ImageOps
 
 from .bmp import encode_bmp4
 from .dither import dither
 from .palette import DEVICE_INDICES, PERCEIVED, get_palette
+from .placeholder import PlaceholderText, draw_placeholder
 
 try:  # HEIC support is optional at import time; the manifest requires it.
     from pillow_heif import register_heif_opener
@@ -171,25 +172,9 @@ def render(data: bytes, opts: RenderOptions, canvas: Canvas) -> RenderResult:
     return finish(positions, canvas)
 
 
-def render_placeholder(title: str, lines: list[str], canvas: Canvas) -> RenderResult:
-    """Render a simple text placeholder. Blocking; run in an executor."""
-    img = Image.new("RGB", (canvas.width, canvas.height), (255, 255, 255))
-    draw = ImageDraw.Draw(img)
-    scale = min(canvas.width, canvas.height) / 480
-    title_font = ImageFont.load_default(size=round(40 * scale))
-    body_font = ImageFont.load_default(size=round(22 * scale))
-    margin = round(40 * scale)
-    draw.rectangle(
-        (margin // 2, margin // 2, canvas.width - margin // 2, canvas.height - margin // 2),
-        outline=(0, 0, 0),
-        width=max(2, round(3 * scale)),
-    )
-    y = margin * 2
-    draw.text((margin, y), title, fill=(0, 0, 0), font=title_font)
-    y += round(70 * scale)
-    for line in lines:
-        draw.text((margin, y), line, fill=(0, 0, 255), font=body_font)
-        y += round(36 * scale)
+def render_placeholder(text: PlaceholderText, canvas: Canvas) -> RenderResult:
+    """Render the "no photos yet" screen. Blocking; run in an executor."""
+    img = draw_placeholder(canvas.width, canvas.height, text)
     positions = dither(np.asarray(img, dtype=np.float32), get_palette("pure"), "none")
     return finish(positions, canvas)
 

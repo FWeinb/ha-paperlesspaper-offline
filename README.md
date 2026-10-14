@@ -254,6 +254,14 @@ If you have a 13" frame, run `tools/hw_spike.py --panel 13 --mount landscape`
 time in `src/types.h` (`EPD_TYPE_13INCH` / `EPD_TYPE_7INCH`). Make sure your
 frame's boot log shows the right ID prefix (`epd7-` or `epd13-`).
 
+## Credits
+
+Text on the frame (the "No photos yet" screen) is set in
+[Noto Sans](https://github.com/notofonts/latin-greek-cyrillic), © The Noto
+Project Authors. It is licensed under the SIL Open Font License 1.1 (see
+`custom_components/paperlessoffline/render/fonts/OFL.txt`) and bundled as a
+Latin subset.
+
 ## Development
 
 ```sh

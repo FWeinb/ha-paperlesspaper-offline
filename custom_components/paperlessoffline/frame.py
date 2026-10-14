@@ -66,6 +66,7 @@ from .const import (
 from .issues import async_update_issues, reprovision_reason
 from .render import (
     Canvas,
+    PlaceholderText,
     RenderOptions,
     RenderResult,
     canvas_for,
@@ -94,6 +95,7 @@ def signal_update(entry_id: str) -> str:
 
 
 SIGNAL_ANY_UPDATE = f"{DOMAIN}_any_update"
+PLACEHOLDER_NAME = "placeholder"
 THUMB_SIZES = (320, 1280)
 
 
@@ -396,10 +398,10 @@ class FrameManager:
             self._advance()
             if st.current_kind == "photo" and (photo := self.get_photo(st.current_id)):
                 return await self.async_render_photo(photo), photo.name
-        # Empty rotation: keep the last image, or show the placeholder.
-        if await self._async_served_available():
+        # Empty rotation: keep the last photo, or show the (current) placeholder.
+        if st.served_name != PLACEHOLDER_NAME and await self._async_served_available():
             return str(st.served_key), st.served_name or ""
-        return await self._async_render_placeholder(), "placeholder"
+        return await self._async_render_placeholder(), PLACEHOLDER_NAME
 
     async def _async_served_available(self) -> bool:
         key = self.state.served_key
@@ -628,18 +630,25 @@ class FrameManager:
         canvas = self.canvas
         return await self._async_render_cached(key, lambda: render(path.read_bytes(), opts, canvas))
 
-    async def _async_render_placeholder(self) -> str:
-        title = self.entry.title
-        canvas = self.canvas
-        key = cache_key("placeholder:" + title, {}, asdict(canvas))
-        return await self._async_render_cached(
-            key,
-            lambda: render_placeholder(
-                title,
-                ["No photos yet.", "Add photos in Home Assistant", f"ID: {self.client_id}"],
-                canvas,
+    def placeholder_text(self) -> PlaceholderText:
+        """What the "no photos yet" screen says, in HA's language."""
+        german = (self.hass.config.language or "").startswith("de")
+        return PlaceholderText(
+            title=self.entry.title,
+            subtitle="Noch keine Fotos" if german else "No photos yet",
+            hint=(
+                "Fotos in Home Assistant unter „Bilderrahmen“ hinzufügen."
+                if german
+                else "Add photos in Home Assistant under Photo frames."
             ),
+            footer=self.client_id,
         )
+
+    async def _async_render_placeholder(self) -> str:
+        text = self.placeholder_text()
+        canvas = self.canvas
+        key = cache_key("placeholder", asdict(text), asdict(canvas))
+        return await self._async_render_cached(key, lambda: render_placeholder(text, canvas))
 
     async def async_preview(self, which: str) -> bytes | None:
         """Preview PNG of what is showing ("showing") or will show ("up_next")."""

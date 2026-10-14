@@ -442,3 +442,19 @@ async def test_image_retry_after_settings_is_not_a_wake(
     freezer.tick(timedelta(seconds=90))
     retry = await client.get(IMAGE_URL)
     assert retry.headers["Last-Modified"] == first.headers["Last-Modified"]
+
+
+async def test_placeholder_follows_rename_and_language(
+    hass: HomeAssistant, hass_client_no_auth, loaded_entry, freezer
+) -> None:
+    """A frame showing the placeholder gets the updated one (new name / language)."""
+    client = await hass_client_no_auth()
+    _, first = await _wake(client, freezer)
+    hass.config_entries.async_update_entry(loaded_entry, title="Küche")
+    await hass.async_block_till_done()
+    _, second = await _wake(client, freezer)
+    assert second.headers["Last-Modified"] != first.headers["Last-Modified"]
+    _, third = await _wake(client, freezer)
+    assert third.headers["Last-Modified"] == second.headers["Last-Modified"]  # no needless redraw
+    hass.config.language = "de"
+    assert loaded_entry.runtime_data.placeholder_text().subtitle == "Noch keine Fotos"

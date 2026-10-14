@@ -476,3 +476,30 @@ rotation direction is assumed by symmetry with the 7".
 - the `.local` rewrite
 
 Bluetooth against real hardware still needs a manual test.
+
+## 14. "No photos yet" screen
+
+- Shown when a frame has never been served a photo and its rotation is
+  empty. It is drawn for the six-colour panel:
+  - a flat illustration (a framed picture hanging from a nail, with sun and
+    hills) that uses all six colours
+  - the frame name in bold, a red accent bar, "No photos yet" in red, and a
+    hint pointing to the Photo frames panel
+  - the frame ID in blue at the bottom
+- **Layout**: stacked and centred on portrait and square canvases; the
+  illustration sits beside the text on wide landscape canvases. Long names
+  and hints wrap, and everything scales with the panel's short side.
+- **Exact colours**: text is drawn without anti-aliasing
+  (`ImageDraw.fontmode = "1"`) and only in the pure palette colours, so every
+  pixel maps to a panel colour exactly, with no stray dither pixels around
+  letters.
+- **Font**: Pillow's built-in font lacks glyphs like `ü`, `ß` and `„` (frame
+  names such as "Küche" showed boxes). Noto Sans Regular and Bold are bundled
+  instead (SIL OFL 1.1, about 28 kB each). They're subset to Basic Latin,
+  Latin-1 and Latin Extended-A plus common punctuation by
+  `tools/build_fonts.py`.
+- **Language**: the text follows HA's language (English or German).
+- **Updating**: the cache key includes the text, and a frame already showing
+  the placeholder gets the current version at its next wake (e.g. after a
+  rename). A frame that has shown a photo keeps that photo when its rotation
+  becomes empty, as before.

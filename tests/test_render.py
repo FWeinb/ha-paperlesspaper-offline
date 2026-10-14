@@ -10,6 +10,7 @@ from PIL import Image
 import pytest
 
 from custom_components.paperlessoffline.render import (
+    PlaceholderText,
     RenderOptions,
     canvas_for,
     render,
@@ -174,9 +175,33 @@ def test_transparent_png_uses_background() -> None:
     assert native.getpixel((10, 10)) == (0, 0, 0)
 
 
-def test_placeholder() -> None:
-    result = render_placeholder("Kitchen", ["No photos yet"], canvas_for(1200, 1600, "portrait"))
-    assert Image.open(io.BytesIO(result.bmp)).size == (1200, 1600)
+@pytest.mark.parametrize(
+    ("native", "mounting"),
+    [((800, 480), "portrait"), ((800, 480), "landscape"), ((1200, 1600), "portrait")],
+)
+def test_placeholder(native, mounting) -> None:
+    text = PlaceholderText(
+        "Großes Wohnzimmer über der Garage",
+        "Noch keine Fotos",
+        "Fotos in Home Assistant unter „Bilderrahmen“ hinzufügen.",
+        "epd7-dc1ed5613e74",
+    )
+    canvas = canvas_for(*native, mounting)
+    result = render_placeholder(text, canvas)
+    assert Image.open(io.BytesIO(result.bmp)).size == native
+    # Text is drawn without anti-aliasing: only exact palette colours appear.
+    colours = set(Image.open(io.BytesIO(result.preview_png)).convert("RGB").getdata())
+    assert colours <= {tuple(int(c) for c in row) for row in PERCEIVED}
+    assert len(colours) == 6  # the illustration uses every colour
+
+
+def test_placeholder_font_has_umlauts() -> None:
+    from custom_components.paperlessoffline.render.placeholder import _font
+
+    font = _font(40)
+    # A missing glyph renders as the same "tofu" box for different characters.
+    assert font.getmask("ü").getbbox() != font.getmask("ß").getbbox()
+    assert font.getmask("„").getbbox() is not None
 
 
 def test_resolve_layers() -> None:
