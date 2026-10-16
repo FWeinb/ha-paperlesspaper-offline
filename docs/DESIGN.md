@@ -737,8 +737,27 @@ Each step is tested on a real frame before the next.
   preview at a time. Changes made meanwhile are coalesced, and only the
   latest draft is sent when the running request returns. Before, every
   debounced change was rendered in turn behind the render lock, stale or not.
+- **Faster error diffusion** (`render/dither.py`): on the user's host (Celeron
+  N3450, 2 MB cache) dithering was about 85% of a render: Sierra-2 2.07 s,
+  serpentine 5.80 s, decode and fit 0.04 s. The wavefront loop (about 2,900
+  wavefronts on 480x800) was limited by numpy calls per wavefront and by cache
+  misses: each wavefront touched about 160 scattered rows of a 4.6 MB error
+  buffer.
+  - Now a wavefront uses only plain slices: its pixels are `w - 3` apart in
+    the flat image, and the error waiting for each pixel lives in a ring
+    buffer indexed by (wavefront, row). Every kernel tap is one contiguous
+    slice a few wavefronts ahead, and the buffer is 9 wavefronts (87 KB), so
+    it stays in cache. The nearest colour is one matrix product.
+  - The output is unchanged: tests compare it pixel for pixel with the
+    raster loop (random, gradient and tiny images, both palettes).
+  - Mac: Sierra-2 0.185 s to 0.036 s, Floyd-Steinberg 0.131 s to 0.030 s.
+    Profiling on the N3450 showed index arrays (int32 or int64), BLAS
+    threads and the matrix product make little difference there.
+  - Serpentine can't use wavefronts (a reversed row can only start once the
+    row above has finished), so it stays a pixel loop and is about 6x slower
+    than the plain scan.
 - **Not done on purpose**: no prepared image in memory or on disk, stored
-  originals stay untouched, dithering is unchanged.
+  originals stay untouched.
 - **Measured** (M-series Mac, 24 MP JPEG with EXIF rotation, 800x480 canvas,
   wall time and peak memory above the imported module):
 

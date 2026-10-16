@@ -46,8 +46,10 @@ RENDER_FIELDS = {
     "serpentine": (
         t("Serpentine scanning", "Serpentinen-Abtastung"),
         t(
-            "Alternate the scan direction per row; reduces directional artefacts.",
-            "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte.",
+            "Alternate the scan direction per row; reduces directional artefacts. "
+            "Renders much slower (several seconds on small hosts).",
+            "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte. "
+            "Rendert deutlich langsamer (auf kleinen Hosts mehrere Sekunden).",
         ),
     ),
     "fit": (

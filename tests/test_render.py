@@ -37,12 +37,32 @@ from .conftest import make_jpeg
 
 
 @pytest.mark.parametrize("method", list(KERNELS))
-def test_wavefront_matches_raster(method: str) -> None:
-    rng = np.random.default_rng(42)
+@pytest.mark.parametrize("palette", [PERCEIVED, PURE], ids=["perceived", "pure"])
+@pytest.mark.parametrize("seed", [42, 7, 1234])
+def test_wavefront_matches_raster(method: str, palette, seed: int) -> None:
+    rng = np.random.default_rng(seed)
     img = rng.uniform(0, 255, (37, 53, 3)).astype(np.float32)
-    fast = error_diffusion_wavefront(img, PERCEIVED, method)
-    slow = error_diffusion_scalar(img, PERCEIVED, method)
+    fast = error_diffusion_wavefront(img, palette, method)
+    slow = error_diffusion_scalar(img, palette, method)
     assert np.array_equal(fast, slow)
+
+
+@pytest.mark.parametrize("method", list(KERNELS))
+@pytest.mark.parametrize("size", [(1, 9), (5, 4), (9, 1), (3, 3)])
+def test_wavefront_matches_raster_on_tiny_images(method: str, size) -> None:
+    img = np.random.default_rng(3).uniform(0, 255, (*size, 3)).astype(np.float32)
+    fast = error_diffusion_wavefront(img, PERCEIVED, method)
+    assert np.array_equal(fast, error_diffusion_scalar(img, PERCEIVED, method))
+
+
+@pytest.mark.parametrize("method", list(KERNELS))
+def test_wavefront_matches_raster_on_gradients(method: str) -> None:
+    """Smooth areas put many pixels close to two colours (near ties)."""
+    y, x = np.mgrid[0:60, 0:90].astype(np.float32)
+    img = np.dstack([128 + 100 * np.sin(x / 9), 128 + 100 * np.cos(y / 13), 2 * (x + y)])
+    img = img.astype(np.float32)
+    fast = error_diffusion_wavefront(img, PERCEIVED, method)
+    assert np.array_equal(fast, error_diffusion_scalar(img, PERCEIVED, method))
 
 
 @pytest.mark.parametrize("method", DITHER_METHODS)

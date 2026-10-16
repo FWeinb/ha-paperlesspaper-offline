@@ -436,7 +436,7 @@
         },
         "serpentine": {
           "name": "Serpentinen-Abtastung",
-          "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte."
+          "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte. Rendert deutlich langsamer (auf kleinen Hosts mehrere Sekunden)."
         },
         "fit": {
           "name": "Einpassung",
@@ -520,7 +520,7 @@
         },
         "serpentine": {
           "name": "Serpentinen-Abtastung",
-          "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte."
+          "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte. Rendert deutlich langsamer (auf kleinen Hosts mehrere Sekunden)."
         },
         "fit": {
           "name": "Einpassung",
@@ -662,7 +662,7 @@
         },
         "serpentine": {
           "name": "Serpentinen-Abtastung",
-          "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte."
+          "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte. Rendert deutlich langsamer (auf kleinen Hosts mehrere Sekunden)."
         },
         "fit": {
           "name": "Einpassung",
@@ -736,7 +736,7 @@
         },
         "serpentine": {
           "name": "Serpentinen-Abtastung",
-          "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte."
+          "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte. Rendert deutlich langsamer (auf kleinen Hosts mehrere Sekunden)."
         },
         "fit": {
           "name": "Einpassung",

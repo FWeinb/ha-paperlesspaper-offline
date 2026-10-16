@@ -113,6 +113,7 @@ export class RenderSettingsForm extends LitElement {
           </label>
         </div>
         <div class=${explicit ? "ctl" : "ctl inherited"}>${this.control(key, current, !explicit)}</div>
+        ${key === "serpentine" ? html`<span class="hint">${l("serpentine_hint")}</span>` : nothing}
       </div>`;
     })}`;
   }
@@ -148,6 +149,10 @@ export class RenderSettingsForm extends LitElement {
       }
       .ctl select {
         width: 100%;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--pp-muted);
       }
       .ctl.inherited {
         opacity: 0.55;

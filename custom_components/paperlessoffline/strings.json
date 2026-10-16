@@ -436,7 +436,7 @@
         },
         "serpentine": {
           "name": "Serpentine scanning",
-          "description": "Alternate the scan direction per row; reduces directional artefacts."
+          "description": "Alternate the scan direction per row; reduces directional artefacts. Renders much slower (several seconds on small hosts)."
         },
         "fit": {
           "name": "Fit",
@@ -520,7 +520,7 @@
         },
         "serpentine": {
           "name": "Serpentine scanning",
-          "description": "Alternate the scan direction per row; reduces directional artefacts."
+          "description": "Alternate the scan direction per row; reduces directional artefacts. Renders much slower (several seconds on small hosts)."
         },
         "fit": {
           "name": "Fit",
@@ -662,7 +662,7 @@
         },
         "serpentine": {
           "name": "Serpentine scanning",
-          "description": "Alternate the scan direction per row; reduces directional artefacts."
+          "description": "Alternate the scan direction per row; reduces directional artefacts. Renders much slower (several seconds on small hosts)."
         },
         "fit": {
           "name": "Fit",
@@ -736,7 +736,7 @@
         },
         "serpentine": {
           "name": "Serpentine scanning",
-          "description": "Alternate the scan direction per row; reduces directional artefacts."
+          "description": "Alternate the scan direction per row; reduces directional artefacts. Renders much slower (several seconds on small hosts)."
         },
         "fit": {
           "name": "Fit",

@@ -1,4 +1,4 @@
-import { s as A, i as E, n as d, r as l, a as j, l as m, A as n, d as u, f as gt, b as o, g as H, h as mt, j as vt, k as yt, t as I, o as bt, p as $t, q as xt, u as wt, v as _t, w as nt, x as kt, y as Pt, z as Ot, B as lt, C as Et, D as It, E as St, F as Dt, c as q, G as Ct, e as Tt, H as jt } from "./chunk-lK7tZf5W.js";
+import { s as A, i as E, n as d, r as l, a as j, l as m, A as n, d as u, f as gt, b as o, g as H, h as mt, j as vt, k as yt, t as I, o as bt, p as $t, q as xt, u as wt, v as _t, w as nt, x as kt, y as Pt, z as Ot, B as lt, C as Et, D as It, E as St, F as Dt, c as q, G as Ct, e as Tt, H as jt } from "./chunk-DMimEvLu.js";
 /**
  * @license
  * Copyright 2017 Google LLC
@@ -1719,6 +1719,7 @@ let F = class extends j {
           </label>
         </div>
         <div class=${s ? "ctl" : "ctl inherited"}>${this.control(e, i, !s)}</div>
+        ${e === "serpentine" ? o`<span class="hint">${t("serpentine_hint")}</span>` : n}
       </div>`;
     })}`;
   }
@@ -1754,6 +1755,10 @@ F.styles = [
       }
       .ctl select {
         width: 100%;
+      }
+      .hint {
+        font-size: 12px;
+        color: var(--pp-muted);
       }
       .ctl.inherited {
         opacity: 0.55;

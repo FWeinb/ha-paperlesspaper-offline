@@ -113,29 +113,48 @@ def _nearest_flat(pixels: np.ndarray, palette: np.ndarray) -> np.ndarray:
 
 
 def error_diffusion_wavefront(image: np.ndarray, palette: np.ndarray, method: str) -> np.ndarray:
-    """Raster-order error diffusion, batched along anti-diagonal wavefronts."""
+    """Raster-order error diffusion, batched along anti-diagonal wavefronts.
+
+    Slow hosts are limited by numpy calls per wavefront and by cache misses, so
+    each wavefront uses only plain slices: its pixels are ``w - _WAVE`` apart in
+    the flat image, and the error waiting for them lives in a small ring buffer
+    indexed by (wavefront, row), where every kernel tap is one contiguous slice
+    a few wavefronts ahead. The nearest colour is one matrix product (|v|^2 is
+    the same for every colour, so it is left out).
+    """
     entries, divisor = KERNELS[method]
     h, w, _ = image.shape
-    err = np.zeros((h + _PAD, w + 2 * _PAD, 3), dtype=np.float32)
-    out = np.zeros((h, w), dtype=np.uint8)
-    weights = [(dx, dy, wt / divisor) for dx, dy, wt in entries]
-    all_rows = np.arange(h)
+    if w <= _WAVE:
+        return error_diffusion_scalar(image, palette, method)
+    pixels = np.ascontiguousarray(image, dtype=np.float32).reshape(-1, 3)
+    out = np.zeros(h * w, dtype=np.uint8)
+    # Every tap lands on a later wavefront: (wavefronts ahead, rows down, weight).
+    taps = [(dx + _WAVE * dy, dy, np.float32(wt / divisor)) for dx, dy, wt in entries]
+    ring = max(lead for lead, _, _ in taps) + 1
+    max_dy = max(dy for _, dy, _ in taps)
+    # err[t % ring, y]: error waiting for pixel (t - _WAVE * y, y). Taps that leave
+    # the image land on cells no wavefront reads.
+    err = np.zeros((ring, h + max_dy, 3), dtype=np.float32)
+    pal = np.asarray(palette, dtype=np.float64)
+    pal32 = pal.astype(np.float32)
+    minus_2p = -2 * pal.T
+    p_squared = (pal**2).sum(axis=1)
+    step = w - _WAVE
 
     for t in range(w + _WAVE * (h - 1)):
         y_lo = max(0, -(-(t - w + 1) // _WAVE))
         y_hi = min(h - 1, t // _WAVE)
-        if y_lo > y_hi:
-            continue
-        ys = all_rows[y_lo : y_hi + 1]
-        xs = t - _WAVE * ys
-        xp = xs + _PAD
-        vals = np.clip(image[ys, xs] + err[ys, xp], 0, 255)
-        idx = _nearest_flat(vals, palette)
-        out[ys, xs] = idx
-        e = vals - palette[idx]
-        for dx, dy, wt in weights:
-            err[ys + dy, xp + dx] += e * wt
-    return out
+        on_wave = slice(t + y_lo * step, t + y_hi * step + 1, step)
+        waiting = err[t % ring]
+        vals = pixels[on_wave] + waiting[y_lo : y_hi + 1]
+        np.clip(vals, 0, 255, out=vals)
+        idx = (vals @ minus_2p + p_squared).argmin(axis=1)
+        out[on_wave] = idx
+        e = vals - pal32[idx]
+        for lead, dy, wt in taps:
+            err[(t + lead) % ring, y_lo + dy : y_hi + 1 + dy] += e * wt
+        waiting[:] = 0
+    return out.reshape(h, w)
 
 
 def error_diffusion_scalar(
