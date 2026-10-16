@@ -636,11 +636,13 @@ def _build_base(lang: str) -> dict:
                 "photos": {"name": L(t("Photos in rotation", "Fotos in der Rotation"))},
                 "battery_voltage": {"name": L(t("Battery voltage", "Akkuspannung"))},
                 "wifi_signal": {"name": L(t("WiFi signal", "WLAN-Signal"))},
+                "orientation": {"name": L(t("Orientation", "Ausrichtung"))},
             },
             "switch": {
                 "motion_wakeup": {"name": L(t("Motion wake-up", "Aufwecken durch Bewegung"))},
                 "auto_rotation": {"name": L(t("Auto rotation", "Automatische Drehung"))},
                 "charger_mode": {"name": L(t("Charger mode", "Lademodus"))},
+                "telemetry": {"name": L(t("Telemetry", "Telemetrie"))},
             },
         },
         "exceptions": {
