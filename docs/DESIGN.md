@@ -850,3 +850,19 @@ A slice of Step B shipped on its own: a photo can carry its own overlays.
   `closed` event is stopped at the list so it does not close the photo editor.
 - **Not yet**: copying overlays between photos, `photo.date`,
   `photo.location`.
+
+## 21. Firmware telemetry on image requests
+
+With the frame's *Telemetry* switch on (the default), the firmware appends
+`voltage` (mV), `usb`, `charging`, `orientation` (0 to 3), `width`, `height`
+and `fw` to its image requests.
+
+- Battery voltage, USB power, charging and orientation are fed from them, and
+  `fw` becomes the device's software version.
+- The last value is kept until the next report; `last_read` gives its age and
+  `source` says whether it came from a wake or a Bluetooth read (the newer
+  one wins).
+- Frames on older firmware, or with the switch off, keep the last Bluetooth
+  reading.
+- `width` and `height` are ignored: the frame's client ID decides the panel.
+- The raw query stays available in the `telemetry` attribute of *Last seen*.

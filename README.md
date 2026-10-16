@@ -1,132 +1,139 @@
 # paperlesspaper (offline firmware) for Home Assistant
 
-A Home Assistant integration for [paperlesspaper](https://paperlesspaper.de) e-paper
-photo frames running the
+Run your [paperlesspaper](https://paperlesspaper.de) e-paper photo frames from
+Home Assistant. Each frame gets its own photo library and slideshow, which you
+manage from a sidebar panel, a dashboard card or automations. You can also
+put live text on top of the photos, such as the weather or a sensor value.
+
+This integration is for frames running the
 [offline firmware](https://github.com/paperlesspaper/paperlesspaper-firmware-offline).
+For telemetry on wake, use the fork
+[FWeinb/paperlesspaper-firmware-offline](https://github.com/FWeinb/paperlesspaper-firmware-offline).
 
-Each frame becomes a device in Home Assistant with its own photo library and
-slideshow. Home Assistant does the image processing (cropping, colour
-enhancement and dithering onto the six Spectra 6 colours) and serves the frame
-a ready-to-display image. You choose the dithering per photo, with a per-frame
-and a global default.
+![The Photo frames panel in dark mode, showing three frames and the photo library of the living room frame](docs/images/panel-dark.webp)
 
-> **Status:** all three planned phases are done: core, sidebar panel and
-> dashboard card, and Bluetooth extras (battery, WiFi onboarding, repairs).
-> See [docs/DESIGN.md](docs/DESIGN.md).
+## Screenshots
 
-## How it works
+<table>
+  <tr>
+    <td width="50%"><img src="docs/images/editor-dark.webp" alt="Photo editor with crop, focal point and a live dithered preview"></td>
+    <td width="50%"><img src="docs/images/global-defaults-dark.webp" alt="Global defaults with a dithered preview on the hallway frame"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Photo editor:</b> crop, focal point, overlays and a live preview of the dithered result</td>
+    <td align="center"><b>Global defaults:</b> the default look for every frame, previewed on any frame's photo</td>
+  </tr>
+</table>
 
-The offline firmware is *pull only*:
+## Requirements
 
-1. The frame sleeps.
-2. It wakes on a timer, a button press or (optionally) motion.
-3. It downloads a settings file and one image from URLs you configure.
-4. It goes back to sleep.
-
-Home Assistant serves both URLs, so the frame:
-
-- shows the next photo of its slideshow on every wake;
-- picks up settings (refresh interval, motion wake-up, auto rotation, charger
-  mode, HTTP credentials) on its next wake;
-- sleeps through **quiet hours**, because Home Assistant stretches its sleep
-  time.
-
-Home Assistant can't reach the frame while it sleeps. Every change takes effect
-at the frame's **next wake**; the *In sync* and *Pending changes* entities show
-what hasn't been picked up yet. Press the frame's button twice to force a wake.
+- Home Assistant 2026.1.0 or newer.
+- A paperlesspaper frame running the offline firmware.
+- Recommended: a Bluetooth adapter or an ESPHome Bluetooth proxy near the
+  frame. It makes setup easier and lets you push changes instantly.
 
 ## Installation
 
-1. In HACS, add this repository as a custom repository (category *Integration*).
+**With HACS (recommended).**
+
+1. In HACS, add `https://github.com/FWeinb/ha-paperlesspaper-offline` as a
+   custom repository (category *Integration*).
 2. Install **paperlesspaper (offline firmware)** and restart Home Assistant.
-3. Check that Home Assistant has a local network URL (*Settings → System →
-   Network*). The frame must reach it over plain HTTP.
+
+**Manually.**
+
+1. Download `paperlessoffline.zip` from the latest
+   [release](https://github.com/FWeinb/ha-paperlesspaper-offline/releases).
+2. Extract it into `config/custom_components/paperlessoffline/`.
+3. Restart Home Assistant.
+
+Install from a release, not from a copy of the repository: the panel and card
+are only included in the release zip.
+
+Then check that Home Assistant has a local network URL (*Settings → System →
+Network*). The frame must reach it over plain HTTP.
 
 ## Adding a frame
 
 **Over Bluetooth (recommended).**
 
-1. Press the frame's button **once** to put it into setup mode.
-2. Home Assistant discovers it (with a local Bluetooth adapter or an ESPHome
-   Bluetooth proxy) and offers to set it up.
-3. Confirm. Home Assistant writes its URLs to the frame.
+1. Press the frame's button **once**. It stays in setup mode for about 30
+   seconds.
+2. Home Assistant discovers the frame and offers to set it up. Confirm.
+3. For a new frame, open **WiFi (optional)** and enter your network. Home
+   Assistant checks that the frame really connects before finishing.
 
-For a new frame, open the **WiFi (optional)** section and enter your network.
-Home Assistant sets it first and checks that the frame really connects (the
-firmware only keeps credentials that work) before writing the URLs. The frame
-stays in setup mode for only about 30 seconds after the button press; if setup
-fails, press the button again and retry.
-
-Home Assistant's local URL must be reachable by the frame. If it is
-`localhost`, a loopback address (`127.0.0.1`) or a `*.local` name, Home
-Assistant gives the frame its LAN IP address instead: loopback would point at
-the frame itself, and the frame can't resolve mDNS names. In that case (and
-when you choose an address, below) the URL uses Home Assistant's own port, so
-`http://homeassistant.local` becomes e.g. `http://192.168.1.20:8123`. The port
-is always included unless it is the default (80 for http, 443 for https).
-
-**Address the frame uses.** If Home Assistant is reachable on several
-networks or IPs (e.g. a separate IoT VLAN), choose which one goes into the
-frame's URLs. You can pick it during setup and change it later in the frame's
-options. The list offers *Automatic* plus every IPv4 address of the Home
-Assistant host, and you can also type an IP or a hostname the frame can
-resolve. After changing it, press the frame's button once: Home Assistant
-gives the frame the new URLs over Bluetooth (or use the repair notice).
+If setup times out, press the button again and retry.
 
 **Manually.**
 
 1. Add the integration and enter the frame ID shown on its screen, e.g.
    `epd7-3485188f1dc8`.
-2. Home Assistant shows a *Settings URL* and an *Image URL*.
+2. Copy the *Settings URL* and *Image URL* that Home Assistant shows.
 3. Enter both in the official
    [web UI](https://paperlesspaper.github.io/paperlesspaper-firmware-offline/).
 
-## Managing photos: the Photo frames panel
+**Several networks?** If Home Assistant is reachable on more than one address
+(e.g. a separate IoT VLAN), choose the one the frame should use during setup,
+or later under *Address the frame uses* in the frame's options. Pick
+*Automatic*, one of the listed IPs, or type an IP or hostname the frame can
+resolve. Then press the frame's button once so it gets the new address over
+Bluetooth (or follow the repair notice).
 
-Admins get a **Photo frames** entry in the sidebar. It has three parts.
+## Good to know: changes apply on the next wake
 
-**Frame status** (top of each frame's page):
-- what the frame is showing and what's up next, as dithered previews
-- when it was last seen
-- whether it has picked up every change
-- a *Skip* button
+The frame sleeps most of the time and only wakes on its refresh interval, a
+button press or (optionally) motion. Anything you change in Home Assistant,
+whether a new photo or a setting, shows up at the frame's **next wake**.
 
-**Photos tab:**
-- Upload by drag-and-drop or the *Upload* button (JPEG, PNG, WebP, HEIC; up
-  to 50 MB and 100 megapixels each), or *Import from media* to pick images from any Home Assistant
-  media source.
-- Drag photos to change the order; the eye button takes a photo out of the
-  rotation. Choose *In order* or *Shuffle*.
-- Click a photo to open the editor:
-  - Drag to **crop**. The box is locked to the frame's shape by default, so
-    you get exactly what the frame shows.
-  - Click to set the **focal point**, the part kept when cropping to fill.
-  - **Rotate** in 90° steps.
-  - Override **dithering, serpentine, fit, background, brightness, contrast and
-    saturation** for this photo. Each setting shows the default it would
-    otherwise inherit.
-  - A **live preview** shows the photo dithered exactly as the frame will
-    display it.
+- **Show it now:** press the frame's button **twice** to make it wake and
+  fetch the current photo.
+- **Apply settings now:** press the button **once**. With Bluetooth in range,
+  Home Assistant sends pending changes straight away and refreshes the battery
+  reading.
+- **Is it up to date?** The *In sync* binary sensor is off, and *Pending
+  changes* lists what is waiting, until the frame has picked everything up.
+
+## Managing photos
+
+Admins get a **Photo frames** entry in the sidebar.
+
+**Each frame's page** shows what the frame displays now and what's up next,
+when it was last seen, and whether it is in sync. *Skip* moves on to the next
+photo.
+
+**Photos tab**
+- **Add photos** by drag-and-drop or *Upload* (JPEG, PNG, WebP, HEIC; up to
+  50 MB and 100 megapixels each), or *Import from media* to pick from any Home
+  Assistant media source.
+- **Order** by dragging. Choose *In order* or *Shuffle* (no repeats until all
+  photos have been shown).
+- **Pause a photo** with the eye button to take it out of the rotation without
+  deleting it.
+- **Edit a photo** by clicking it:
+  - drag to **crop** (locked to the frame's shape by default);
+  - click to set the **focal point**, the part kept when cropping to fill;
+  - **rotate** in 90° steps;
+  - adjust **dithering, serpentine, fit, background, brightness, contrast
+    and saturation** for this photo only;
+  - check the **live preview**, which shows exactly what the frame will show;
   - *Show next*, *Copy to…* another frame, or *Delete*.
 
-**Settings tab:** the frame's mounting, refresh interval and rendering
-defaults, with a preview. Quiet hours, HTTP authentication and the frame's URLs
-are in the integration's options.
+**Settings tab:** mounting, refresh interval and the frame's default look,
+with a preview.
 
-**Global defaults** (sidebar of the panel): rendering defaults for every
-frame, previewed on any frame's photo.
+**Global defaults** (panel sidebar): the default look for every frame.
+
+Settings are layered: a photo's own setting wins over the frame default, which
+wins over the global default. Every field shows what it would inherit.
 
 The panel follows your Home Assistant theme and language (English and German).
 
 ## Dashboard card
 
-The integration registers a **paperlesspaper frame** card
-(`custom:paperlessoffline-frame-card`). Add it from the card picker and choose
-a frame. It shows:
-- what the frame displays, and what's up next (optional)
-- the sync state and when the frame was last seen
-- a *Skip* button
-- for admins, a shortcut to the panel
+Add the **paperlesspaper frame** card from the card picker and choose a frame.
+It shows the current photo (and optionally what's up next), the sync state,
+a *Skip* button and, for admins, a link to the panel.
 
 ```yaml
 type: custom:paperlessoffline-frame-card
@@ -135,62 +142,86 @@ show_up_next: true
 title: Kitchen                # optional
 ```
 
-## Text and entity overlays
+## Text overlays
 
-Overlays are text boxes drawn crisply on top of photos. They suit sensor
-values, the weather, the date or a caption. There are two kinds:
+Overlays are text boxes drawn sharply on top of photos: the weather, a sensor
+value, the date or a caption.
 
-- **Global photo overlays** are drawn on every photo of a frame. Edit them in
-  the panel (*Settings* tab of a frame, section *Global photo overlays*).
-- **Photo overlays** belong to one photo and are drawn only on it, below the
-  global ones. Edit them in the photo editor (section *Photo overlays*).
-  They are copied along with `copy_photo`. One-off images (`show_image`) get
-  only global photo overlays.
+- **Global photo overlays** appear on every photo of a frame. Edit them in the
+  panel: *Settings* tab, section *Global photo overlays*.
+- **Photo overlays** appear on one photo only. Edit them in the photo editor,
+  section *Photo overlays*. To hide the global ones on a photo, tick *Hide
+  global photo overlays on this photo*.
 
-Both have a live preview using current values. The overlay actions
-(`add_overlay`, `update_overlay`, `remove_overlay`, `move_overlay`,
-`list_overlays`) work on the global ones, or on one photo's when you pass
-`photo_id`.
+Both have a live preview with current values.
 
-The text and "show if" fields use Home Assistant's own code editor (as in
-*Developer tools → Template*), with Jinja highlighting and autocompletion for
-entity IDs and `mdi:` icons. If that editor isn't available, they fall back to
-plain text fields.
+**Writing the text.** The text is markdown with Home Assistant templates, with
+autocompletion for entity IDs and icons:
 
-- **Text** is markdown with Home Assistant templates:
-  - `# Heading`, `**bold**`, `*italic*`, `- list item`
-  - line breaks
-  - colours `{red}…{/red}` (black, white, red, green, blue, yellow)
-  - icons `:mdi:weather-sunny:` (any Material Design Icon)
-- **Helpers** for templates:
-  - `weather_icon(state)`: the icon for a weather condition;
-  - `entity_icon(entity_id)`: an icon set on an entity;
-  - `date_local(value, preset)`: dates in your language, with presets
-    `short`, `long`, `month_year`, `weekday` and `time`.
-- **Variables**: `frame.name`, and `photo.name` (empty on one-off images and the
-  placeholder, where `photo` is `None`, so `{% if photo %}` works).
-- **Placement**: one of nine positions, a size from S to XL (scaled to the
-  panel), a width (fit to text or a percentage) and an alignment.
-- **Behind the text**: a box in any panel colour, an outline around the
-  letters, or nothing.
-- **Show if**: an optional template; the overlay is drawn only when it
-  renders to something truthy.
-- **Update**: *every wake when the text changed* (the default), or *only when
-  the photo changes*, to avoid extra panel refreshes for slowly changing
-  values.
-- **Per photo**: *Hide global photo overlays on this photo* in the photo editor.
-  It does not hide that photo's own overlays.
-
-Values are read when the frame wakes, so the frame shows them as of its last
-update. A broken template leaves only that box out; the panel shows the error.
-
-Examples:
+- `# Heading`, `**bold**`, `*italic*`, `- list item` and line breaks
+- colours: `{red}…{/red}` (black, white, red, green, blue, yellow)
+- icons: `:mdi:weather-sunny:` (any Material Design Icon)
+- `weather_icon(state)`: the icon for a weather condition
+- `entity_icon(entity_id)`: the icon set on an entity
+- `date_local(value, preset)`: a date in your language; presets `short`,
+  `long`, `month_year`, `weekday`, `time`
+- `frame.name` and `photo.name` (`photo` is `None` on one-off images, so
+  `{% if photo %}` works)
 
 ```text
 :mdi:thermometer: **{{ states('sensor.outdoor_temperature') }} °C**
 {{ weather_icon(states('weather.home')) }} {{ state_attr('weather.home', 'temperature') }} °
 {{ date_local(now(), 'long') }}
 ```
+
+**Other options per overlay**
+- **Placement**: one of nine positions, size S to XL, width (fit to text or a
+  percentage) and alignment.
+- **Behind the text**: a coloured box, an outline around the letters, or
+  nothing.
+- **Show if**: a template; the overlay only appears when it is truthy.
+- **Update**: on every wake when the text changed (default), or only when the
+  photo changes. The second avoids extra screen refreshes for values that
+  change all the time.
+
+Values are read when the frame wakes, so they are as fresh as the last wake.
+If a template is broken, only that overlay is left out and the panel shows the
+error.
+
+## Automations
+
+### Actions
+
+Every action takes `config_entry_id`, which selects the frame.
+
+| Action | What it does |
+|---|---|
+| `paperlessoffline.add_photo` | Add an image from **one** of `file_path`, `url`, `media_content_id` or `image_entity_id` (camera or image entity). Optional `name`, `enabled` and photo settings. Returns the `photo_id`. |
+| `paperlessoffline.update_photo` | Change `name`, `enabled` or photo settings; `reset` clears settings (`all` clears every one). |
+| `paperlessoffline.remove_photo` / `move_photo` / `copy_photo` | Manage the library; `copy_photo` copies to another frame. |
+| `paperlessoffline.show_photo` / `next_photo` | Choose or skip the photo for the next wake. |
+| `paperlessoffline.show_image` / `clear_image` | Show a one-off image for `wakes` wakes, or until `clear_image`, without adding it to the library. |
+| `paperlessoffline.list_photos` | Return the library and what's up next. |
+| `paperlessoffline.set_defaults` | Set the global defaults. |
+| `paperlessoffline.add_overlay` / `update_overlay` / `remove_overlay` / `move_overlay` | Manage overlays. Pass `photo_id` for a photo's overlays, leave it out for the global ones. |
+| `paperlessoffline.copy_overlays` | Copy overlays to another frame. |
+| `paperlessoffline.list_overlays` | Return the overlays with their last text and error. |
+
+For `file_path`, the folder must be listed under
+`homeassistant: allowlist_external_dirs`.
+
+**Show the doorbell camera for one wake:**
+
+```yaml
+action: paperlessoffline.show_image
+data:
+  config_entry_id: 01J...   # the frame
+  image_entity_id: camera.doorbell
+  wakes: 1
+  saturation: 1.3
+```
+
+**Add a rain warning that only appears when needed:**
 
 ```yaml
 action: paperlessoffline.add_overlay
@@ -203,186 +234,127 @@ data:
   size: l
 ```
 
-Other overlay actions: `update_overlay`, `remove_overlay`, `move_overlay`,
-`copy_overlays` (to another frame) and `list_overlays` (returns each overlay's
-last text and error).
+### Photo settings
 
-## Telemetry
-
-With the **Telemetry** switch on (the default), the firmware adds
-`voltage` (mV), `usb`, `charging`, `orientation` (0 to 3), `width`, `height`
-and `fw` to its image requests. The integration feeds battery voltage, USB
-power, charging and orientation from them, and shows `fw` as the device's
-software version. The last value is kept until the next report, so check
-`last_read` for its age. Frames on older firmware, or with the switch off,
-keep showing the last Bluetooth reading. `width` and `height` are ignored: the
-frame's client ID decides the panel. The raw query stays available in the
-`telemetry` attribute of *Last seen*.
-
-## Bluetooth while the frame is in setup mode
-
-The frame can only be reached over Bluetooth in setup mode, right after a
-**single** button press. Whenever Home Assistant sees a known frame
-advertising, it connects for a few seconds and:
-
-- reads **battery voltage, charging and USB power** (and WiFi signal);
-- sends **pending changes** immediately, instead of waiting for the next wake;
-- gives the frame **new URLs** if they changed (see *Repairs* below).
-
-So pressing the button once is also a way to refresh the battery reading or
-apply changes right away. This needs a Bluetooth adapter or an ESPHome
-Bluetooth proxy near the frame. Turn it off per frame in the options (*Update
-over Bluetooth in setup mode*) if you want to use the official web UI while
-the frame is in setup mode.
-
-## Repairs
-
-Home Assistant raises a repair notice (*Settings → System → Repairs*) when:
-
-- **a frame hasn't checked in.** It missed its expected wake and two more
-  intervals (quiet hours are taken into account). The notice clears itself
-  when the frame checks in again.
-- **a frame needs new URLs.** Either you generated new URLs in the options,
-  or Home Assistant's local URL changed while the frame is overdue. The fix
-  dialog updates the frame over Bluetooth (press its button once first), or
-  shows the URLs to enter in the web UI.
-
-## Entities (per frame)
-
-| Entity | Purpose |
-|---|---|
-| Image *Showing* / *Up next* | Dithered previews, as the panel will look |
-| Select *Up next* | Choose which photo the frame shows on its next wake |
-| Select *Slideshow order* | In order, or shuffle (no repeats until all photos have been shown) |
-| Button *Skip photo* | Skip the photo that's up next |
-| Number *Refresh interval* | Minutes between wakes |
-| Switches | Motion wake-up, auto rotation, charger mode, telemetry |
-| Sensors | Last seen, current photo, pending changes, photos in rotation |
-| Binary sensor *In sync* | Off while the frame still has changes to pick up |
-| Sensor *Battery voltage*, binary sensors *Charging* and *USB power* | From the frame's last wake or Bluetooth read, whichever is newer (see `source` and `last_read`) |
-| Sensor *WiFi signal* | Bluetooth only; disabled by default |
-| Sensor *Orientation* | Raw accelerometer value 0 to 3 from the last wake; diagnostic, disabled by default |
-
-There is also a **device trigger**, *Frame woke up*, and the
-`paperlessoffline_frame_wake` event, whose data includes the photo that was
-served.
-
-The options flow also sets:
-
-- the mounting orientation
-- quiet hours
-- rendering defaults for the frame
-- HTTP Basic authentication
-- new URLs, if you need to regenerate them
-
-## Actions
-
-All actions take `config_entry_id`, which selects the frame.
-
-| Action | What it does |
-|---|---|
-| `paperlessoffline.add_photo` | Add an image from **one** of `file_path`, `url`, `media_content_id` or `image_entity_id` (camera or image entity). Optional `name`, `enabled` and per-photo render settings. Returns the `photo_id`. |
-| `paperlessoffline.update_photo` | Change `name`, `enabled` or render settings; `reset` clears overrides (`all` clears every override). |
-| `paperlessoffline.remove_photo` / `move_photo` / `copy_photo` | Manage the library; `copy_photo` copies to another frame. |
-| `paperlessoffline.show_photo` / `next_photo` | Choose or skip the photo for the next wake. |
-| `paperlessoffline.show_image` | Show a one-off image instead of the slideshow for `wakes` wakes, or until `clear_image`. The image is not added to the library. |
-| `paperlessoffline.list_photos` | Returns the library and what's up next. |
-| `paperlessoffline.set_defaults` | Set the global render defaults. |
-
-Render settings are layered: **global default → frame default → photo override**.
+These can be set per photo in actions, or as defaults with `set_defaults`.
 
 | Setting | Values | Set at |
 |---|---|---|
-| `dither` | `floyd_steinberg`, `atkinson`, `jarvis_judice_ninke`, `sierra2`, `bayer`, `none` | all levels |
-| `serpentine` | true / false | all levels |
-| `fit` | `cover` (crop), `contain` (borders), `stretch` | all levels |
-| `background` | `white`, `black` | all levels |
-| `brightness`, `contrast`, `saturation` | 0 to 3 (1 = unchanged) | all levels |
-| `palette` | `perceived` (default; matches what the panel really shows), `pure` | global and frame |
+| `dither` | `floyd_steinberg`, `atkinson`, `jarvis_judice_ninke`, `sierra2`, `bayer`, `none` | global, frame, photo |
+| `serpentine` | true / false | global, frame, photo |
+| `fit` | `cover` (crop), `contain` (borders), `stretch` | global, frame, photo |
+| `background` | `white`, `black` | global, frame, photo |
+| `brightness`, `contrast`, `saturation` | 0 to 3 (1 = unchanged) | global, frame, photo |
+| `palette` | `perceived` (default; matches what the panel really shows), `pure` | global, frame |
 | `rotation` | 0 / 90 / 180 / 270 | photo |
 | `focal_x`, `focal_y` | 0 to 1, the point kept when cropping | photo |
 | `crop` | `[x, y, width, height]` as fractions | photo |
 
-Example: show the doorbell camera for one wake.
+### Triggers
 
-```yaml
-action: paperlessoffline.show_image
-data:
-  config_entry_id: 01J...   # the frame
-  image_entity_id: camera.doorbell
-  wakes: 1
-  saturation: 1.3
-```
+- Device trigger **Frame woke up**.
+- Event `paperlessoffline_frame_wake`, whose data includes the photo that was
+  served.
 
-For `file_path` to work, the folder must be listed under
-`homeassistant: allowlist_external_dirs`.
+## Entities
 
-## Security notes
+Each frame is a device with these entities:
 
-- Each frame's URLs contain a long random token. Anyone who knows a frame's
-  URLs can fetch its image and settings, so don't share them.
-- The firmware doesn't send credentials when it fetches the settings file. If
-  you enable HTTP authentication, only the image URL is protected, and the
-  settings file (which contains the credentials) is protected by the token
+| Entity | Use it to |
+|---|---|
+| Image *Showing* / *Up next* | See what the frame shows now and next |
+| Select *Up next* | Pick the photo for the next wake |
+| Select *Slideshow order* | Switch between in order and shuffle |
+| Button *Skip photo* | Skip the photo that's up next |
+| Number *Refresh interval* | Set the minutes between wakes |
+| Switches | Turn motion wake-up, auto rotation, charger mode and telemetry on or off |
+| Sensors | Last seen, current photo, pending changes, photos in rotation |
+| Binary sensor *In sync* | See whether the frame has picked up every change |
+| *Battery voltage*, *Charging*, *USB power* | Watch the battery |
+| *WiFi signal* | Check reception (Bluetooth only; disabled by default) |
+| *Orientation* | Diagnostic, disabled by default |
+
+**Battery readings** update on every wake while the *Telemetry* switch is on
+(the default) and the frame runs the
+[firmware fork](https://github.com/FWeinb/paperlesspaper-firmware-offline)
+with telemetry support. Otherwise they update only
+when Home Assistant reaches the frame over Bluetooth (one button press).
+
+## Frame options
+
+*Settings → Devices & services → paperlesspaper → Configure* sets:
+
+- mounting orientation
+- **quiet hours**, when the frame doesn't wake
+- the frame's default look
+- HTTP Basic authentication for the image
+- the address the frame uses
+- new URLs, if you need to regenerate them
+- *Update over Bluetooth in setup mode*: turn this off if you want to use the
+  official web UI while the frame is in setup mode
+
+## Troubleshooting
+
+**"Frame hasn't checked in" repair.** The frame missed its expected wake by
+two more intervals (quiet hours are taken into account). Check its battery and
+WiFi. The notice clears itself when the frame checks in again.
+
+**"Frame needs new URLs" repair.** You regenerated the URLs, or Home
+Assistant's address changed. Press the frame's button once and use the fix
+dialog to update it over Bluetooth, or copy the shown URLs into the web UI.
+
+**The frame shows an old photo.** It hasn't woken since the change. Press its
+button twice, or wait for the next refresh.
+
+**No *Photo frames* panel.** The panel is for admins only. If you are an
+admin, the integration was probably installed from a copy of the repository
+instead of a release. Reinstall from HACS or the release zip.
+
+**Using a `*.local` or `localhost` URL.** The frame can't resolve these, so
+Home Assistant gives the frame its LAN IP and port instead (e.g.
+`http://192.168.1.20:8123`). Choose a different address in the frame's options
+if that one is wrong.
+
+## Security
+
+- Each frame's URLs contain a long secret token. Anyone who has them can fetch
+  the frame's image and settings, so don't share them.
+- HTTP authentication protects only the image. The firmware fetches its
+  settings file without credentials, so that file is protected by the token
   alone.
-- Plain HTTP on the local network is expected. The firmware doesn't verify TLS
+- The frame talks plain HTTP on your local network; it can't verify TLS
   certificates anyway.
 
-## Hardware support
+## Supported frames
 
 | Frame | Status |
 |---|---|
-| 7.3" (`epd7-…`) | Tested: image format and portrait/landscape orientation verified |
+| 7.3" (`epd7-…`) | Tested |
 | 13.3" (`epd13-…`) | Untested. It should work, but landscape mounting may come out upside down |
 
-If you have a 13" frame, run `tools/hw_spike.py --panel 13 --mount landscape`
-(see its docstring) and report whether the arrow points up.
+If you have a 13" frame, please
+[open an issue](https://github.com/FWeinb/ha-paperlesspaper-offline/issues);
+[DEVELOPMENT.md](DEVELOPMENT.md#hardware-check) describes a quick check.
 
-**Firmware build note:** the upstream firmware selects the panel at compile
-time in `src/types.h` (`EPD_TYPE_13INCH` / `EPD_TYPE_7INCH`). Make sure your
-frame's boot log shows the right ID prefix (`epd7-` or `epd13-`).
+If you build the firmware yourself, select the right panel in `src/types.h`
+(`EPD_TYPE_13INCH` / `EPD_TYPE_7INCH`). The frame's ID must start with
+`epd7-` or `epd13-` to match.
+
+## Contributing
+
+Bug reports and pull requests are welcome on
+[GitHub](https://github.com/FWeinb/ha-paperlesspaper-offline/issues). See
+[DEVELOPMENT.md](DEVELOPMENT.md) for building, testing and releasing.
 
 ## Credits
 
-Text on the frame (the "No photos yet" screen) is set in
-[Noto Sans](https://github.com/notofonts/latin-greek-cyrillic), © The Noto
-Project Authors. It is licensed under the SIL Open Font License 1.1 (see
-`custom_components/paperlessoffline/render/fonts/OFL.txt`) and bundled as a
-Latin subset. Arrows and maths symbols fall back to
-[Noto Sans Math](https://github.com/notofonts/math) (same licence, also
-subset). Overlay icons use the
+Text on the frame is set in
+[Noto Sans](https://github.com/notofonts/latin-greek-cyrillic) and
+[Noto Sans Math](https://github.com/notofonts/math), © The Noto Project
+Authors, under the SIL Open Font License 1.1. Overlay icons use the
 [Material Design Icons](https://pictogrammers.com/library/mdi/) webfont by
-Pictogrammers, under the Apache 2.0 licence (see
-`render/fonts/MaterialDesignIcons-LICENSE.txt`).
+Pictogrammers, under the Apache 2.0 licence. The licence texts are in
+`custom_components/paperlessoffline/render/fonts/`.
 
-## Development
-
-```sh
-uv venv --python 3.14 && uv pip install -r requirements_test.txt
-.venv/bin/pytest -q
-.venv/bin/ruff check . && .venv/bin/mypy custom_components
-```
-
-`strings.json`, both translation files and `services.yaml` are generated by
-`tools/gen_strings.py` and `tools/gen_services_yaml.py`. Edit those scripts,
-not the generated files.
-
-### Frontend
-
-The panel and card are Lit + TypeScript in `frontend/`. They are built with Vite
-into `custom_components/paperlessoffline/frontend/`. That directory is build
-output and is not committed. The release workflow builds it and attaches the
-whole integration as `paperlessoffline.zip` to each GitHub release, which is
-what HACS installs. Build it locally to run the integration from a checkout:
-
-```sh
-cd frontend
-npm ci
-npm run build      # typecheck + bundle
-npm run dev        # mock harness at http://localhost:5199 (see dev/mock.ts)
-npm run e2e        # interaction smoke test against the running harness
-```
-
-The mock harness (`dev/mock.ts`) fakes the integration's websocket API. Query
-parameters such as `?frame=kitchen&edit=0`, `?tab=settings`, `?view=card`,
-`?dark=1`, `?narrow=1` and `?lang=de` jump to a particular view.
+The sample photos in the screenshot come from [Lorem Picsum](https://picsum.photos)
+(Unsplash).
