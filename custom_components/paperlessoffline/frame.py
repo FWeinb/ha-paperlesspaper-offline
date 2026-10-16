@@ -9,6 +9,7 @@ from datetime import datetime
 import hashlib
 import json
 import logging
+import math
 from pathlib import Path
 import secrets
 import time
@@ -54,6 +55,7 @@ from .const import (
     DOMAIN,
     EVENT_FRAME_WAKE,
     IMAGE_PATH,
+    MAX_IMAGE_PIXELS,
     MAX_UPLOAD_BYTES,
     ORDER_SEQUENTIAL,
     PANELS,
@@ -70,6 +72,7 @@ from .render import (
     PlaceholderText,
     RenderOptions,
     RenderResult,
+    TooManyPixelsError,
     canvas_for,
     composite,
     make_thumbnail,
@@ -977,7 +980,18 @@ class FrameManager:
                 translation_domain=DOMAIN, translation_key="image_too_large"
             )
         try:
-            fmt, _, _ = await self.hass.async_add_executor_job(validate_image, data)
+            fmt, _, _ = await self.hass.async_add_executor_job(
+                validate_image, data, MAX_IMAGE_PIXELS
+            )
+        except TooManyPixelsError as err:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="image_too_many_pixels",
+                translation_placeholders={
+                    "megapixels": str(math.ceil(err.pixels / 1e6)),
+                    "limit": str(MAX_IMAGE_PIXELS // 1_000_000),
+                },
+            ) from err
         except Exception as err:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,

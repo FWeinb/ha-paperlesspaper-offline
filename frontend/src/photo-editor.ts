@@ -5,6 +5,7 @@ import { copyPhoto, deletePhoto, errorMessage, renderPreview, showPhoto, updateP
 import "./crop-area";
 import type { Crop } from "./crop-area";
 import { localizer } from "./localize";
+import { PreviewQueue } from "./preview-queue";
 import "./render-settings";
 import { resolveSettings } from "./render-settings";
 import { icon, sharedStyles } from "./styles";
@@ -34,8 +35,10 @@ export class PhotoEditor extends LitElement {
   @state() private notice: string | null = null;
   @state() private busy = false;
 
-  private previewTimer?: number;
-  private previewSeq = 0;
+  private previewQueue = new PreviewQueue(
+    (stale) => this.loadPreview(stale),
+    (busy) => (this.rendering = busy),
+  );
 
   override connectedCallback() {
     super.connectedCallback();
@@ -45,7 +48,7 @@ export class PhotoEditor extends LitElement {
   override disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener("keydown", this.onKey);
-    window.clearTimeout(this.previewTimer);
+    this.previewQueue.cancel();
   }
 
   private onKey = (ev: KeyboardEvent) => {
@@ -92,22 +95,17 @@ export class PhotoEditor extends LitElement {
   }
 
   private schedulePreview(delay = PREVIEW_DELAY) {
-    window.clearTimeout(this.previewTimer);
-    this.previewTimer = window.setTimeout(() => this.loadPreview(), delay);
+    this.previewQueue.schedule(delay);
   }
 
-  private async loadPreview() {
-    const seq = ++this.previewSeq;
-    this.rendering = true;
+  private async loadPreview(stale: () => boolean) {
     try {
       const result = await renderPreview(this.hass, this.frame.entry_id, this.photo.photo_id, {
         overrides: this.draft,
       });
-      if (seq === this.previewSeq) this.preview = result.image;
+      if (!stale()) this.preview = result.image;
     } catch (err) {
-      if (seq === this.previewSeq) this.error = errorMessage(err);
-    } finally {
-      if (seq === this.previewSeq) this.rendering = false;
+      if (!stale()) this.error = errorMessage(err);
     }
   }
 

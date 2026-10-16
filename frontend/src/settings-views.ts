@@ -2,6 +2,7 @@ import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { errorMessage, fetchPhotos, renderPreview, saveDefaults, updateFrame } from "./api";
 import { localizer } from "./localize";
+import { PreviewQueue } from "./preview-queue";
 import "./render-settings";
 import { resolveSettings } from "./render-settings";
 import { sharedStyles } from "./styles";
@@ -18,39 +19,35 @@ abstract class PreviewingView extends LitElement {
   @state() protected rendering = false;
   @state() protected error: string | null = null;
   @state() protected status: "saved" | null = null;
-  private timer?: number;
-  private seq = 0;
+  private queue = new PreviewQueue(
+    (stale) => this.loadPreview(stale),
+    (busy) => (this.rendering = busy),
+  );
 
   override disconnectedCallback() {
     super.disconnectedCallback();
-    window.clearTimeout(this.timer);
+    this.queue.cancel();
   }
 
   protected abstract previewRequest(): { frame: Frame; photoId: string; settings: object } | null;
 
   protected schedulePreview(delay = PREVIEW_DELAY) {
-    window.clearTimeout(this.timer);
-    this.timer = window.setTimeout(() => this.loadPreview(), delay);
+    this.queue.schedule(delay);
   }
 
-  private async loadPreview() {
+  private async loadPreview(stale: () => boolean) {
     const req = this.previewRequest();
     if (!req) {
       this.preview = null;
       return;
     }
-    const seq = ++this.seq;
-    this.rendering = true;
     try {
       const res = await renderPreview(this.hass, req.frame.entry_id, req.photoId, req.settings);
-      if (seq === this.seq) {
-        this.preview = res.image;
-        this.previewAspect = `${res.width} / ${res.height}`;
-      }
+      if (stale()) return;
+      this.preview = res.image;
+      this.previewAspect = `${res.width} / ${res.height}`;
     } catch (err) {
-      if (seq === this.seq) this.error = errorMessage(err);
-    } finally {
-      if (seq === this.seq) this.rendering = false;
+      if (!stale()) this.error = errorMessage(err);
     }
   }
 

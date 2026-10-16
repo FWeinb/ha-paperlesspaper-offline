@@ -93,7 +93,7 @@ Admins get a **Photo frames** entry in the sidebar. It has three parts.
 
 **Photos tab:**
 - Upload by drag-and-drop or the *Upload* button (JPEG, PNG, WebP, HEIC; up
-  to 50 MB each), or *Import from media* to pick images from any Home Assistant
+  to 50 MB and 100 megapixels each), or *Import from media* to pick images from any Home Assistant
   media source.
 - Drag photos to change the order; the eye button takes a photo out of the
   rotation. Choose *In order* or *Shuffle*.

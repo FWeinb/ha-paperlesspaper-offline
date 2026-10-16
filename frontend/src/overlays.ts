@@ -12,6 +12,7 @@ import {
 } from "./api";
 import { ensureCodeEditor, insertIntoCodeEditor } from "./ha-editor";
 import { localizer } from "./localize";
+import { PreviewQueue } from "./preview-queue";
 import { icon, sharedStyles } from "./styles";
 import type { Anchor, Frame, HomeAssistant, Overlay, PaletteColor, Photo } from "./types";
 
@@ -362,8 +363,10 @@ export class OverlayEditor extends LitElement {
   @state() private error: string | null = null;
   /** Whether HA's code editor is available (else plain text fields). */
   @state() private codeEditor = false;
-  private timer?: number;
-  private seq = 0;
+  private queue = new PreviewQueue(
+    (stale) => this.loadPreview(stale),
+    (busy) => (this.rendering = busy),
+  );
 
   override connectedCallback() {
     super.connectedCallback();
@@ -374,7 +377,7 @@ export class OverlayEditor extends LitElement {
   override disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener("keydown", this.onKey);
-    window.clearTimeout(this.timer);
+    this.queue.cancel();
   }
 
   private onKey = (ev: KeyboardEvent) => {
@@ -398,13 +401,10 @@ export class OverlayEditor extends LitElement {
   }
 
   private schedule(delay = PREVIEW_DELAY) {
-    window.clearTimeout(this.timer);
-    this.timer = window.setTimeout(() => this.loadPreview(), delay);
+    this.queue.schedule(delay);
   }
 
-  private async loadPreview() {
-    const seq = ++this.seq;
-    this.rendering = true;
+  private async loadPreview(stale: () => boolean) {
     const editedId = this.draft.overlay_id ?? DRAFT_ID;
     const draft = { ...this.draft, overlay_id: editedId };
     const list = this.overlays.some((o) => o.overlay_id === editedId)
@@ -412,14 +412,12 @@ export class OverlayEditor extends LitElement {
       : [...this.overlays, draft];
     try {
       const res = await previewOverlays(this.hass, this.frame.entry_id, list, this.sampleId);
-      if (seq !== this.seq) return;
+      if (stale()) return;
       this.preview = res.image;
       this.aspect = `${res.width} / ${res.height}`;
       this.result = res.results[editedId] ?? null;
     } catch (err) {
-      if (seq === this.seq) this.error = errorMessage(err);
-    } finally {
-      if (seq === this.seq) this.rendering = false;
+      if (!stale()) this.error = errorMessage(err);
     }
   }
 

@@ -58,6 +58,8 @@ OFFLINE_GRACE_SECONDS: Final = 300
 # Frames that fetched settings within 2x their sleep + this are "settings frames".
 SETTINGS_GRACE_SECONDS: Final = 300
 MAX_UPLOAD_BYTES: Final = 50 * 1024 * 1024
+# Decoding costs memory by pixel count (3 bytes each), not file size.
+MAX_IMAGE_PIXELS: Final = 100_000_000
 ALLOWED_FORMATS: Final = frozenset({"JPEG", "PNG", "WEBP", "HEIF", "MPO"})
 
 # Render settings and which level may set them

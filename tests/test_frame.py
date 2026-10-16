@@ -6,6 +6,7 @@ import base64
 from datetime import timedelta
 import io
 from pathlib import Path
+from unittest.mock import patch
 
 from freezegun.api import FrozenDateTimeFactory
 from homeassistant.core import HomeAssistant
@@ -497,3 +498,32 @@ async def test_settings_download_url_keeps_port(
     assert (await resp.json())["downloadUrl"] == f"http://192.168.1.10:8123{IMAGE_URL}"
     resp = await client.get(SETTINGS_URL, headers={"Host": "192.168.1.10"})
     assert (await resp.json())["downloadUrl"] == f"http://192.168.1.10{IMAGE_URL}"
+
+
+async def test_upload_pixel_limit(hass: HomeAssistant, loaded_entry, monkeypatch) -> None:
+    """Images above the pixel limit are refused, for the library and for show_image."""
+    manager = loaded_entry.runtime_data
+    monkeypatch.setattr("custom_components.paperlessoffline.frame.MAX_IMAGE_PIXELS", 320 * 199)
+    with pytest.raises(ServiceValidationError) as err:
+        await manager.async_add_photo(make_jpeg(), "big")
+    assert err.value.translation_key == "image_too_many_pixels"
+    assert err.value.translation_placeholders == {"megapixels": "1", "limit": "0"}  # rounded up
+    with pytest.raises(ServiceValidationError, match="megapixels"):
+        await manager.async_set_override(make_jpeg(), "big", None, 1)
+    assert manager.photos == []
+    assert manager.state.override is None
+    await manager.async_add_photo(make_jpeg(size=(320, 199)), "fits")
+
+
+async def test_decompression_bomb_reports_pixels(hass: HomeAssistant, loaded_entry) -> None:
+    """Images Pillow itself refuses as too large get the same message."""
+    from PIL import Image as PILImage
+
+    manager = loaded_entry.runtime_data
+    with (
+        patch.object(PILImage, "MAX_IMAGE_PIXELS", 1000),
+        pytest.raises(ServiceValidationError) as err,
+    ):
+        await manager.async_add_photo(make_jpeg(), "bomb")
+    assert err.value.translation_key == "image_too_many_pixels"
+    assert err.value.translation_placeholders == {"megapixels": "1", "limit": "100"}

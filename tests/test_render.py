@@ -25,6 +25,12 @@ from custom_components.paperlessoffline.render.dither import (
     error_diffusion_wavefront,
 )
 from custom_components.paperlessoffline.render.palette import DEVICE_INDICES, PERCEIVED, PURE
+from custom_components.paperlessoffline.render.pipeline import (
+    fit_image,
+    load_region,
+    make_thumbnail,
+    open_image,
+)
 from custom_components.paperlessoffline.settings import resolve
 
 from .conftest import make_jpeg
@@ -216,3 +222,113 @@ def test_resolve_layers() -> None:
     assert opts.palette == "pure"  # palette is not overridable per photo
     assert opts.crop == (0, 0, 1, 1)
     assert resolve(None, None, None) == RenderOptions()
+
+
+def _reference_fit(data: bytes, opts: RenderOptions, width: int, height: int) -> Image.Image:
+    """The full-size decode, rotate, crop and fit used before shrink-first (render v1)."""
+    from PIL import ImageOps
+
+    background = (255, 255, 255)
+    img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
+    if opts.rotation % 360:
+        img = img.rotate(-(opts.rotation % 360), expand=True)
+    if opts.crop:
+        cx, cy, cw, ch = opts.crop
+        iw, ih = img.size
+        box = (
+            round(max(0.0, cx) * iw),
+            round(max(0.0, cy) * ih),
+            round(min(1.0, cx + cw) * iw),
+            round(min(1.0, cy + ch) * ih),
+        )
+        img = img.crop(box)
+    iw, ih = img.size
+    lanczos = Image.Resampling.LANCZOS
+    if opts.fit == "stretch":
+        return img.resize((width, height), lanczos, reducing_gap=3.0)
+    if opts.fit == "contain":
+        scale = min(width / iw, height / ih)
+        nw, nh = max(1, round(iw * scale)), max(1, round(ih * scale))
+        canvas = Image.new("RGB", (width, height), background)
+        canvas.paste(
+            img.resize((nw, nh), lanczos, reducing_gap=3.0), ((width - nw) // 2, (height - nh) // 2)
+        )
+        return canvas
+    scale = max(width / iw, height / ih)
+    nw, nh = max(width, round(iw * scale)), max(height, round(ih * scale))
+    resized = img.resize((nw, nh), lanczos, reducing_gap=3.0)
+    left = round(min(max(opts.focal_x * nw - width / 2, 0), nw - width))
+    top = round(min(max(opts.focal_y * nh - height / 2, 0), nh - height))
+    return resized.crop((left, top, left + width, top + height))
+
+
+def _photo(size: tuple[int, int], orientation: int = 1, fmt: str = "JPEG") -> bytes:
+    """A photo-like test image: smooth gradients plus an asymmetric marker."""
+    w, h = size
+    y, x = np.mgrid[0:h, 0:w].astype(np.float32)
+    rgb = np.dstack(
+        [
+            128 + 100 * np.sin(x / (w / 7)),
+            128 + 100 * np.cos(y / (h / 5)),
+            255 * (x + 2 * y) / (w + 2 * h),
+        ]
+    ).astype(np.uint8)
+    rgb[h // 10 : h // 4, w // 12 : w // 3] = (250, 250, 20)  # top left, wider than tall
+    img = Image.fromarray(rgb)
+    exif = Image.Exif()
+    exif[0x0112] = orientation
+    buf = io.BytesIO()
+    img.save(buf, fmt, quality=95, exif=exif) if fmt == "JPEG" else img.save(buf, fmt)
+    return buf.getvalue()
+
+
+@pytest.mark.parametrize("orientation", [1, 2, 3, 5, 6, 8])
+@pytest.mark.parametrize("rotation", [0, 90, 270])
+@pytest.mark.parametrize(
+    ("fit", "crop", "focal"),
+    [
+        ("cover", None, (0.5, 0.5)),
+        ("cover", (0.1, 0.2, 0.5, 0.4), (0.9, 0.1)),
+        ("contain", None, (0.5, 0.5)),
+        ("contain", (0.3, 0.1, 0.2, 0.6), (0.5, 0.5)),
+        ("stretch", (0.0, 0.5, 0.7, 0.5), (0.5, 0.5)),
+    ],
+)
+def test_shrink_first_matches_full_decode(orientation, rotation, fit, crop, focal) -> None:
+    """Shrinking while decoding gives the same picture as fitting the full image."""
+    data = _photo((2400, 1600), orientation)
+    opts = RenderOptions(fit=fit, crop=crop, focal_x=focal[0], focal_y=focal[1], rotation=rotation)
+    new = np.asarray(fit_image(data, opts, 200, 120), dtype=np.float32)
+    old = np.asarray(_reference_fit(data, opts, 200, 120), dtype=np.float32)
+    assert new.shape == old.shape
+    diff = np.abs(new - old)
+    assert diff.mean() < 1.0
+    assert np.percentile(diff, 99) < 4
+
+
+def test_shrink_first_png_and_rotation_180() -> None:
+    """Non-JPEG sources are shrunk by pixel averaging, with the same result."""
+    data = _photo((1800, 1200), fmt="PNG")
+    opts = RenderOptions(rotation=180, crop=(0.05, 0.05, 0.6, 0.6), focal_x=0.2)
+    new = np.asarray(fit_image(data, opts, 160, 240), dtype=np.float32)
+    old = np.asarray(_reference_fit(data, opts, 160, 240), dtype=np.float32)
+    assert np.abs(new - old).mean() < 1.0
+
+
+def test_load_region_shrinks_but_keeps_twice_the_output() -> None:
+    img = open_image(_photo((2400, 1600), 6))
+    region, box = load_region(img, 90, (0, 0, 2400, 1600), (200, 133), (255, 255, 255))
+    assert region.size[0] < 2400
+    assert box[2] - box[0] >= 400 and box[3] - box[1] >= 266
+
+
+def test_thumbnail_uses_upright_orientation(tmp_path) -> None:
+    source = tmp_path / "p.jpg"
+    source.write_bytes(_photo((2400, 1600), 6))  # stored landscape, shown portrait
+    thumb = Image.open(io.BytesIO(make_thumbnail(source, tmp_path / "t.jpg", 320, 90)))
+    assert thumb.size == (320, 213)
+    upright = _reference_fit(
+        source.read_bytes(), RenderOptions(rotation=90, fit="stretch"), 320, 213
+    )
+    diff = np.abs(np.asarray(thumb, dtype=np.float32) - np.asarray(upright, dtype=np.float32))
+    assert diff.mean() < 3

@@ -375,6 +375,9 @@
     "image_too_large": {
       "message": "The image is larger than 50 MB."
     },
+    "image_too_many_pixels": {
+      "message": "The image has {megapixels} megapixels; at most {limit} are allowed."
+    },
     "invalid_image": {
       "message": "The file is not a readable image: {error}"
     },

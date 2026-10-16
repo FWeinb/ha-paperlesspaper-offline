@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-RENDER_VERSION = 1
+RENDER_VERSION = 2
 MAX_ENTRIES = 24
 
 

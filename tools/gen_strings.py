@@ -653,6 +653,14 @@ def _build_base(lang: str) -> dict:
             "image_too_large": {
                 "message": L(t("The image is larger than 50 MB.", "Das Bild ist größer als 50 MB."))
             },
+            "image_too_many_pixels": {
+                "message": L(
+                    t(
+                        "The image has {megapixels} megapixels; at most {limit} are allowed.",
+                        "Das Bild hat {megapixels} Megapixel; erlaubt sind höchstens {limit}.",
+                    )
+                )
+            },
             "invalid_image": {
                 "message": L(
                     t(

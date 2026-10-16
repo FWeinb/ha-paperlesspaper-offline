@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import io
+import math
 from pathlib import Path
+import re
 from typing import Any
 
 import numpy as np
-from PIL import Image, ImageEnhance, ImageOps
+from PIL import Image, ImageEnhance
 
 from .bmp import encode_bmp4
 from .dither import dither, nearest
@@ -85,11 +87,133 @@ def canvas_for(native_width: int, native_height: int, mounting: str) -> Canvas:
     return Canvas(native_height, native_width, 1 if flipped else 3)
 
 
-def load_image(data: bytes) -> Image.Image:
-    """Decode image bytes, apply EXIF orientation and flatten alpha."""
-    img: Image.Image = Image.open(io.BytesIO(data))
+Box = tuple[float, float, float, float]  # x0, y0, x1, y1 in pixels
+
+_T = Image.Transpose
+_EXIF_TRANSPOSE = {
+    2: _T.FLIP_LEFT_RIGHT,
+    3: _T.ROTATE_180,
+    4: _T.FLIP_TOP_BOTTOM,
+    5: _T.TRANSPOSE,
+    6: _T.ROTATE_270,
+    7: _T.TRANSVERSE,
+    8: _T.ROTATE_90,
+}
+_ROTATION_TRANSPOSE = {90: _T.ROTATE_270, 180: _T.ROTATE_180, 270: _T.ROTATE_90}  # clockwise
+_INVERSE = {_T.ROTATE_90: _T.ROTATE_270, _T.ROTATE_270: _T.ROTATE_90}  # others undo themselves
+_SWAPS_AXES = {_T.ROTATE_90, _T.ROTATE_270, _T.TRANSPOSE, _T.TRANSVERSE}
+# Shrink the decoded image to at least this many times the output size before
+# the final Lanczos resize, which keeps it free of visible quality loss.
+SHRINK_MARGIN = 2
+
+
+def open_image(data: bytes) -> Image.Image:
+    """Open image bytes without decoding the pixels yet."""
+    return Image.open(io.BytesIO(data))
+
+
+def _transposes(img: Image.Image, rotation: int) -> list[Image.Transpose]:
+    """EXIF orientation, then a clockwise rotation, as lossless transposes."""
+    ops = []
+    if (op := _EXIF_TRANSPOSE.get(img.getexif().get(0x0112, 1))) is not None:
+        ops.append(op)
+    if (op := _ROTATION_TRANSPOSE.get(rotation % 360)) is not None:
+        ops.append(op)
+    return ops
+
+
+def _transpose_box(box: Box, size: tuple[int, int], op: Image.Transpose) -> Box:
+    """Where ``box`` of an image of ``size`` ends up after transposing it."""
+    x0, y0, x1, y1 = box
+    w, h = size
+    return {
+        _T.FLIP_LEFT_RIGHT: (w - x1, y0, w - x0, y1),
+        _T.FLIP_TOP_BOTTOM: (x0, h - y1, x1, h - y0),
+        _T.ROTATE_180: (w - x1, h - y1, w - x0, h - y0),
+        _T.ROTATE_90: (y0, w - x1, y1, w - x0),
+        _T.ROTATE_270: (h - y1, x0, h - y0, x1),
+        _T.TRANSPOSE: (y0, x0, y1, x1),
+        _T.TRANSVERSE: (h - y1, w - x1, h - y0, w - x0),
+    }[op]
+
+
+def _transposed_size(size: tuple[int, int], op: Image.Transpose) -> tuple[int, int]:
+    return (size[1], size[0]) if op in _SWAPS_AXES else size
+
+
+def upright_size(img: Image.Image, rotation: int = 0) -> tuple[int, int]:
+    """Size after EXIF orientation and a clockwise rotation."""
+    size = img.size
+    for op in _transposes(img, rotation):
+        size = _transposed_size(size, op)
+    return size
+
+
+def _shrink_factor(box: Box, out: tuple[int, int]) -> int:
+    """Largest integer factor that keeps ``box`` at least SHRINK_MARGIN x ``out``."""
+    return max(
+        1,
+        math.floor(min((box[2] - box[0]) / out[0], (box[3] - box[1]) / out[1]) / SHRINK_MARGIN),
+    )
+
+
+def load_region(
+    img: Image.Image,
+    rotation: int,
+    box: Box,
+    out: tuple[int, int],
+    background: tuple[int, int, int],
+) -> tuple[Image.Image, Box]:
+    """Decode just enough of ``img`` to resize its ``box`` to ``out``.
+
+    ``box`` and ``out`` are upright (after EXIF orientation and the clockwise
+    ``rotation``). The image is shrunk while decoding (JPEG DCT scaling), cut
+    down to the box and shrunk by pixel averaging, but stays at least
+    SHRINK_MARGIN times ``out``; only then is it turned upright. Returns the
+    upright RGB image and where ``box`` lies in it.
+    """
+    ops = _transposes(img, rotation)
+    sizes = [img.size]
+    for op in ops:
+        sizes.append(_transposed_size(sizes[-1], op))
+    for op, size in zip(reversed(ops), reversed(sizes[1:]), strict=True):
+        box = _transpose_box(box, size, _INVERSE.get(op, op))
+    if sum(op in _SWAPS_AXES for op in ops) % 2:
+        out = (out[1], out[0])
+
+    if (factor := _shrink_factor(box, out)) > 1:
+        width, height = img.size
+        # Returns where the full image lies in the scaled decode (None if not supported).
+        if drafted := img.draft(None, (-(-width // factor), -(-height // factor))):
+            scale = width / drafted[1][2]
+            box = (box[0] / scale, box[1] / scale, box[2] / scale, box[3] / scale)
     img.load()
-    return ImageOps.exif_transpose(img)
+    img = to_rgb(img, background)
+    # Keep only the box and the pixels Lanczos reads around it (3 per output
+    # pixel), shrunk by pixel averaging when there is room.
+    factor = _shrink_factor(box, out)
+    ratio = max((box[2] - box[0]) / out[0], (box[3] - box[1]) / out[1])
+    margin = math.ceil(3 * ratio) + factor
+    region = (
+        max(0, math.floor(box[0]) - margin),
+        max(0, math.floor(box[1]) - margin),
+        min(img.size[0], math.ceil(box[2]) + margin),
+        min(img.size[1], math.ceil(box[3]) + margin),
+    )
+    if factor > 1:
+        img = img.reduce(factor, region)
+    elif region != (0, 0, *img.size):
+        img = img.crop(region)
+    box = (
+        (box[0] - region[0]) / factor,
+        (box[1] - region[1]) / factor,
+        (box[2] - region[0]) / factor,
+        (box[3] - region[1]) / factor,
+    )
+    for op in ops:
+        box = _transpose_box(box, img.size, op)
+        img = img.transpose(op)
+    return img, box
 
 
 def to_rgb(img: Image.Image, background: tuple[int, int, int]) -> Image.Image:
@@ -99,42 +223,66 @@ def to_rgb(img: Image.Image, background: tuple[int, int, int]) -> Image.Image:
         base = Image.new("RGBA", rgba.size, (*background, 255))
         base.alpha_composite(rgba)
         return base.convert("RGB")
-    return img.convert("RGB")
+    return img if img.mode == "RGB" else img.convert("RGB")
 
 
-def fit_image(img: Image.Image, opts: RenderOptions, width: int, height: int) -> Image.Image:
-    """Rotate, crop and fit an RGB image onto a width x height canvas."""
-    background = BACKGROUNDS.get(opts.background, BACKGROUNDS["white"])
-    if opts.rotation % 360:
-        img = img.rotate(-(opts.rotation % 360), expand=True)
+def fit_plan(
+    size: tuple[int, int], opts: RenderOptions, width: int, height: int
+) -> tuple[Box, tuple[int, int], tuple[int, int] | None]:
+    """Crop and fit an upright image of ``size`` onto a width x height canvas.
+
+    Returns the source box, the size it is resized to and, for "contain", where
+    the result is pasted onto the background.
+    """
+    iw, ih = size
+    box: Box = (0, 0, iw, ih)
     if opts.crop:
         cx, cy, cw, ch = opts.crop
-        iw, ih = img.size
-        box = (
+        crop = (
             round(max(0.0, cx) * iw),
             round(max(0.0, cy) * ih),
             round(min(1.0, cx + cw) * iw),
             round(min(1.0, cy + ch) * ih),
         )
-        if box[2] - box[0] >= 1 and box[3] - box[1] >= 1:
-            img = img.crop(box)
-    iw, ih = img.size
+        if crop[2] - crop[0] >= 1 and crop[3] - crop[1] >= 1:
+            box = crop
+    bw, bh = box[2] - box[0], box[3] - box[1]
     if opts.fit == "stretch":
-        return img.resize((width, height), Image.Resampling.LANCZOS, reducing_gap=3.0)
+        return box, (width, height), None
     if opts.fit == "contain":
-        scale = min(width / iw, height / ih)
-        nw, nh = max(1, round(iw * scale)), max(1, round(ih * scale))
-        resized = img.resize((nw, nh), Image.Resampling.LANCZOS, reducing_gap=3.0)
-        canvas = Image.new("RGB", (width, height), background)
-        canvas.paste(resized, ((width - nw) // 2, (height - nh) // 2))
-        return canvas
-    # cover
-    scale = max(width / iw, height / ih)
-    nw, nh = max(width, round(iw * scale)), max(height, round(ih * scale))
-    resized = img.resize((nw, nh), Image.Resampling.LANCZOS, reducing_gap=3.0)
+        scale = min(width / bw, height / bh)
+        nw, nh = max(1, round(bw * scale)), max(1, round(bh * scale))
+        return box, (nw, nh), ((width - nw) // 2, (height - nh) // 2)
+    # cover: scale up to cover the canvas, then cut out around the focal point
+    scale = max(width / bw, height / bh)
+    nw, nh = max(width, round(bw * scale)), max(height, round(bh * scale))
     left = round(min(max(opts.focal_x * nw - width / 2, 0), nw - width))
     top = round(min(max(opts.focal_y * nh - height / 2, 0), nh - height))
-    return resized.crop((left, top, left + width, top + height))
+    sx, sy = nw / bw, nh / bh
+    return (
+        (
+            box[0] + left / sx,
+            box[1] + top / sy,
+            box[0] + (left + width) / sx,
+            box[1] + (top + height) / sy,
+        ),
+        (width, height),
+        None,
+    )
+
+
+def fit_image(data: bytes, opts: RenderOptions, width: int, height: int) -> Image.Image:
+    """Decode, rotate, crop and fit image bytes onto a width x height RGB canvas."""
+    background = BACKGROUNDS.get(opts.background, BACKGROUNDS["white"])
+    img = open_image(data)
+    box, out, paste = fit_plan(upright_size(img, opts.rotation), opts, width, height)
+    img, box = load_region(img, opts.rotation, box, out, background)
+    resized = img.resize(out, Image.Resampling.LANCZOS, box=box, reducing_gap=3.0)
+    if paste is None:
+        return resized
+    canvas = Image.new("RGB", (width, height), background)
+    canvas.paste(resized, paste)
+    return canvas
 
 
 def enhance(img: Image.Image, opts: RenderOptions) -> Image.Image:
@@ -165,9 +313,7 @@ def render_preview(data: bytes, opts: RenderOptions, canvas: Canvas) -> bytes:
 
 def render(data: bytes, opts: RenderOptions, canvas: Canvas) -> RenderResult:
     """Render encoded image bytes for a canvas. Blocking; run in an executor."""
-    background = BACKGROUNDS.get(opts.background, BACKGROUNDS["white"])
-    img = to_rgb(load_image(data), background)
-    img = enhance(fit_image(img, opts, canvas.width, canvas.height), opts)
+    img = enhance(fit_image(data, opts, canvas.width, canvas.height), opts)
     rgb = np.asarray(img, dtype=np.float32)
     positions = dither(rgb, get_palette(opts.palette), opts.dither, opts.serpentine)
     return finish(positions, canvas)
@@ -180,9 +326,28 @@ def render_placeholder(text: PlaceholderText, canvas: Canvas) -> RenderResult:
     return finish(positions, canvas)
 
 
-def validate_image(data: bytes) -> tuple[str, int, int]:
-    """Check that bytes decode as an image; return (format, width, height)."""
-    img = Image.open(io.BytesIO(data))
+class TooManyPixelsError(ValueError):
+    """The image has more pixels than allowed."""
+
+    def __init__(self, pixels: int) -> None:
+        """Initialise."""
+        super().__init__(f"{pixels} pixels")
+        self.pixels = pixels
+
+
+def validate_image(data: bytes, max_pixels: int) -> tuple[str, int, int]:
+    """Check that bytes decode as an image; return (format, width, height).
+
+    Raises TooManyPixelsError above ``max_pixels``, including for images Pillow
+    itself refuses as too large (decompression bombs).
+    """
+    try:
+        img = Image.open(io.BytesIO(data))
+    except Image.DecompressionBombError as err:
+        match = re.search(r"\((\d+) pixels\)", str(err))
+        raise TooManyPixelsError(int(match[1]) if match else 0) from err
+    if img.width * img.height > max_pixels:
+        raise TooManyPixelsError(img.width * img.height)
     img.verify()
     img = Image.open(io.BytesIO(data))
     return (img.format or "unknown", img.width, img.height)
@@ -192,10 +357,12 @@ def make_thumbnail(source: Path, target: Path, size: int = 320, rotation: int = 
     """Create (or read) a cached JPEG of an original, optionally rotated clockwise."""
     if target.is_file() and target.stat().st_mtime >= source.stat().st_mtime:
         return target.read_bytes()
-    img = to_rgb(load_image(source.read_bytes()), BACKGROUNDS["white"])
-    if rotation % 360:
-        img = img.rotate(-(rotation % 360), expand=True)
-    img.thumbnail((size, size), Image.Resampling.LANCZOS)
+    img = open_image(source.read_bytes())
+    iw, ih = upright_size(img, rotation)
+    scale = min(size / iw, size / ih, 1.0)
+    out = (max(1, round(iw * scale)), max(1, round(ih * scale)))
+    img, box = load_region(img, rotation, (0, 0, iw, ih), out, BACKGROUNDS["white"])
+    img = img.resize(out, Image.Resampling.LANCZOS, box=box)
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=85)
     target.parent.mkdir(parents=True, exist_ok=True)

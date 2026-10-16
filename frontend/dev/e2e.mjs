@@ -141,6 +141,28 @@ await new Promise((r) => setTimeout(r, 400));
 const toggled = (await ws()).filter((m) => m.type === "paperlessoffline/overlay/save").pop();
 check(toggled?.overlay?.id === "o1" && toggled.overlay.enabled === false, "toggle disables an overlay");
 
+// 6. Slow previews: changes made while one renders are coalesced into one request.
+await page.goto(`${BASE}?frame=kitchen&edit=0&slow=1500`);
+await new Promise((r) => setTimeout(r, 1000)); // the first preview is still running
+const editorForm = () => page.evaluateHandle(() =>
+  document.querySelector("paperlessoffline-panel").shadowRoot.querySelector("pp-photo-editor")
+    .shadowRoot.querySelector("pp-render-settings").shadowRoot.querySelectorAll(".row")[0]);
+await (await editorForm()).evaluate((row) => row.querySelector("input[type=checkbox]").click());
+for (const value of ["atkinson", "bayer", "none", "atkinson", "sierra2"]) {
+  await new Promise((r) => setTimeout(r, 500));
+  await (await editorForm()).evaluate((row, v) => {
+    const sel = row.querySelector("select");
+    sel.value = v;
+    sel.dispatchEvent(new Event("change"));
+  }, value);
+}
+await new Promise((r) => setTimeout(r, 4500));
+const slow = (await ws()).filter((m) => m.type === "paperlessoffline/preview");
+const maxInFlight = await page.evaluate(() => window.__previewMax);
+check(maxInFlight === 1, `one preview in flight at a time (max ${maxInFlight})`);
+check(slow.length <= 4, `stale changes coalesced (${slow.length} requests for 6 changes)`);
+check(slow.at(-1)?.overrides?.dither === "sierra2", "last request has the latest draft");
+
 await browser.close();
 console.log(failures.length ? `${failures.length} failure(s)` : "all interactions ok");
 process.exit(failures.length ? 1 : 0);

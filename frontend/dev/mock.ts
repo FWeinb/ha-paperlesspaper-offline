@@ -153,6 +153,20 @@ function drawOverlayMock(dataUrl: string, list: any[], w: number, h: number): Pr
 }
 
 const delay = <T>(v: T, ms = 120) => new Promise<T>((r) => setTimeout(() => r(v), ms));
+// ?slow=<ms> makes previews take that long; window.__previewMax records the
+// most preview requests that were in flight at once.
+const previewMs = Number(params.get("slow") ?? 300);
+let previewsInFlight = 0;
+async function previewDelay<T>(v: T | Promise<T>): Promise<T> {
+  previewsInFlight++;
+  const w = window as any;
+  w.__previewMax = Math.max(w.__previewMax ?? 0, previewsInFlight);
+  try {
+    return await delay(await v, previewMs);
+  } finally {
+    previewsInFlight--;
+  }
+}
 
 const hass: any = {
   language: params.get("lang") ?? "en",
@@ -175,7 +189,7 @@ const hass: any = {
         const frame = frames.find((f) => f.entry_id === msg.entry_id)!;
         const idx = photos[msg.entry_id].findIndex((p) => p.photo_id === msg.photo_id);
         const scale = 0.5;
-        return delay({ image: quantize(sources[idx], frame.canvas.width * scale, frame.canvas.height * scale, msg.overrides?.crop), width: frame.canvas.width, height: frame.canvas.height }, 300);
+        return previewDelay({ image: quantize(sources[idx], frame.canvas.width * scale, frame.canvas.height * scale, msg.overrides?.crop), width: frame.canvas.width, height: frame.canvas.height });
       }
       case "overlays": return delay({ overlays: overlays[msg.entry_id] ?? [] });
       case "overlay/save": {
@@ -196,7 +210,7 @@ const hass: any = {
         const base = quantize(sources[idx], frame.canvas.width / 2, frame.canvas.height / 2);
         const image = await drawOverlayMock(base, list, frame.canvas.width / 2, frame.canvas.height / 2);
         const results = Object.fromEntries(list.map((o: any) => [o.overlay_id, evalTemplate(o.template)]));
-        return delay({ image, width: frame.canvas.width, height: frame.canvas.height, results }, 300);
+        return previewDelay({ image, width: frame.canvas.width, height: frame.canvas.height, results });
       }
       case "media_source/browse_media":
         return delay(msg.media_content_id

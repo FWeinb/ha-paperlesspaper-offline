@@ -117,8 +117,13 @@ e-paper photo frames running the
 - **Dithering algorithms:** Floyd-Steinberg, Atkinson, Jarvis-Judice-Ninke,
   Sierra-2, ordered/Bayer, and none (nearest colour), each with optional
   serpentine scanning. Implemented in numpy.
+- **Target hardware**: HA often runs on slow hosts (Raspberry Pi class, 4 to
+  8 GB RAM, shared with everything else). Prefer doing less work and keeping
+  peak memory low over caching in RAM: no prepared images are kept in memory,
+  renders and thumbnails are cached on disk only.
 - **Pipeline:**
-  1. Decode the image and apply its EXIF orientation.
+  1. Decode only what the canvas needs (shrink-first, see §18) and apply the
+     EXIF orientation.
   2. Apply the photo's rotation.
   3. Fit or crop the image to the mounted canvas.
   4. Apply enhancement (brightness, contrast, saturation).
@@ -705,3 +710,46 @@ Each step is tested on a real frame before the next.
     reverse proxy on port 80 keeps working.
   - The settings JSON's `downloadUrl` reuses the host and port the frame
     itself requested.
+
+## 18. Implementation notes (render speed)
+
+- **Shrink-first decode** (`render/pipeline.py`, `fit_plan` and `load_region`):
+  the crop and the cover/contain box around the focal point are worked out
+  first, in upright coordinates, then mapped back through the photo's rotation
+  and EXIF orientation to the stored pixels.
+  - JPEGs are decoded at 1/2, 1/4 or 1/8 scale (`Image.draft`, DCT scaling),
+    then the box (plus the pixels Lanczos reads around it) is cut out and
+    shrunk by pixel averaging (`Image.reduce`). Both stop while the box is
+    still at least twice the output size (`SHRINK_MARGIN`), so the final
+    Lanczos resize sees enough pixels and the result matches the full decode
+    (tests compare both paths: mean difference under 1 of 255 per channel).
+  - EXIF orientation and the photo's rotation become lossless transposes,
+    applied after shrinking, so they touch only the small image.
+  - Enhancement and dithering run at canvas size as before.
+  - Thumbnails (320 and 1280 px) use the same decode, targeting the thumb size.
+  - `RENDER_VERSION` is 2, so existing cached renders are redone once.
+- **Upload pixel limit**: images above 100 megapixels are refused (library
+  uploads and `show_image` overrides share the validation), since decoding
+  costs 3 bytes per pixel whatever the file size.
+- **One preview request in flight** (`frontend/src/preview-queue.ts`): the
+  photo editor, the settings views and the overlay editor send at most one
+  preview at a time. Changes made meanwhile are coalesced, and only the
+  latest draft is sent when the running request returns. Before, every
+  debounced change was rendered in turn behind the render lock, stale or not.
+- **Not done on purpose**: no prepared image in memory or on disk, stored
+  originals stay untouched, dithering is unchanged.
+- **Measured** (M-series Mac, 24 MP JPEG with EXIF rotation, 800x480 canvas,
+  wall time and peak memory above the imported module):
+
+  | Render                                  | Before        | After         |
+  |-----------------------------------------|---------------|---------------|
+  | Floyd-Steinberg                         | 0.32 s, 232 MB | 0.22 s, 63 MB  |
+  | Floyd-Steinberg, serpentine             | 0.64 s, 304 MB | 0.55 s, 135 MB |
+  | Bayer                                   | 0.22 s, 265 MB | 0.12 s, 100 MB |
+  | 30 % crop, rotated (no shrink possible) | 0.26 s, 230 MB | 0.23 s, 131 MB |
+  | 1280 px thumbnail, rotated              | 0.15 s, 230 MB | 0.11 s, 89 MB  |
+
+  A cropped photo whose box is less than twice the canvas still needs the full
+  decode; then only the transposes and copies are saved. Serpentine dithering
+  remains the slowest step (about 0.4 s here, so seconds on a Pi).
+
