@@ -15,9 +15,11 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 import probatio as vol
 
+from .cards import CARD_BACKGROUNDS, PRESETS
 from .const import DOMAIN, RENDER_KEYS_FRAME_ONLY, RENDER_KEYS_PHOTO_ONLY, RENDER_KEYS_SHARED
 from .data import DATA_KEY, get_manager
 from .overlay_schema import OVERLAY_FIELDS, build_overlay
+from .render.pipeline import BACKGROUNDS
 from .settings import FRAME_FIELDS, PHOTO_FIELDS
 from .sources import ATTR_ENTITY, ATTR_FILE_PATH, ATTR_MEDIA, ATTR_URL, async_fetch_source
 from .store import OverlayDef
@@ -31,8 +33,12 @@ ATTR_ENABLED = "enabled"
 ATTR_POSITION = "position"
 ATTR_WAKES = "wakes"
 ATTR_RESET = "reset"
+ATTR_PRESET = "preset"
+ATTR_BACKGROUND = "background"
+ATTR_BACKGROUND_PHOTO = "background_photo_id"
 
 SERVICE_ADD_PHOTO = "add_photo"
+SERVICE_ADD_CARD = "add_card"
 SERVICE_REMOVE_PHOTO = "remove_photo"
 SERVICE_UPDATE_PHOTO = "update_photo"
 SERVICE_MOVE_PHOTO = "move_photo"
@@ -103,6 +109,15 @@ SCHEMAS: dict[str, vol.Schema] = {
             **_PHOTO_OVERRIDES,
         }
     ),
+    SERVICE_ADD_CARD: vol.Schema(
+        {
+            **_ENTRY,
+            vol.Optional(ATTR_NAME): cv.string,
+            vol.Optional(ATTR_PRESET, default="blank"): vol.In(PRESETS),
+            vol.Optional(ATTR_BACKGROUND, default="white"): vol.In(CARD_BACKGROUNDS),
+            vol.Optional(ATTR_BACKGROUND_PHOTO): cv.string,
+        }
+    ),
     SERVICE_REMOVE_PHOTO: vol.Schema(_PHOTO),
     SERVICE_UPDATE_PHOTO: vol.Schema(
         {
@@ -112,6 +127,9 @@ SCHEMAS: dict[str, vol.Schema] = {
             vol.Optional(ATTR_HIDE_OVERLAYS): cv.boolean,
             vol.Optional(ATTR_RESET): vol.All(cv.ensure_list, [vol.In((*_PHOTO_KEYS, "all"))]),
             **_PHOTO_OVERRIDES,
+            # A photo's render setting, or a card's background (checked per item).
+            vol.Optional(ATTR_BACKGROUND): vol.In(CARD_BACKGROUNDS),
+            vol.Optional(ATTR_BACKGROUND_PHOTO): cv.string,
         }
     ),
     SERVICE_MOVE_PHOTO: vol.Schema(
@@ -148,6 +166,7 @@ def _overrides(call: ServiceCall, keys: tuple[str, ...]) -> dict[str, Any]:
 def _photo_dict(manager: Any, photo: Any) -> dict[str, Any]:
     return {
         "photo_id": photo.id,
+        "kind": photo.kind,
         "name": photo.name,
         "enabled": photo.enabled,
         "added": photo.added,
@@ -158,8 +177,27 @@ def _photo_dict(manager: Any, photo: Any) -> dict[str, Any]:
         },
         "hide_frame_overlays": photo.hide_frame_overlays,
         "overlay_count": len(photo.overlays),
+        **card_fields(photo),
         "preview_url": f"/api/{DOMAIN}/preview/{manager.entry.entry_id}/{photo.id}.png",
     }
+
+
+def card_fields(photo: Any) -> dict[str, Any]:
+    """A card's background (empty for photos)."""
+    if not photo.is_card:
+        return {}
+    return {"background": photo.background, "background_photo_id": photo.background_photo_id}
+
+
+async def _add_card(call: ServiceCall) -> ServiceResponse:
+    manager = get_manager(call.hass, call.data[ATTR_ENTRY])
+    card = manager.async_add_card(
+        call.data.get(ATTR_NAME),
+        call.data[ATTR_PRESET],
+        call.data[ATTR_BACKGROUND],
+        call.data.get(ATTR_BACKGROUND_PHOTO),
+    )
+    return _photo_dict(manager, card)
 
 
 async def _add_photo(call: ServiceCall) -> ServiceResponse:
@@ -181,12 +219,24 @@ async def _remove_photo(call: ServiceCall) -> None:
 
 async def _update_photo(call: ServiceCall) -> ServiceResponse:
     manager = get_manager(call.hass, call.data[ATTR_ENTRY])
+    overrides = _overrides(call, _PHOTO_KEYS)
+    background = None
+    if manager.require_photo(call.data[ATTR_PHOTO]).is_card:
+        background = overrides.pop(ATTR_BACKGROUND, None)
+    elif overrides.get(ATTR_BACKGROUND, "white") not in BACKGROUNDS:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="not_a_card",
+            translation_placeholders={"photo_id": call.data[ATTR_PHOTO]},
+        )
     photo = manager.async_update_photo(
         call.data[ATTR_PHOTO],
         name=call.data.get(ATTR_NAME),
         enabled=call.data.get(ATTR_ENABLED),
-        overrides=_overrides(call, _PHOTO_KEYS),
+        overrides=overrides,
         reset=call.data.get(ATTR_RESET),
+        background=background,
+        background_photo_id=call.data.get(ATTR_BACKGROUND_PHOTO),
     )
     if ATTR_HIDE_OVERLAYS in call.data:
         photo = manager.async_set_photo_hide_overlays(photo.id, call.data[ATTR_HIDE_OVERLAYS])
@@ -330,6 +380,7 @@ HANDLERS: dict[str, tuple[Any, SupportsResponse]] = {
     SERVICE_COPY_OVERLAYS: (_copy_overlays, SupportsResponse.OPTIONAL),
     SERVICE_LIST_OVERLAYS: (_list_overlays, SupportsResponse.ONLY),
     SERVICE_ADD_PHOTO: (_add_photo, SupportsResponse.OPTIONAL),
+    SERVICE_ADD_CARD: (_add_card, SupportsResponse.OPTIONAL),
     SERVICE_REMOVE_PHOTO: (_remove_photo, SupportsResponse.NONE),
     SERVICE_UPDATE_PHOTO: (_update_photo, SupportsResponse.OPTIONAL),
     SERVICE_MOVE_PHOTO: (_move_photo, SupportsResponse.NONE),

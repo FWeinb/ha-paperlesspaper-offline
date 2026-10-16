@@ -2,6 +2,8 @@ import { mdiClose, mdiContentCopy, mdiDelete, mdiImageCheck, mdiRotateLeft, mdiR
 import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { copyPhoto, deletePhoto, errorMessage, renderPreview, showPhoto, updatePhoto } from "./api";
+import "./card-background";
+import type { CardBackgroundValue } from "./card-background";
 import "./crop-area";
 import "./overlays";
 import type { Crop } from "./crop-area";
@@ -10,19 +12,23 @@ import { PreviewQueue } from "./preview-queue";
 import "./render-settings";
 import { resolveSettings } from "./render-settings";
 import { icon, sharedStyles } from "./styles";
-import type { Frame, FrameSettings, HomeAssistant, Photo, PhotoSettings, ResolvedSettings } from "./types";
+import type { Frame, FrameSettings, HomeAssistant, LibraryItem, PhotoSettings, ResolvedSettings } from "./types";
 
 const PREVIEW_DELAY = 350;
 const SHARED_KEYS = ["dither", "serpentine", "fit", "background", "brightness", "contrast", "saturation"] as const;
 
-/** Modal editor for one photo: crop/focal/rotation, render overrides, live preview. */
+/**
+ * Modal editor for one library item. A photo gets crop/focal/rotation and render
+ * overrides; a card (card mode) gets its background instead. Both get overlays
+ * and a live preview.
+ */
 @customElement("pp-photo-editor")
 export class PhotoEditor extends LitElement {
   @property({ attribute: false }) hass!: HomeAssistant;
   @property({ attribute: false }) frame!: Frame;
   @property({ attribute: false }) frames: Frame[] = [];
-  @property({ attribute: false }) photos: Photo[] = [];
-  @property({ attribute: false }) photo!: Photo;
+  @property({ attribute: false }) photos: LibraryItem[] = [];
+  @property({ attribute: false }) photo!: LibraryItem;
   /** Resolved frame-level settings the photo inherits from. */
   @property({ attribute: false }) inherited!: ResolvedSettings;
 
@@ -30,6 +36,7 @@ export class PhotoEditor extends LitElement {
   @state() private name = "";
   @state() private enabled = true;
   @state() private hideOverlays = false;
+  @state() private background: CardBackgroundValue = { background: "white", background_photo_id: null };
   @state() private preview: string | null = null;
   @state() private rendering = false;
   @state() private lockAspect = true;
@@ -63,9 +70,24 @@ export class PhotoEditor extends LitElement {
       this.name = this.photo.name;
       this.enabled = this.photo.enabled;
       this.hideOverlays = this.photo.hide_frame_overlays ?? false;
+      this.background = this.savedBackground;
       this.lockAspect = true;
       this.schedulePreview(0);
+    } else if (changed.has("photos") && this.isCard) {
+      // A card's preview shows its overlays, which may just have been edited.
+      this.schedulePreview(0);
     }
+  }
+
+  private get isCard(): boolean {
+    return this.photo.kind === "card";
+  }
+
+  private get savedBackground(): CardBackgroundValue {
+    return {
+      background: this.photo.background ?? "white",
+      background_photo_id: this.photo.background_photo_id ?? null,
+    };
   }
 
   private get resolved(): ResolvedSettings {
@@ -85,7 +107,8 @@ export class PhotoEditor extends LitElement {
       this.name !== this.photo.name ||
       this.enabled !== this.photo.enabled ||
       this.hideOverlays !== (this.photo.hide_frame_overlays ?? false) ||
-      JSON.stringify(this.draft) !== JSON.stringify(this.photo.overrides ?? {})
+      JSON.stringify(this.draft) !== JSON.stringify(this.photo.overrides ?? {}) ||
+      (this.isCard && JSON.stringify(this.background) !== JSON.stringify(this.savedBackground))
     );
   }
 
@@ -102,9 +125,12 @@ export class PhotoEditor extends LitElement {
 
   private async loadPreview(stale: () => boolean) {
     try {
-      const result = await renderPreview(this.hass, this.frame.entry_id, this.photo.photo_id, {
-        overrides: this.draft,
-      });
+      const result = await renderPreview(
+        this.hass,
+        this.frame.entry_id,
+        this.photo.photo_id,
+        this.isCard ? { ...this.background } : { overrides: this.draft },
+      );
       if (!stale()) this.preview = result.image;
     } catch (err) {
       if (!stale()) this.error = errorMessage(err);
@@ -140,8 +166,8 @@ export class PhotoEditor extends LitElement {
       await updatePhoto(this.hass, this.frame.entry_id, this.photo.photo_id, {
         name: this.name.trim() || this.photo.name,
         enabled: this.enabled,
-        overrides: this.draft,
         hide_frame_overlays: this.hideOverlays,
+        ...(this.isCard ? this.background : { overrides: this.draft }),
       });
       this.close();
     } catch (err) {
@@ -153,7 +179,11 @@ export class PhotoEditor extends LitElement {
 
   private async deleteClicked() {
     const l = localizer(this.hass);
-    if (!confirm(l("delete_confirm", { name: this.photo.name }))) return;
+    const cards = this.photos.filter(
+      (p) => p.kind === "card" && p.background === "photo" && p.background_photo_id === this.photo.photo_id,
+    ).length;
+    const warning = cards === 1 ? l("used_as_background_one") : cards ? l("used_as_background", { n: cards }) : "";
+    if (!confirm([l("delete_confirm", { name: this.photo.name }), warning].filter(Boolean).join("\n\n"))) return;
     try {
       await deletePhoto(this.hass, this.frame.entry_id, this.photo.photo_id);
       this.close();
@@ -188,18 +218,93 @@ export class PhotoEditor extends LitElement {
     this.dispatchEvent(new CustomEvent("closed", { bubbles: true, composed: true }));
   }
 
+  private renderPreview() {
+    const l = localizer(this.hass);
+    return html`<div class="section-title">
+        <span>${l("preview")}</span>
+        ${this.rendering ? html`<span class="muted">${l("rendering")}</span>` : nothing}
+      </div>
+      <div class="preview" style="aspect-ratio:${this.frame.canvas.width}/${this.frame.canvas.height}">
+        ${this.preview ? html`<img src=${this.preview} alt=${l("preview")} />` : nothing}
+      </div>
+      <span class="muted hint">${l("preview_hint")}</span>`;
+  }
+
+  /** Card mode: the preview takes the crop area's place; the background is picked beside it. */
+  private renderBackground() {
+    const l = localizer(this.hass);
+    return html`<div class="section-title"><span>${l("card_background")}</span></div>
+      <pp-card-background
+        .hass=${this.hass}
+        .photos=${this.photos}
+        .value=${this.background}
+        @value-changed=${(e: CustomEvent<{ value: CardBackgroundValue }>) => {
+          this.background = e.detail.value;
+          this.schedulePreview(0);
+        }}
+      ></pp-card-background>`;
+  }
+
+  private renderCrop() {
+    const l = localizer(this.hass);
+    const coverFit = this.resolved.fit === "cover";
+    return html`<section class="visual">
+      <div class="section-title">
+        <span>${l("crop")}</span>
+        <span class="tools">
+          <button class="icon-btn" title=${l("rotate_left")} @click=${() => this.rotate(-90)}>
+            ${icon(mdiRotateLeft)}
+          </button>
+          <button class="icon-btn" title=${l("rotate_right")} @click=${() => this.rotate(90)}>
+            ${icon(mdiRotateRight)}
+          </button>
+        </span>
+      </div>
+      <pp-crop-area
+        .src=${this.photo.display_urls[String(this.rotation)]}
+        .crop=${(this.draft.crop as Crop) ?? null}
+        .focal=${{ x: this.draft.focal_x ?? 0.5, y: this.draft.focal_y ?? 0.5 }}
+        .aspect=${coverFit && this.lockAspect ? this.aspect : null}
+        @crop-changed=${(e: CustomEvent<{ crop: Crop }>) => this.setDraft({ crop: e.detail.crop })}
+        @focal-changed=${(e: CustomEvent<{ x: number; y: number }>) =>
+          this.setDraft({ focal_x: e.detail.x, focal_y: e.detail.y })}
+      ></pp-crop-area>
+      <div class="crop-tools">
+        <span class="muted hint">${l("crop_hint")}</span>
+        ${coverFit
+          ? html`<label class="check">
+              <input
+                type="checkbox"
+                .checked=${this.lockAspect}
+                @change=${(e: Event) => (this.lockAspect = (e.target as HTMLInputElement).checked)}
+              />
+              ${l("lock_aspect")}
+            </label>`
+          : nothing}
+        <button class="btn" ?disabled=${!this.draft.crop} @click=${() => this.setDraft({}, ["crop"])}>
+          ${l("clear_crop")}
+        </button>
+        <button
+          class="btn"
+          ?disabled=${this.draft.focal_x === undefined}
+          @click=${() => this.setDraft({}, ["focal_x", "focal_y"])}
+        >
+          ${l("reset_focal")}
+        </button>
+      </div>
+    </section>`;
+  }
+
   protected override render() {
     if (!this.photo) return nothing;
     const l = localizer(this.hass);
-    const coverFit = this.resolved.fit === "cover";
     const otherFrames = this.frames.filter((f) => f.entry_id !== this.frame.entry_id);
     const shared: FrameSettings = {};
     for (const key of SHARED_KEYS) {
       if (this.draft[key] !== undefined) (shared as Record<string, unknown>)[key] = this.draft[key];
     }
-    const previewStyle = `aspect-ratio:${this.frame.canvas.width}/${this.frame.canvas.height}`;
     return html`<div class="scrim" @click=${(e: Event) => e.target === e.currentTarget && this.close()}>
-      <div class="dialog card" role="dialog" aria-modal="true" aria-label=${l("edit_photo")}>
+      <div class="dialog card" role="dialog" aria-modal="true" aria-label=${l(this.isCard ? "edit_card" : "edit_photo")}>
         <header>
           <input
             class="title"
@@ -211,60 +316,9 @@ export class PhotoEditor extends LitElement {
           <button class="icon-btn" title=${l("close")} @click=${this.close}>${icon(mdiClose)}</button>
         </header>
         <div class="body">
-          <section class="visual">
-            <div class="section-title">
-              <span>${l("crop")}</span>
-              <span class="tools">
-                <button class="icon-btn" title=${l("rotate_left")} @click=${() => this.rotate(-90)}>
-                  ${icon(mdiRotateLeft)}
-                </button>
-                <button class="icon-btn" title=${l("rotate_right")} @click=${() => this.rotate(90)}>
-                  ${icon(mdiRotateRight)}
-                </button>
-              </span>
-            </div>
-            <pp-crop-area
-              .src=${this.photo.display_urls[String(this.rotation)]}
-              .crop=${(this.draft.crop as Crop) ?? null}
-              .focal=${{ x: this.draft.focal_x ?? 0.5, y: this.draft.focal_y ?? 0.5 }}
-              .aspect=${coverFit && this.lockAspect ? this.aspect : null}
-              @crop-changed=${(e: CustomEvent<{ crop: Crop }>) => this.setDraft({ crop: e.detail.crop })}
-              @focal-changed=${(e: CustomEvent<{ x: number; y: number }>) =>
-                this.setDraft({ focal_x: e.detail.x, focal_y: e.detail.y })}
-            ></pp-crop-area>
-            <div class="crop-tools">
-              <span class="muted hint">${l("crop_hint")}</span>
-              ${coverFit
-                ? html`<label class="check">
-                    <input
-                      type="checkbox"
-                      .checked=${this.lockAspect}
-                      @change=${(e: Event) => (this.lockAspect = (e.target as HTMLInputElement).checked)}
-                    />
-                    ${l("lock_aspect")}
-                  </label>`
-                : nothing}
-              <button class="btn" ?disabled=${!this.draft.crop} @click=${() => this.setDraft({}, ["crop"])}>
-                ${l("clear_crop")}
-              </button>
-              <button
-                class="btn"
-                ?disabled=${this.draft.focal_x === undefined}
-                @click=${() => this.setDraft({}, ["focal_x", "focal_y"])}
-              >
-                ${l("reset_focal")}
-              </button>
-            </div>
-          </section>
+          ${this.isCard ? html`<section class="visual card-preview">${this.renderPreview()}</section>` : this.renderCrop()}
           <section class="settings">
-            <div class="section-title">
-              <span>${l("preview")}</span>
-              ${this.rendering ? html`<span class="muted">${l("rendering")}</span>` : nothing}
-            </div>
-            <div class="preview" style=${previewStyle}>
-              ${this.preview ? html`<img src=${this.preview} alt=${l("preview")} />` : nothing}
-            </div>
-            <span class="muted hint">${l("preview_hint")}</span>
+            ${this.isCard ? this.renderBackground() : this.renderPreview()}
             <label class="check rotation">
               <input
                 type="checkbox"
@@ -279,16 +333,18 @@ export class PhotoEditor extends LitElement {
                 .checked=${this.hideOverlays}
                 @change=${(e: Event) => (this.hideOverlays = (e.target as HTMLInputElement).checked)}
               />
-              ${l("hide_frame_overlays")}
+              ${l(this.isCard ? "hide_frame_overlays_card" : "hide_frame_overlays")}
             </label>
             <pp-overlays .hass=${this.hass} .frame=${this.frame} .photos=${this.photos.length ? this.photos : [this.photo]} .photo=${this.photo}></pp-overlays>
-            <div class="section-title"><span>${l("rendering_settings")}</span></div>
-            <pp-render-settings
-              .hass=${this.hass}
-              .value=${shared}
-              .inherited=${this.inherited}
-              @value-changed=${this.onSettings}
-            ></pp-render-settings>
+            ${this.isCard
+              ? nothing
+              : html`<div class="section-title"><span>${l("rendering_settings")}</span></div>
+                  <pp-render-settings
+                    .hass=${this.hass}
+                    .value=${shared}
+                    .inherited=${this.inherited}
+                    @value-changed=${this.onSettings}
+                  ></pp-render-settings>`}
           </section>
         </div>
         ${this.error ? html`<div class="msg error">${l("error", { error: this.error })}</div>` : nothing}
@@ -415,6 +471,9 @@ export class PhotoEditor extends LitElement {
         display: grid;
         place-items: center;
         box-shadow: inset 0 0 0 1px var(--pp-border);
+      }
+      .card-preview .preview {
+        height: min(560px, 65vh);
       }
       .preview img {
         width: 100%;

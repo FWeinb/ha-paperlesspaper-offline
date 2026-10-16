@@ -16,6 +16,7 @@ _Avoid_: Refresh, poll, update
 
 **Library item**:
 A photo or a card in a frame's library; library items take part in the rotation.
+In code this is `LibraryItem` (Python and TypeScript), with `kind` set to `photo` or `card`. The stored library key (`photos`), the `photo_id` field, the photo actions (`update_photo`, `list_photos`, ...) and the `photo` template variable keep the photo name for every library item, so users' automations and stored data stay unchanged.
 _Avoid_: Entry, slide, media
 
 **Photo**:

@@ -61,7 +61,7 @@ OVERLAY_FIELDS = {
     "show_if": {"selector": {"text": {"multiline": True}}},
     "enabled": {"selector": {"boolean": {}}},
     "anchor": select(ANCHORS, "overlay_anchor"),
-    "size": select(["s", "m", "l", "xl"], "overlay_size"),
+    "size": select(["s", "m", "l", "xl", "xxl"], "overlay_size"),
     "width": {"selector": {"number": {"min": 5, "max": 100, "unit_of_measurement": "%"}}},
     "margin": {"selector": {"number": {"min": 0, "max": 0.3, "step": 0.01, "mode": "box"}}},
     "align": select(["left", "center", "right"], "overlay_align"),
@@ -71,6 +71,8 @@ OVERLAY_FIELDS = {
     "redraw": select(["change", "photo"], "overlay_redraw"),
 }
 
+CARD_BACKGROUND = select([*COLORS, "photo"], "card_background")
+
 SERVICES = {
     "add_photo": {
         "config_entry_id": FRAME,
@@ -78,6 +80,13 @@ SERVICES = {
         "name": NAME,
         "enabled": {"default": True, "selector": {"boolean": {}}},
         **PHOTO_RENDER,
+    },
+    "add_card": {
+        "config_entry_id": FRAME,
+        "name": NAME,
+        "preset": {"default": "blank", **select(["blank", "info", "notice"], "card_preset")},
+        "background": {"default": "white", **CARD_BACKGROUND},
+        "background_photo_id": PHOTO_ID_OPTIONAL,
     },
     "remove_photo": {"config_entry_id": FRAME, "photo_id": PHOTO_ID},
     "update_photo": {
@@ -88,6 +97,8 @@ SERVICES = {
         "hide_frame_overlays": {"selector": {"boolean": {}}},
         "reset": select(PHOTO_KEYS, multiple=True),
         **PHOTO_RENDER,
+        "background": CARD_BACKGROUND,
+        "background_photo_id": PHOTO_ID_OPTIONAL,
     },
     "move_photo": {
         "config_entry_id": FRAME,

@@ -1,14 +1,16 @@
 import type {
+  CardBackground,
+  CardPreset,
   Defaults,
   Frame,
   FrameSettings,
   HomeAssistant,
+  LibraryItem,
   MediaItem,
   Mounting,
   Order,
   Overlay,
   OverlayPreview,
-  Photo,
   PhotoSettings,
 } from "./types";
 
@@ -18,7 +20,7 @@ export const fetchFrames = (hass: HomeAssistant) =>
   hass.callWS<{ frames: Frame[] }>({ type: `${D}/frames` }).then((r) => r.frames);
 
 export const fetchPhotos = (hass: HomeAssistant, entryId: string) =>
-  hass.callWS<{ photos: Photo[] }>({ type: `${D}/photos`, entry_id: entryId }).then((r) => r.photos);
+  hass.callWS<{ photos: LibraryItem[] }>({ type: `${D}/photos`, entry_id: entryId }).then((r) => r.photos);
 
 export const subscribeChanges = (hass: HomeAssistant, cb: (entryId: string | null) => void) =>
   hass.connection.subscribeMessage<{ entry_id: string | null }>((m) => cb(m.entry_id), {
@@ -29,8 +31,30 @@ export const updatePhoto = (
   hass: HomeAssistant,
   entryId: string,
   photoId: string,
-  changes: { name?: string; enabled?: boolean; overrides?: PhotoSettings; hide_frame_overlays?: boolean },
-) => hass.callWS<Photo>({ type: `${D}/photo/update`, entry_id: entryId, photo_id: photoId, ...changes });
+  changes: {
+    name?: string;
+    enabled?: boolean;
+    overrides?: PhotoSettings;
+    hide_frame_overlays?: boolean;
+    /** Cards only. */
+    background?: CardBackground;
+    background_photo_id?: string | null;
+  },
+) => hass.callWS<LibraryItem>({ type: `${D}/photo/update`, entry_id: entryId, photo_id: photoId, ...changes });
+
+export const addCard = (
+  hass: HomeAssistant,
+  entryId: string,
+  card: { name?: string; preset: CardPreset; background: CardBackground; background_photo_id?: string | null },
+) => {
+  const { background_photo_id, ...rest } = card;
+  return hass.callWS<LibraryItem>({
+    type: `${D}/card/add`,
+    entry_id: entryId,
+    ...rest,
+    ...(background_photo_id ? { background_photo_id } : {}),
+  });
+};
 
 export const deletePhoto = (hass: HomeAssistant, entryId: string, photoId: string) =>
   hass.callWS({ type: `${D}/photo/delete`, entry_id: entryId, photo_id: photoId });
@@ -39,7 +63,7 @@ export const reorderPhotos = (hass: HomeAssistant, entryId: string, order: strin
   hass.callWS({ type: `${D}/photo/reorder`, entry_id: entryId, order });
 
 export const copyPhoto = (hass: HomeAssistant, entryId: string, photoId: string, target: string) =>
-  hass.callWS<Photo>({
+  hass.callWS<LibraryItem>({
     type: `${D}/photo/copy`,
     entry_id: entryId,
     photo_id: photoId,
@@ -59,7 +83,7 @@ export const updateFrame = (
 ) => hass.callWS<Frame>({ type: `${D}/frame/update`, entry_id: entryId, ...changes });
 
 export const importMedia = (hass: HomeAssistant, entryId: string, mediaContentId: string) =>
-  hass.callWS<Photo>({ type: `${D}/import`, entry_id: entryId, media_content_id: mediaContentId });
+  hass.callWS<LibraryItem>({ type: `${D}/import`, entry_id: entryId, media_content_id: mediaContentId });
 
 export const renderPreview = (
   hass: HomeAssistant,
@@ -69,6 +93,9 @@ export const renderPreview = (
     overrides?: PhotoSettings;
     frame_defaults?: FrameSettings;
     global_defaults?: FrameSettings;
+    /** Cards: an unsaved background. */
+    background?: CardBackground;
+    background_photo_id?: string | null;
   },
 ) =>
   hass.callWS<{ image: string; width: number; height: number }>({

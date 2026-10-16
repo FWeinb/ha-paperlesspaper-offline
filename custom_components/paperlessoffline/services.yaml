@@ -109,6 +109,42 @@ add_photo:
       example: '[0.1, 0.0, 0.8, 1.0]'
       selector:
         object: {}
+add_card:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: paperlessoffline
+    name:
+      selector:
+        text: {}
+    preset:
+      default: blank
+      selector:
+        select:
+          options:
+          - blank
+          - info
+          - notice
+          translation_key: card_preset
+    background:
+      default: white
+      selector:
+        select:
+          options:
+          - black
+          - white
+          - red
+          - green
+          - blue
+          - yellow
+          - photo
+          translation_key: card_background
+    background_photo_id:
+      example: a1b2c3d4e5f6
+      selector:
+        text: {}
 remove_photo:
   fields:
     config_entry_id:
@@ -185,9 +221,14 @@ update_photo:
       selector:
         select:
           options:
-          - white
           - black
-          translation_key: background
+          - white
+          - red
+          - green
+          - blue
+          - yellow
+          - photo
+          translation_key: card_background
     brightness:
       selector:
         number:
@@ -235,6 +276,10 @@ update_photo:
       example: '[0.1, 0.0, 0.8, 1.0]'
       selector:
         object: {}
+    background_photo_id:
+      example: a1b2c3d4e5f6
+      selector:
+        text: {}
 move_photo:
   fields:
     config_entry_id:
@@ -470,6 +515,7 @@ add_overlay:
           - m
           - l
           - xl
+          - xxl
           translation_key: overlay_size
     width:
       selector:
@@ -582,6 +628,7 @@ update_overlay:
           - m
           - l
           - xl
+          - xxl
           translation_key: overlay_size
     width:
       selector:

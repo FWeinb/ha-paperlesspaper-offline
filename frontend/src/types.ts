@@ -79,14 +79,22 @@ export interface Frame {
   needs_reprovision: boolean;
 }
 
-export interface Photo {
+export type CardBackground = PaletteColor | "photo";
+export type CardPreset = "blank" | "info" | "notice";
+
+/** A library item: a photo, or a card (text on a background, no file). */
+export interface LibraryItem {
   photo_id: string;
+  kind: "photo" | "card";
   name: string;
   enabled: boolean;
   added: string;
   overrides: PhotoSettings;
   hide_frame_overlays: boolean;
   overlay_count?: number;
+  /** Cards only. */
+  background?: CardBackground;
+  background_photo_id?: string | null;
   thumb_url: string;
   display_urls: Record<string, string>;
 }
@@ -130,7 +138,7 @@ export interface Overlay {
   margin: number;
   width: number | null;
   align: "left" | "center" | "right";
-  size: "s" | "m" | "l" | "xl";
+  size: "s" | "m" | "l" | "xl" | "xxl";
   text_color: PaletteColor;
   backing: "box" | "halo" | "none";
   backing_color: PaletteColor;

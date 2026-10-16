@@ -2,11 +2,11 @@
  * Dev harness: renders the panel/card against an in-memory fake of the
  * integration's websocket API. Query params:
  *   ?view=panel|card   ?frame=<entry_id|global>   ?tab=photos|settings
- *   ?edit=<photo index>   ?import=1   ?dark=1   ?narrow=1
+ *   ?edit=<library index> (7 is a card)   ?import=1   ?dark=1   ?narrow=1
  */
 import "../src/card";
 import "../src/panel";
-import type { Frame, FrameSettings, Photo } from "../src/types";
+import type { Frame, FrameSettings, LibraryItem } from "../src/types";
 
 const params = new URLSearchParams(location.search);
 if (params.get("dark")) document.body.classList.add("dark");
@@ -68,8 +68,9 @@ function quantize(src: HTMLCanvasElement, w: number, h: number, crop?: number[])
 
 const names = ["Beach sunset", "Grandma's garden", "Alps 2024", "Kids at the lake", "Autumn forest", "City lights", "Lavender field"];
 const sources = names.map((_, i) => sampleImage(i));
-const photoOf = (i: number, entry: string): Photo => ({
+const photoOf = (i: number, entry: string): LibraryItem => ({
   photo_id: `p${entry}${i}`,
+  kind: "photo",
   name: names[i],
   enabled: i !== 4,
   added: new Date().toISOString(),
@@ -100,7 +101,72 @@ const frames: Frame[] = [
     ble: { read_at: null }, overdue: true, needs_reprovision: false,
   },
 ];
-const photos: Record<string, Photo[]> = { kitchen: names.map((_, i) => photoOf(i, "kitchen")), hall: [] };
+const photos: Record<string, LibraryItem[]> = { kitchen: names.map((_, i) => photoOf(i, "kitchen")), hall: [] };
+
+const FILL: Record<string, string> = { white: "#d6d6d6", black: "#1f2226", red: "#ea4843", green: "#067406", blue: "#416ce1", yellow: "#dbd529" };
+type Bg = { background?: string; background_photo_id?: string | null };
+
+/** A library item's base image: a photo's dithered render, or a card's background. */
+function baseImage(entry: string, photoId: string | null, w: number, h: number, bg?: Bg): string {
+  const item = photos[entry].find((p) => p.photo_id === photoId) ?? photos[entry].find((p) => p.kind === "photo");
+  if (item?.kind === "card") {
+    const b = bg ?? item;
+    if (b.background === "photo" && b.background_photo_id) return baseImage(entry, b.background_photo_id, w, h);
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    const g = c.getContext("2d")!;
+    g.fillStyle = FILL[b.background ?? "white"];
+    g.fillRect(0, 0, w, h);
+    return c.toDataURL();
+  }
+  const idx = item ? Number(item.photo_id.slice(1 + entry.length)) : 0;
+  return quantize(sources[idx], w, h);
+}
+
+/** A card's preview: its background with its overlays (and the global ones unless hidden). */
+async function cardImage(entry: string, card: LibraryItem, w: number, h: number, bg?: Bg): Promise<string> {
+  const list = [...(overlays[`photo:${card.photo_id}`] ?? []), ...(card.hide_frame_overlays ? [] : overlays[entry] ?? [])];
+  return drawOverlayMock(baseImage(entry, card.photo_id, w, h, bg), list, w, h);
+}
+
+const PRESETS: Record<string, any[]> = {
+  blank: [],
+  info: [
+    { name: "Title", template: "# {{ frame.name }}", anchor: "top_center", align: "center", size: "l", text_color: "black", backing: "box" },
+    { name: "Values", template: "{{ date_local(now(), 'long') }}\nAdd your values here", anchor: "center", align: "center", size: "m", text_color: "black", backing: "box" },
+  ],
+  notice: [{ name: "Notice", template: "Notice", anchor: "center", align: "center", size: "xxl", text_color: "black", backing: "none" }],
+};
+let nextCard = 1;
+
+function addCardMock(entry: string, msg: any): LibraryItem {
+  const id = `c${nextCard++}`;
+  const card: LibraryItem = {
+    photo_id: id, kind: "card", name: msg.name || ({ blank: "Card", info: "Info", notice: "Notice" } as any)[msg.preset ?? "blank"],
+    enabled: true, added: new Date().toISOString(), overrides: {}, hide_frame_overlays: true,
+    background: msg.background ?? "white", background_photo_id: msg.background === "photo" ? msg.background_photo_id : null,
+    thumb_url: "", display_urls: {},
+  };
+  const darkBg = ["black", "blue", "red", "green"].includes(card.background!);
+  overlays[`photo:${id}`] = PRESETS[msg.preset ?? "blank"].map((o) => ({
+    enabled: true, show_if: null, margin: 0.03, width: null, backing_color: "white", redraw: "change", last_text: null, last_error: null,
+    ...o, text_color: o.backing === "none" && darkBg ? "white" : o.text_color, overlay_id: `o${nextOverlay++}`,
+  }));
+  card.overlay_count = overlays[`photo:${id}`].length;
+  photos[entry].push(card);
+  return card;
+}
+
+/** Subscribers of `paperlessoffline/subscribe`: told whenever a frame's data changes. */
+const subscribers = new Set<(m: { entry_id: string | null }) => void>();
+async function changed(entry: string) {
+  for (const card of photos[entry] ?? []) {
+    if (card.kind === "card") card.thumb_url = await cardImage(entry, card, 320, 192);
+  }
+  const f = frames.find((x) => x.entry_id === entry);
+  if (f) { f.photo_count = photos[entry].length; f.enabled_count = photos[entry].filter((p) => p.enabled).length; }
+  for (const cb of subscribers) cb({ entry_id: entry });
+}
 
 /** Overlay lists: the frame's global ones under the entry id, a photo's own under `photo:<id>`. */
 const scopeKey = (msg: any): string => (msg.photo_id ? `photo:${msg.photo_id}` : msg.entry_id);
@@ -135,7 +201,7 @@ function drawOverlayMock(dataUrl: string, list: any[], w: number, h: number): Pr
         if (!o.enabled) continue;
         const { text } = evalTemplate(o.template);
         if (!text) continue;
-        const size = ({ s: 9, m: 12, l: 16, xl: 22 } as any)[o.size] ?? 12;
+        const size = ({ s: 9, m: 12, l: 16, xl: 22, xxl: 36 } as any)[o.size] ?? 12;
         g.font = `${size}px sans-serif`;
         const lines = text.replace(/[*#]|:mdi:[a-z-]+:/g, "").split("\n");
         const tw = Math.max(...lines.map((t: string) => g.measureText(t).width)) + size;
@@ -184,14 +250,30 @@ const hass: any = {
     const t = msg.type.replace("paperlessoffline/", "");
     switch (t) {
       case "frames": return delay({ frames });
-      case "photos": return delay({ photos: photos[msg.entry_id] ?? [] });
+      case "photos": return delay({ photos: [...(photos[msg.entry_id] ?? [])] });
+      case "card/add": { const card = addCardMock(msg.entry_id, msg); await changed(msg.entry_id); return delay(card); }
+      case "photo/update": {
+        const p = photos[msg.entry_id].find((x) => x.photo_id === msg.photo_id)!;
+        for (const k of ["name", "enabled", "overrides", "hide_frame_overlays", "background", "background_photo_id"]) if (k in msg) (p as any)[k] = msg[k];
+        if (p.kind === "card" && p.background !== "photo") p.background_photo_id = null;
+        await changed(msg.entry_id);
+        return delay(p);
+      }
+      case "photo/delete": {
+        photos[msg.entry_id] = photos[msg.entry_id].filter((x) => x.photo_id !== msg.photo_id);
+        for (const c of photos[msg.entry_id]) if (c.background_photo_id === msg.photo_id) { c.background = "white"; c.background_photo_id = null; }
+        await changed(msg.entry_id);
+        return delay(null);
+      }
       case "defaults": return delay({ defaults: globalDefaults, builtin: { dither: "floyd_steinberg", serpentine: false, fit: "cover", brightness: 1, contrast: 1, saturation: 1, background: "white", palette: "perceived" } });
       case "defaults/set": globalDefaults = msg.defaults; return delay({ defaults: globalDefaults });
       case "preview": {
         const frame = frames.find((f) => f.entry_id === msg.entry_id)!;
-        const idx = photos[msg.entry_id].findIndex((p) => p.photo_id === msg.photo_id);
-        const scale = 0.5;
-        return previewDelay({ image: quantize(sources[idx], frame.canvas.width * scale, frame.canvas.height * scale, msg.overrides?.crop), width: frame.canvas.width, height: frame.canvas.height });
+        const item = photos[msg.entry_id].find((p) => p.photo_id === msg.photo_id)!;
+        const [w, h] = [frame.canvas.width / 2, frame.canvas.height / 2];
+        if (item.kind === "card") return previewDelay({ image: await cardImage(msg.entry_id, item, w, h, "background" in msg ? msg : undefined), width: frame.canvas.width, height: frame.canvas.height });
+        const idx = photos[msg.entry_id].indexOf(item);
+        return previewDelay({ image: quantize(sources[idx], w, h, msg.overrides?.crop), width: frame.canvas.width, height: frame.canvas.height });
       }
       case "overlays": return delay({ overlays: overlays[scopeKey(msg)] ?? [] });
       case "overlay/save": {
@@ -200,7 +282,7 @@ const hass: any = {
         const r = evalTemplate(rest.template ?? "");
         if (id) { const i = list.findIndex((o) => o.overlay_id === id); list[i] = { ...list[i], ...rest, overlay_id: id }; return delay(list[i]); }
         const created = { ...rest, overlay_id: `o${nextOverlay++}`, last_text: r.text, last_error: r.error };
-        list.push(created); return delay(created);
+        list.push(created); if (msg.photo_id) await changed(msg.entry_id); return delay(created);
       }
       case "overlay/delete": overlays[scopeKey(msg)] = overlays[scopeKey(msg)].filter((o) => o.overlay_id !== msg.overlay_id); return delay(null);
       case "overlay/reorder": { const by = new Map(overlays[scopeKey(msg)].map((o) => [o.overlay_id, o])); overlays[scopeKey(msg)] = msg.order.map((i: string) => by.get(i)); return delay(null); }
@@ -210,8 +292,7 @@ const hass: any = {
         const drafts = msg.overlays.map((o: any) => ({ ...o, overlay_id: o.id ?? o.overlay_id }));
         // Photo drafts are drawn first, then the stored global ones on top.
         const list = msg.for_photo ? [...drafts, ...(overlays[msg.entry_id] ?? [])] : drafts;
-        const idx = Math.max(0, photos[msg.entry_id].findIndex((p) => p.photo_id === msg.photo_id));
-        const base = quantize(sources[idx], frame.canvas.width / 2, frame.canvas.height / 2);
+        const base = baseImage(msg.entry_id, msg.photo_id, frame.canvas.width / 2, frame.canvas.height / 2);
         const image = await drawOverlayMock(base, list, frame.canvas.width / 2, frame.canvas.height / 2);
         const results = Object.fromEntries(list.map((o: any) => [o.overlay_id, evalTemplate(o.template)]));
         return previewDelay({ image, width: frame.canvas.width, height: frame.canvas.height, results });
@@ -225,7 +306,12 @@ const hass: any = {
   },
   async callService(...args: unknown[]) { console.log("service", args); },
   async fetchWithAuth() { return new Response(JSON.stringify({ added: [], errors: [] })); },
-  connection: { async subscribeMessage() { return async () => undefined; } },
+  connection: {
+    async subscribeMessage(cb: (m: { entry_id: string | null }) => void) {
+      subscribers.add(cb);
+      return async () => void subscribers.delete(cb);
+    },
+  },
 };
 
 hass.states["sensor.outdoor_temperature"] = { state: "7.5", attributes: { friendly_name: "Outdoor temperature", unit_of_measurement: "°C", device_class: "temperature" }, last_changed: "" };
@@ -250,7 +336,11 @@ for (const f of frames) {
   }
 }
 
+addCardMock("kitchen", { name: "Welcome", preset: "info", background: "yellow" });
+frames[0].photo_count = photos.kitchen.length;
+
 async function main() {
+  await changed("kitchen");
   if (params.get("view") === "card") {
     const wrap = document.createElement("div");
     wrap.id = "cards";

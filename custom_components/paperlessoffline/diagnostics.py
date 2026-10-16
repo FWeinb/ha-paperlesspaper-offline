@@ -28,11 +28,13 @@ async def async_get_config_entry_diagnostics(
         "photos": [
             {
                 "id": p.id,
+                "kind": p.kind,
                 "enabled": p.enabled,
                 "overrides": p.overrides,
                 "file": p.filename,
                 "date": p.date,
                 "location": REDACTED if p.location else None,
+                **({"background": p.background} if p.is_card else {}),
             }
             for p in manager.photos
         ],

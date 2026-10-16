@@ -206,7 +206,8 @@
         "s": "Small",
         "m": "Medium",
         "l": "Large",
-        "xl": "Extra large"
+        "xl": "Extra large",
+        "xxl": "Huge"
       }
     },
     "overlay_align": {
@@ -237,6 +238,24 @@
       "options": {
         "change": "Every wake when the text changed",
         "photo": "Only when the photo changes"
+      }
+    },
+    "card_preset": {
+      "options": {
+        "blank": "Blank",
+        "info": "Info: a title and values",
+        "notice": "Notice: one big message"
+      }
+    },
+    "card_background": {
+      "options": {
+        "white": "White",
+        "black": "Black",
+        "red": "Red",
+        "green": "Green",
+        "blue": "Blue",
+        "yellow": "Yellow",
+        "photo": "Photo"
       }
     }
   },
@@ -404,6 +423,15 @@
     },
     "overlay_not_found": {
       "message": "Overlay {overlay_id} not found."
+    },
+    "invalid_card_background": {
+      "message": "A photo background needs the ID of a photo (not a card) of this frame."
+    },
+    "card_has_no_render_settings": {
+      "message": "Cards have no render settings; change the background instead."
+    },
+    "not_a_card": {
+      "message": "{photo_id} is a photo: its background is white or black, and only cards have a background photo."
     }
   },
   "services": {
@@ -537,7 +565,7 @@
         },
         "background": {
           "name": "Background",
-          "description": "Border colour for 'fit with borders' and transparency."
+          "description": "On a photo: the border colour for 'fit with borders' (white or black). On a card: its background."
         },
         "brightness": {
           "name": "Brightness",
@@ -570,6 +598,10 @@
         "hide_frame_overlays": {
           "name": "Hide frame overlays",
           "description": "Don't draw the frame's overlays on this photo."
+        },
+        "background_photo_id": {
+          "name": "Background photo ID",
+          "description": "The photo a card with a photo background is drawn on, with that photo's settings."
         }
       }
     },
@@ -990,6 +1022,32 @@
         "photo_id": {
           "name": "Photo ID",
           "description": "Acts on this photo's own overlays. Leave empty for the frame's global photo overlays. ID of the photo (see the list photos action)."
+        }
+      }
+    },
+    "add_card": {
+      "name": "Add card",
+      "description": "Adds a text card to a frame's library. Its text is its overlays; edit them with the overlay actions and the card's photo ID.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Display name."
+        },
+        "preset": {
+          "name": "Preset",
+          "description": "What the card starts with, in Home Assistant's language."
+        },
+        "background": {
+          "name": "Background",
+          "description": "A colour, or 'photo' to draw the card on a photo of this frame."
+        },
+        "background_photo_id": {
+          "name": "Background photo ID",
+          "description": "The photo a card with a photo background is drawn on, with that photo's settings."
         }
       }
     }

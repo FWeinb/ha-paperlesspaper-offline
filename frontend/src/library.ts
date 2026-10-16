@@ -1,11 +1,12 @@
-import { mdiEye, mdiEyeOff, mdiImageMultiple, mdiTune, mdiUpload } from "@mdi/js";
+import { mdiCardTextOutline, mdiEye, mdiEyeOff, mdiImageMultiple, mdiTune, mdiUpload } from "@mdi/js";
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { errorMessage, reorderPhotos, updateFrame, updatePhoto, uploadPhotos } from "./api";
+import "./card-dialog";
 import { localizer } from "./localize";
 import "./media-import";
 import { icon, sharedStyles } from "./styles";
-import type { Frame, HomeAssistant, Order, Photo } from "./types";
+import type { Frame, HomeAssistant, LibraryItem, Order } from "./types";
 
 const DRAG_TYPE = "application/x-paperlessoffline-photo";
 
@@ -14,13 +15,14 @@ const DRAG_TYPE = "application/x-paperlessoffline-photo";
 export class Library extends LitElement {
   @property({ attribute: false }) hass!: HomeAssistant;
   @property({ attribute: false }) frame!: Frame;
-  @property({ attribute: false }) photos: Photo[] = [];
+  @property({ attribute: false }) photos: LibraryItem[] = [];
 
   @state() private dropActive = false;
   @state() private uploading = 0;
   @state() private uploadErrors: { file: string; error: string }[] = [];
   @state() private error: string | null = null;
   @state() private importOpen = false;
+  @state() private cardOpen = false;
   @state() private dragId: string | null = null;
   @state() private dragOverId: string | null = null;
 
@@ -60,19 +62,19 @@ export class Library extends LitElement {
     this.upload([...ev.dataTransfer.files]);
   }
 
-  private onTileDragStart(ev: DragEvent, photo: Photo) {
+  private onTileDragStart(ev: DragEvent, photo: LibraryItem) {
     this.dragId = photo.photo_id;
     ev.dataTransfer?.setData(DRAG_TYPE, photo.photo_id);
     if (ev.dataTransfer) ev.dataTransfer.effectAllowed = "move";
   }
 
-  private onTileDragOver(ev: DragEvent, photo: Photo) {
+  private onTileDragOver(ev: DragEvent, photo: LibraryItem) {
     if (!this.dragId || !ev.dataTransfer?.types.includes(DRAG_TYPE)) return;
     ev.preventDefault();
     this.dragOverId = photo.photo_id;
   }
 
-  private async onTileDrop(ev: DragEvent, target: Photo) {
+  private async onTileDrop(ev: DragEvent, target: LibraryItem) {
     const id = ev.dataTransfer?.getData(DRAG_TYPE);
     this.dragOverId = null;
     this.dragId = null;
@@ -91,7 +93,7 @@ export class Library extends LitElement {
     }
   }
 
-  private async toggleEnabled(ev: Event, photo: Photo) {
+  private async toggleEnabled(ev: Event, photo: LibraryItem) {
     ev.stopPropagation();
     try {
       await updatePhoto(this.hass, this.frame.entry_id, photo.photo_id, { enabled: !photo.enabled });
@@ -108,7 +110,7 @@ export class Library extends LitElement {
     }
   }
 
-  private edit(photo: Photo) {
+  private edit(photo: LibraryItem) {
     this.dispatchEvent(new CustomEvent("edit-photo", { detail: { photo }, bubbles: true, composed: true }));
   }
 
@@ -123,6 +125,9 @@ export class Library extends LitElement {
           <input type="file" accept="image/*,.heic,.heif" multiple hidden @change=${this.onFileInput} />
         </label>
         <button class="btn" @click=${() => (this.importOpen = true)}>${icon(mdiImageMultiple)} ${l("import")}</button>
+        <button class="btn add-card" @click=${() => (this.cardOpen = true)}>
+          ${icon(mdiCardTextOutline)} ${l("add_card")}
+        </button>
         <span class="spacer"></span>
         <label class="order">
           <span class="muted">${l("order")}</span>
@@ -157,8 +162,9 @@ export class Library extends LitElement {
           ? html`<div class="grid">
               ${this.photos.map((photo) => {
                 const custom = Object.keys(photo.overrides ?? {}).length > 0;
+                const card = photo.kind === "card";
                 return html`<div
-                  class="tile ${photo.enabled ? "" : "disabled"} ${this.dragOverId === photo.photo_id ? "over" : ""}"
+                  class="tile ${photo.enabled ? "" : "disabled"} ${card ? "is-card" : ""} ${this.dragOverId === photo.photo_id ? "over" : ""}"
                   draggable="true"
                   tabindex="0"
                   @click=${() => this.edit(photo)}
@@ -174,6 +180,7 @@ export class Library extends LitElement {
                     ${photo.photo_id === showing ? html`<span class="chip ok">${l("showing")}</span>` : nothing}
                     ${photo.photo_id === upNext ? html`<span class="chip">${l("up_next")}</span>` : nothing}
                     ${custom ? html`<span class="chip" title=${l("custom")}>${icon(mdiTune)}</span>` : nothing}
+                    ${card ? html`<span class="chip card-badge">${l("card_badge")}</span>` : nothing}
                   </div>
                   <div class="caption">
                     <span class="name" title=${photo.name}>${photo.name}</span>
@@ -197,6 +204,18 @@ export class Library extends LitElement {
             .frame=${this.frame}
             @closed=${() => (this.importOpen = false)}
           ></pp-media-import>`
+        : nothing}
+      ${this.cardOpen
+        ? html`<pp-card-dialog
+            .hass=${this.hass}
+            .frame=${this.frame}
+            .photos=${this.photos}
+            @closed=${() => (this.cardOpen = false)}
+            @card-created=${(e: CustomEvent<{ photo: LibraryItem }>) => {
+              this.cardOpen = false;
+              this.edit(e.detail.photo);
+            }}
+          ></pp-card-dialog>`
         : nothing}
     `;
   }
@@ -287,6 +306,9 @@ export class Library extends LitElement {
         aspect-ratio: 1;
         object-fit: cover;
         background: var(--pp-bg);
+      }
+      .tile.is-card img {
+        object-fit: contain;
       }
       .badges {
         position: absolute;

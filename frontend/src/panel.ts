@@ -9,7 +9,7 @@ import "./photo-editor";
 import { resolveSettings } from "./render-settings";
 import "./settings-views";
 import { icon, sharedStyles } from "./styles";
-import type { Defaults, Frame, HomeAssistant, Photo } from "./types";
+import type { Defaults, Frame, HomeAssistant, LibraryItem } from "./types";
 
 const GLOBAL = "global";
 const REFRESH_DELAY = 250;
@@ -24,9 +24,9 @@ export class PaperlessPanel extends LitElement {
   @state() private frames: Frame[] | null = null;
   @state() private selected: string | null = null;
   @state() private tab: "photos" | "settings" = "photos";
-  @state() private photos: Photo[] = [];
+  @state() private photos: LibraryItem[] = [];
   @state() private defaults: Defaults | null = null;
-  @state() private editing: Photo | null = null;
+  @state() private editing: LibraryItem | null = null;
   @state() private error: string | null = null;
 
   private unsubscribe?: Promise<() => Promise<void>>;
@@ -262,7 +262,7 @@ export class PaperlessPanel extends LitElement {
             .hass=${this.hass}
             .frame=${frame}
             .photos=${this.photos}
-            @edit-photo=${(e: CustomEvent<{ photo: Photo }>) => (this.editing = e.detail.photo)}
+            @edit-photo=${(e: CustomEvent<{ photo: LibraryItem }>) => (this.editing = e.detail.photo)}
           ></pp-library>`
         : html`<pp-frame-settings
               .hass=${this.hass}

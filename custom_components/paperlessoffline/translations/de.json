@@ -206,7 +206,8 @@
         "s": "Klein",
         "m": "Mittel",
         "l": "Groß",
-        "xl": "Sehr groß"
+        "xl": "Sehr groß",
+        "xxl": "Riesig"
       }
     },
     "overlay_align": {
@@ -237,6 +238,24 @@
       "options": {
         "change": "Bei jedem Aufwachen, wenn sich der Text geändert hat",
         "photo": "Nur wenn das Foto wechselt"
+      }
+    },
+    "card_preset": {
+      "options": {
+        "blank": "Leer",
+        "info": "Info: ein Titel und Werte",
+        "notice": "Hinweis: eine große Nachricht"
+      }
+    },
+    "card_background": {
+      "options": {
+        "white": "Weiß",
+        "black": "Schwarz",
+        "red": "Rot",
+        "green": "Grün",
+        "blue": "Blau",
+        "yellow": "Gelb",
+        "photo": "Foto"
       }
     }
   },
@@ -404,6 +423,15 @@
     },
     "overlay_not_found": {
       "message": "Overlay {overlay_id} nicht gefunden."
+    },
+    "invalid_card_background": {
+      "message": "Ein Foto-Hintergrund braucht die ID eines Fotos (keiner Karte) dieses Rahmens."
+    },
+    "card_has_no_render_settings": {
+      "message": "Karten haben keine Darstellungseinstellungen; stattdessen den Hintergrund ändern."
+    },
+    "not_a_card": {
+      "message": "{photo_id} ist ein Foto: sein Hintergrund ist Weiß oder Schwarz, und nur Karten haben ein Hintergrundfoto."
     }
   },
   "services": {
@@ -537,7 +565,7 @@
         },
         "background": {
           "name": "Hintergrund",
-          "description": "Randfarbe für „Einpassen mit Rand“ und Transparenz."
+          "description": "Bei einem Foto: die Randfarbe für „Einpassen mit Rand“ (Weiß oder Schwarz). Bei einer Karte: ihr Hintergrund."
         },
         "brightness": {
           "name": "Helligkeit",
@@ -570,6 +598,10 @@
         "hide_frame_overlays": {
           "name": "Rahmen-Overlays ausblenden",
           "description": "Die Overlays des Rahmens nicht auf diesem Foto zeichnen."
+        },
+        "background_photo_id": {
+          "name": "Hintergrundfoto-ID",
+          "description": "Das Foto, auf das eine Karte mit Foto-Hintergrund gezeichnet wird, mit dessen Einstellungen."
         }
       }
     },
@@ -990,6 +1022,32 @@
         "photo_id": {
           "name": "Foto-ID",
           "description": "Nur für Overlays dieses Fotos; ohne Angabe gilt die Liste des Rahmens (globale Foto-Overlays). ID des Fotos (siehe Aktion Fotos auflisten)."
+        }
+      }
+    },
+    "add_card": {
+      "name": "Karte hinzufügen",
+      "description": "Fügt der Bibliothek eines Rahmens eine Textkarte hinzu. Ihr Text sind ihre Overlays; diese mit den Overlay-Aktionen und der Foto-ID der Karte bearbeiten.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Anzeigename."
+        },
+        "preset": {
+          "name": "Vorlage",
+          "description": "Womit die Karte beginnt, in der Sprache von Home Assistant."
+        },
+        "background": {
+          "name": "Hintergrund",
+          "description": "Eine Farbe, oder „Foto“, um die Karte auf ein Foto dieses Rahmens zu zeichnen."
+        },
+        "background_photo_id": {
+          "name": "Hintergrundfoto-ID",
+          "description": "Das Foto, auf das eine Karte mit Foto-Hintergrund gezeichnet wird, mit dessen Einstellungen."
         }
       }
     }

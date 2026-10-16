@@ -13,9 +13,13 @@ from .const import DOMAIN, STORAGE_VERSION
 SAVE_DELAY = 2
 
 
+KIND_PHOTO = "photo"
+KIND_CARD = "card"
+
+
 @dataclass
-class Photo:
-    """One photo in a frame's library."""
+class LibraryItem:
+    """One library item: a photo, or a card (no file; its overlays are its content)."""
 
     id: str
     filename: str
@@ -30,9 +34,18 @@ class Photo:
     date: str | None = None  # ISO 8601 with offset
     location: dict[str, float] | None = None  # latitude, longitude, optionally altitude
     exif_read: bool = False
+    kind: str = KIND_PHOTO
+    # Cards only: "white", "black", a panel colour, or "photo" (background_photo_id).
+    background: str = "white"
+    background_photo_id: str | None = None
+
+    @property
+    def is_card(self) -> bool:
+        """Whether this is a card rather than a photo with a file."""
+        return self.kind == KIND_CARD
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> Photo:
+    def from_dict(cls, data: dict[str, Any]) -> LibraryItem:
         """Deserialise, ignoring unknown keys."""
         known = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
         known["overlays"] = [OverlayDef.from_dict(o) for o in known.get("overlays") or []]
@@ -153,14 +166,14 @@ class FrameStore:
     def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
         """Initialise."""
         self._store: Store[dict[str, Any]] = Store(hass, STORAGE_VERSION, f"{DOMAIN}.{entry_id}")
-        self.photos: list[Photo] = []
+        self.photos: list[LibraryItem] = []
         self.overlays: list[OverlayDef] = []
         self.state = FrameState()
 
     async def async_load(self) -> None:
         """Load from disk."""
         data = await self._store.async_load() or {}
-        self.photos = [Photo.from_dict(p) for p in data.get("photos", [])]
+        self.photos = [LibraryItem.from_dict(p) for p in data.get("photos", [])]
         self.overlays = [OverlayDef.from_dict(o) for o in data.get("overlays", [])]
         self.state = FrameState.from_dict(data.get("state", {}))
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 import contextlib
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime
 import hashlib
 import json
@@ -26,6 +26,7 @@ from yarl import URL
 from . import housekeeping, slideshow
 from .ble import FrameBleError, FrameSession
 from .cache import RenderCache, cache_key
+from .cards import BACKGROUND_PHOTO, CARD_BACKGROUNDS, copy_overlays, preset_name, preset_overlays
 from .const import (
     ALLOWED_FORMATS,
     BLE_COOLDOWN_SECONDS,
@@ -80,13 +81,14 @@ from .render import (
     composite,
     make_thumbnail,
     render,
+    render_fill,
     render_placeholder,
     render_preview,
     validate_image,
 )
 from .schedule import parse_time, quiet_sleep
 from .settings import resolve
-from .store import FrameState, FrameStore, GlobalStore, OverlayDef, Override, Photo
+from .store import KIND_CARD, FrameState, FrameStore, GlobalStore, LibraryItem, OverlayDef, Override
 from .templates import is_truthy, photo_vars, render_text, template_variables
 from .urls import URL_HOST_AUTO, async_frame_base_url, frame_can_use_host, frame_urls
 
@@ -164,7 +166,7 @@ class FrameManager:
 
     async def _async_read_missing_exif(self) -> None:
         """One-time migration: fill in capture data of photos added before it existed."""
-        todo = [p for p in self.photos if not p.exif_read and p.filename]
+        todo = [p for p in self.photos if not p.exif_read and not p.is_card]
         if not todo:
             return
         zone = dt_util.get_default_time_zone()
@@ -205,7 +207,7 @@ class FrameManager:
         return self.store.state
 
     @property
-    def photos(self) -> list[Photo]:
+    def photos(self) -> list[LibraryItem]:
         """Library, in rotation order."""
         return self.store.photos
 
@@ -260,11 +262,11 @@ class FrameManager:
         """Path of the settings endpoint."""
         return SETTINGS_PATH.format(token=self.token)
 
-    def get_photo(self, photo_id: str | None) -> Photo | None:
+    def get_photo(self, photo_id: str | None) -> LibraryItem | None:
         """Look up a photo by id."""
         return next((p for p in self.photos if p.id == photo_id), None)
 
-    def require_photo(self, photo_id: str) -> Photo:
+    def require_photo(self, photo_id: str) -> LibraryItem:
         """Look up a photo or raise a validation error."""
         if (photo := self.get_photo(photo_id)) is None:
             raise ServiceValidationError(
@@ -706,9 +708,33 @@ class FrameManager:
         key = cache_key(source, opts.cache_dict(), asdict(canvas))
         return key, opts
 
-    def photo_key(self, photo: Photo) -> str:
-        """Cache key of a photo's current render."""
-        return self._key(photo.sha256, photo.overrides)[0]
+    def _base_render(self, item: LibraryItem) -> tuple[str, Callable[[], RenderResult]]:
+        """Cache key and producer of a library item's render without overlays.
+
+        A photo is its original with its settings. A card is a solid fill, or the
+        render of its background photo (the same cache entry that photo uses).
+        """
+        canvas = self.canvas
+        if item.is_card:
+            if (background := self.card_background_photo(item)) is not None:
+                return self._base_render(background)
+            color = item.background
+            key = cache_key("fill:" + color, {}, asdict(canvas))
+            return key, lambda: render_fill(color, canvas)
+        key, opts = self._key(item.sha256, item.overrides)
+        path = self.originals / item.filename
+        return key, lambda: render(path.read_bytes(), opts, canvas)
+
+    def card_background_photo(self, card: LibraryItem) -> LibraryItem | None:
+        """The library photo a card is drawn on, if it has one."""
+        if card.background != BACKGROUND_PHOTO:
+            return None
+        photo = self.get_photo(card.background_photo_id)
+        return photo if photo is not None and not photo.is_card else None
+
+    def photo_key(self, photo: LibraryItem) -> str:
+        """Cache key of a library item's current render (without overlays)."""
+        return self._base_render(photo)[0]
 
     async def _async_render_cached(self, key: str, produce: Callable[[], RenderResult]) -> str:
         if await self.hass.async_add_executor_job(self.cache.has, key):
@@ -721,12 +747,9 @@ class FrameManager:
                 )
         return key
 
-    async def async_render_photo(self, photo: Photo) -> str:
-        """Render a library photo; return its cache key."""
-        key, opts = self._key(photo.sha256, photo.overrides)
-        path = self.originals / photo.filename
-        canvas = self.canvas
-        return await self._async_render_cached(key, lambda: render(path.read_bytes(), opts, canvas))
+    async def async_render_photo(self, photo: LibraryItem) -> str:
+        """Render a library item without overlays; return its cache key."""
+        return await self._async_render_cached(*self._base_render(photo))
 
     async def _async_render_override(self, ov: Override) -> str:
         key, opts = self._key("override:" + ov.sha256, ov.overrides)
@@ -768,14 +791,18 @@ class FrameManager:
             return None
         return await self.hass.async_add_executor_job(self.cache.read_png, key)
 
-    def _up_next_parts(self) -> tuple[str, Photo | None, list[tuple[str, OverlayStyle]]]:
+    def _up_next_parts(self) -> tuple[str, LibraryItem | None, list[tuple[str, OverlayStyle]]]:
         """What the next wake shows: (kind, photo, overlays to draw with current values)."""
         kind, photo_id = self.up_next()
         photo = self.get_photo(photo_id) if kind == "photo" else None
+        return kind, photo, self._draw_now(kind, photo)
+
+    def _draw_now(self, kind: str, photo: LibraryItem | None) -> list[tuple[str, OverlayStyle]]:
+        """Overlays drawn on a display, with the values they'd have right now."""
         applicable = self._applicable_overlays(kind, photo)
         variables = self.template_variables(photo)
         texts = {o.id: self.evaluate_overlay(o, variables)[0] for o in applicable}
-        return kind, photo, self._overlay_draw_list(applicable, texts)
+        return self._overlay_draw_list(applicable, texts)
 
     async def _async_render_up_next(self) -> tuple[str, str]:
         """Render what the next wake shows; return (base key, key with overlays)."""
@@ -804,9 +831,13 @@ class FrameManager:
         return base, self._composite_key(base, draw) if draw else base
 
     async def async_photo_preview(self, photo_id: str) -> bytes | None:
-        """Preview PNG of any library photo."""
-        photo = self.require_photo(photo_id)
-        key = await self.async_render_photo(photo)
+        """Preview PNG of any library item; a card's has its overlays at their current values."""
+        return await self._async_item_preview(self.require_photo(photo_id))
+
+    async def _async_item_preview(self, item: LibraryItem) -> bytes | None:
+        key = await self.async_render_photo(item)
+        if item.is_card and (draw := self._draw_now("photo", item)):
+            key = await self._async_render_composite(key, draw)
         return await self.hass.async_add_executor_job(self.cache.read_png, key)
 
     @callback
@@ -839,7 +870,7 @@ class FrameManager:
         base, final = self._up_next_keys()
         st = self.state
         needed = {st.served_key, st.served_base_key, base, final}
-        photos = {p.id: p.filename for p in self.photos}
+        photos = {p.id: p.filename for p in self.photos if not p.is_card}
         override = {st.override.filename} if st.override else set()
         await self.hass.async_add_executor_job(self._evict_files, needed, photos, override)
 
@@ -872,7 +903,7 @@ class FrameManager:
         """The overlay list of a photo, or the frame's (global) list without a photo."""
         return self.require_photo(photo_id).overlays if photo_id else self.overlays
 
-    def _current_photo(self) -> Photo | None:
+    def _current_photo(self) -> LibraryItem | None:
         st = self.state
         return self.get_photo(st.current_id) if st.current_kind == "photo" else None
 
@@ -890,7 +921,7 @@ class FrameManager:
             )
         return overlay
 
-    def overlay_defs_hash(self, photo: Photo | None = None) -> str:
+    def overlay_defs_hash(self, photo: LibraryItem | None = None) -> str:
         """Hash of the overlay definitions a display uses (edits invalidate evaluated texts)."""
         return _hash(
             {
@@ -899,7 +930,7 @@ class FrameManager:
             }
         )
 
-    def _applicable_overlays(self, kind: str | None, photo: Photo | None) -> list[OverlayDef]:
+    def _applicable_overlays(self, kind: str | None, photo: LibraryItem | None) -> list[OverlayDef]:
         """Enabled overlays drawn for a display, in drawing order.
 
         A photo's own overlays come first, global ones on top; the hide switch only
@@ -916,7 +947,7 @@ class FrameManager:
             applicable += [o for o in self.overlays if o.enabled]
         return applicable
 
-    def template_variables(self, photo: Photo | None = None) -> dict[str, Any]:
+    def template_variables(self, photo: LibraryItem | None = None) -> dict[str, Any]:
         """Variables for overlay templates on this frame (``photo`` is None off the library)."""
         return template_variables(
             self.hass, self.display_name, photo_vars(photo) if photo is not None else None
@@ -1028,7 +1059,8 @@ class FrameManager:
         if for_photo and photo is None:
             self.require_photo(photo_id or "")
         if photo is None and self.photos:
-            photo = self.photos[0]
+            # Preview frame overlays on a photo rather than a card where there is one.
+            photo = next((p for p in self.photos if not p.is_card), self.photos[0])
         own = (overlays if for_photo and overlays is not None else photo.overlays) if photo else []
         glob = self.overlays if for_photo or overlays is None else overlays
         hidden = for_photo and photo is not None and photo.hide_frame_overlays
@@ -1088,9 +1120,7 @@ class FrameManager:
     @callback
     def async_copy_overlays_to(self, target: FrameManager, replace: bool = False) -> int:
         """Copy all overlays to another frame (new ids). Returns how many."""
-        copies = [
-            OverlayDef.from_dict({**o.as_dict(), "id": secrets.token_hex(6)}) for o in self.overlays
-        ]
+        copies = copy_overlays(self.overlays)
         if replace:
             target.store.overlays[:] = copies
         else:
@@ -1107,10 +1137,7 @@ class FrameManager:
         targets = [self.require_photo(i) for i in dict.fromkeys(to_photo_ids) if i != photo_id]
         count = 0
         for target in targets:
-            copies = [
-                OverlayDef.from_dict({**o.as_dict(), "id": secrets.token_hex(6)})
-                for o in source.overlays
-            ]
+            copies = copy_overlays(source.overlays)
             if replace:
                 target.overlays[:] = copies
             else:
@@ -1121,7 +1148,7 @@ class FrameManager:
         return count
 
     @callback
-    def async_set_photo_hide_overlays(self, photo_id: str, hide: bool) -> Photo:
+    def async_set_photo_hide_overlays(self, photo_id: str, hide: bool) -> LibraryItem:
         """Whether frame overlays are drawn on a photo."""
         photo = self.require_photo(photo_id)
         photo.hide_frame_overlays = hide
@@ -1136,7 +1163,7 @@ class FrameManager:
         name: str,
         overrides: dict[str, Any] | None = None,
         enabled: bool = True,
-    ) -> Photo:
+    ) -> LibraryItem:
         """Add image bytes to the library."""
         fmt = await self._async_validate(data)
         sha = hashlib.sha256(data).hexdigest()
@@ -1146,7 +1173,7 @@ class FrameManager:
         date, location = await self.hass.async_add_executor_job(
             read_capture, data, dt_util.get_default_time_zone()
         )
-        photo = Photo(
+        photo = LibraryItem(
             id=photo_id,
             filename=filename,
             name=name or photo_id,
@@ -1161,6 +1188,50 @@ class FrameManager:
         self.photos.append(photo)
         self._changed()
         return photo
+
+    @callback
+    def async_add_card(
+        self,
+        name: str | None,
+        preset: str = "blank",
+        background: str = "white",
+        background_photo_id: str | None = None,
+    ) -> LibraryItem:
+        """Add a card made from a preset (texts in HA's language) to the library."""
+        background, background_photo_id = self._card_background(background, background_photo_id)
+        language = self.hass.config.language
+        card = LibraryItem(
+            id=secrets.token_hex(6),
+            filename="",
+            name=name or preset_name(preset, language),
+            sha256="",
+            added=dt_util.utcnow().isoformat(),
+            kind=KIND_CARD,
+            hide_frame_overlays=True,
+            overlays=preset_overlays(preset, background, language),
+            background=background,
+            background_photo_id=background_photo_id,
+        )
+        self.photos.append(card)
+        self._changed()
+        return card
+
+    def _card_background(
+        self, background: str, background_photo_id: str | None
+    ) -> tuple[str, str | None]:
+        """Validate a card background; a photo background needs a photo of this frame."""
+        if background != BACKGROUND_PHOTO:
+            if background not in CARD_BACKGROUNDS:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN, translation_key="invalid_card_background"
+                )
+            return background, None
+        photo = self.get_photo(background_photo_id)
+        if photo is None or photo.is_card:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="invalid_card_background"
+            )
+        return background, photo.id
 
     async def _async_validate(self, data: bytes) -> str:
         if len(data) > MAX_UPLOAD_BYTES:
@@ -1202,10 +1273,21 @@ class FrameManager:
         if st.queued_id == photo_id:
             st.queued_id = None
         st.bag = [p for p in st.bag if p != photo_id]
-        await self.hass.async_add_executor_job(self._delete_photo_files, photo)
+        for card in self.cards_on(photo_id):
+            card.background, card.background_photo_id = "white", None
+        if not photo.is_card:
+            await self.hass.async_add_executor_job(self._delete_photo_files, photo)
         self._changed()
 
-    def _delete_photo_files(self, photo: Photo) -> None:
+    def cards_on(self, photo_id: str) -> list[LibraryItem]:
+        """Cards that use a photo as their background."""
+        return [
+            p
+            for p in self.photos
+            if p.is_card and p.background == BACKGROUND_PHOTO and p.background_photo_id == photo_id
+        ]
+
+    def _delete_photo_files(self, photo: LibraryItem) -> None:
         (self.originals / photo.filename).unlink(missing_ok=True)
         for thumb in (self.directory / "thumbs").glob(f"{photo.id}_*.jpg"):
             thumb.unlink(missing_ok=True)
@@ -1219,9 +1301,28 @@ class FrameManager:
         enabled: bool | None = None,
         overrides: dict[str, Any] | None = None,
         reset: list[str] | None = None,
-    ) -> Photo:
-        """Change a photo's name, rotation membership or render overrides."""
+        background: str | None = None,
+        background_photo_id: str | None = None,
+    ) -> LibraryItem:
+        """Change a photo's name, rotation membership or render overrides, or a card's background.
+
+        A ``background_photo_id`` without ``background`` sets a photo background.
+        """
         photo = self.require_photo(photo_id)
+        if photo.is_card and (overrides or reset):
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="card_has_no_render_settings"
+            )
+        if not photo.is_card and (background is not None or background_photo_id is not None):
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="not_a_card",
+                translation_placeholders={"photo_id": photo_id},
+            )
+        if background is not None or background_photo_id is not None:
+            photo.background, photo.background_photo_id = self._card_background(
+                background or BACKGROUND_PHOTO, background_photo_id or photo.background_photo_id
+            )
         if name is not None:
             photo.name = name
         if enabled is not None:
@@ -1245,30 +1346,65 @@ class FrameManager:
         self.photos.insert(position, photo)
         self._changed()
 
-    async def async_copy_photo_to(self, photo_id: str, target: FrameManager) -> Photo:
-        """Copy a photo (original + overrides) into another frame's library."""
+    async def async_copy_photo_to(
+        self, photo_id: str, target: FrameManager, enabled: bool | None = None
+    ) -> LibraryItem:
+        """Copy a library item into another frame's library.
+
+        A photo takes its original, settings and overlays along. A card takes its
+        overlays and background; a background photo is copied too (disabled), or
+        the target's photo with the same content is used.
+        """
         photo = self.require_photo(photo_id)
+        enabled = photo.enabled if enabled is None else enabled
+        if photo.is_card:
+            return await self._async_copy_card_to(photo, target, enabled)
         data = await self.hass.async_add_executor_job((self.originals / photo.filename).read_bytes)
-        copy = await target.async_add_photo(data, photo.name, dict(photo.overrides), photo.enabled)
+        copy = await target.async_add_photo(data, photo.name, dict(photo.overrides), enabled)
         if photo.overlays:
-            copy.overlays[:] = [
-                OverlayDef.from_dict({**o.as_dict(), "id": secrets.token_hex(6)})
-                for o in photo.overlays
-            ]
+            copy.overlays[:] = copy_overlays(photo.overlays)
             target._changed()
         return copy
 
-    async def async_thumbnail(self, photo_id: str, size: int = 320, rotation: int = 0) -> bytes:
-        """JPEG of a photo's original at a fixed size, optionally rotated (cached)."""
+    async def _async_copy_card_to(
+        self, card: LibraryItem, target: FrameManager, enabled: bool
+    ) -> LibraryItem:
+        background = "white" if card.background == BACKGROUND_PHOTO else card.background
+        background_photo_id = None
+        if (photo := self.card_background_photo(card)) is not None:
+            same = next(
+                (p for p in target.photos if not p.is_card and p.sha256 == photo.sha256), None
+            )
+            if same is None:
+                same = await self.async_copy_photo_to(photo.id, target, enabled=False)
+            background, background_photo_id = BACKGROUND_PHOTO, same.id
+        copy = target.async_add_card(card.name, "blank", background, background_photo_id)
+        copy.overlays[:] = copy_overlays(card.overlays)
+        copy.hide_frame_overlays = card.hide_frame_overlays
+        copy.enabled = enabled
+        target._changed()
+        return copy
+
+    async def async_thumbnail(
+        self, photo_id: str, size: int = 320, rotation: int = 0
+    ) -> tuple[bytes, str]:
+        """(image, content type) for a library item's thumbnail.
+
+        A photo's is a JPEG of its original at a fixed size, optionally rotated
+        (cached in ``thumbs/``). A card's is its preview PNG, evaluated now.
+        """
         photo = self.require_photo(photo_id)
+        if photo.is_card:
+            return await self.async_photo_preview(photo_id) or b"", "image/png"
         if size not in THUMB_SIZES:
             size = THUMB_SIZES[0]
         rotation %= 360
         source = self.originals / photo.filename
         target = self.directory / "thumbs" / f"{photo.id}_{size}_{rotation}.jpg"
-        return await self.hass.async_add_executor_job(
+        jpeg = await self.hass.async_add_executor_job(
             make_thumbnail, source, target, size, rotation
         )
+        return jpeg, "image/jpeg"
 
     async def async_render_preview(
         self,
@@ -1276,9 +1412,19 @@ class FrameManager:
         overrides: dict[str, Any] | None,
         frame_defaults: dict[str, Any] | None = None,
         global_defaults: dict[str, Any] | None = None,
+        background: tuple[str, str | None] | None = None,
     ) -> bytes:
-        """Preview PNG of a photo with unsaved settings (not cached)."""
+        """Preview PNG of a photo with unsaved settings (not cached).
+
+        A card is previewed with its overlays, on an unsaved ``background``
+        (background, background photo id) if given.
+        """
         photo = self.require_photo(photo_id)
+        if photo.is_card:
+            if background is not None:
+                bg, bg_id = self._card_background(*background)
+                photo = replace(photo, background=bg, background_photo_id=bg_id)
+            return await self._async_item_preview(photo) or b""
         if global_defaults is None:
             global_defaults = self.global_store.defaults
         if frame_defaults is None:
@@ -1303,9 +1449,13 @@ class FrameManager:
         self._changed()
 
     @callback
-    def async_set_overrides(self, photo_id: str, overrides: dict[str, Any]) -> Photo:
+    def async_set_overrides(self, photo_id: str, overrides: dict[str, Any]) -> LibraryItem:
         """Replace all render overrides of a photo."""
         photo = self.require_photo(photo_id)
+        if photo.is_card and overrides:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="card_has_no_render_settings"
+            )
         photo.overrides = dict(overrides)
         self._changed()
         return photo

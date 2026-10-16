@@ -14,6 +14,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.util import dt as dt_util
 import probatio as vol
 
+from .cards import CARD_BACKGROUNDS, PRESETS
 from .const import (
     CONF_INTERVAL,
     CONF_MOUNTING,
@@ -30,10 +31,10 @@ from .frame import SIGNAL_ANY_UPDATE, FrameManager
 from .issues import is_overdue
 from .overlay_schema import OVERLAY_SCHEMA, build_overlay
 from .render import MOUNTINGS
-from .services import overlay_dict
+from .services import card_fields, overlay_dict
 from .settings import FRAME_DEFAULTS_SCHEMA, GLOBAL_DEFAULTS_SCHEMA, PHOTO_OVERRIDES_SCHEMA
 from .sources import async_fetch_source
-from .store import Photo
+from .store import LibraryItem
 
 SIGN_EXPIRY = timedelta(hours=12)
 SIGNAL_FRAMES_CHANGED = f"{DOMAIN}_frames_changed"
@@ -47,12 +48,13 @@ def _jsonable(overrides: dict[str, Any]) -> dict[str, Any]:
     return {k: list(v) if isinstance(v, tuple) else v for k, v in overrides.items()}
 
 
-def photo_info(hass: HomeAssistant, manager: FrameManager, photo: Photo) -> dict[str, Any]:
+def photo_info(hass: HomeAssistant, manager: FrameManager, photo: LibraryItem) -> dict[str, Any]:
     """Serialise a photo for the panel, with signed image URLs."""
     entry_id = manager.entry.entry_id
     base = f"/api/{DOMAIN}/thumb/{entry_id}/{photo.id}.jpg"
     return {
         "photo_id": photo.id,
+        "kind": photo.kind,
         "name": photo.name,
         "enabled": photo.enabled,
         "added": photo.added,
@@ -61,6 +63,7 @@ def photo_info(hass: HomeAssistant, manager: FrameManager, photo: Photo) -> dict
         "overrides": _jsonable(photo.overrides),
         "hide_frame_overlays": photo.hide_frame_overlays,
         "overlay_count": len(photo.overlays),
+        **card_fields(photo),
         "thumb_url": async_sign_path(hass, base, SIGN_EXPIRY),
         # The editor needs larger images; one per rotation so crops map 1:1.
         "display_urls": {
@@ -122,6 +125,7 @@ def async_setup_websocket(hass: HomeAssistant) -> None:
         ws_frames,
         ws_subscribe,
         ws_photos,
+        ws_card_add,
         ws_photo_update,
         ws_photo_delete,
         ws_photo_reorder,
@@ -204,22 +208,52 @@ def ws_photos(
 @websocket_api.require_admin
 @websocket_api.websocket_command(
     {
+        vol.Required("type"): f"{DOMAIN}/card/add",
+        **_ENTRY,
+        vol.Optional("name"): cv.string,
+        vol.Optional("preset", default="blank"): vol.In(PRESETS),
+        vol.Optional("background", default="white"): vol.In(CARD_BACKGROUNDS),
+        vol.Optional("background_photo_id"): str,
+    }
+)
+@callback
+def ws_card_add(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Add a card made from a preset."""
+    manager = get_manager(hass, msg["entry_id"])
+    card = manager.async_add_card(
+        msg.get("name"), msg["preset"], msg["background"], msg.get("background_photo_id")
+    )
+    connection.send_result(msg["id"], photo_info(hass, manager, card))
+
+
+@websocket_api.require_admin
+@websocket_api.websocket_command(
+    {
         vol.Required("type"): f"{DOMAIN}/photo/update",
         **_PHOTO,
         vol.Optional("name"): cv.string,
         vol.Optional("enabled"): cv.boolean,
         vol.Optional("overrides"): PHOTO_OVERRIDES_SCHEMA,
         vol.Optional("hide_frame_overlays"): cv.boolean,
+        # Cards only.
+        vol.Optional("background"): vol.In(CARD_BACKGROUNDS),
+        vol.Optional("background_photo_id"): str,
     }
 )
 @callback
 def ws_photo_update(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """Change a photo; ``overrides`` replaces all overrides."""
+    """Change a photo or card; ``overrides`` replaces all overrides."""
     manager = get_manager(hass, msg["entry_id"])
     photo = manager.async_update_photo(
-        msg["photo_id"], name=msg.get("name"), enabled=msg.get("enabled")
+        msg["photo_id"],
+        name=msg.get("name"),
+        enabled=msg.get("enabled"),
+        background=msg.get("background"),
+        background_photo_id=msg.get("background_photo_id"),
     )
     if "overrides" in msg:
         photo = manager.async_set_overrides(msg["photo_id"], msg["overrides"])
@@ -356,6 +390,9 @@ async def ws_import(
         vol.Optional("overrides"): PHOTO_OVERRIDES_SCHEMA,
         vol.Optional("frame_defaults"): FRAME_DEFAULTS_SCHEMA,
         vol.Optional("global_defaults"): GLOBAL_DEFAULTS_SCHEMA,
+        # Cards: an unsaved background.
+        vol.Optional("background"): vol.In(CARD_BACKGROUNDS),
+        vol.Optional("background_photo_id"): vol.Any(None, str),
     }
 )
 @websocket_api.async_response
@@ -369,6 +406,7 @@ async def ws_preview(
         msg.get("overrides"),
         msg.get("frame_defaults"),
         msg.get("global_defaults"),
+        (msg["background"], msg.get("background_photo_id")) if "background" in msg else None,
     )
     connection.send_result(
         msg["id"],

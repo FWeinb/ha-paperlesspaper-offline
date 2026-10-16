@@ -6,7 +6,7 @@ import { PreviewQueue } from "./preview-queue";
 import "./render-settings";
 import { resolveSettings } from "./render-settings";
 import { sharedStyles } from "./styles";
-import type { Defaults, Frame, FrameSettings, HomeAssistant, Mounting, Photo } from "./types";
+import type { Defaults, Frame, FrameSettings, HomeAssistant, LibraryItem, Mounting } from "./types";
 
 const PREVIEW_DELAY = 400;
 const MOUNTINGS: Mounting[] = ["portrait", "landscape", "portrait_flipped", "landscape_flipped"];
@@ -140,7 +140,7 @@ abstract class PreviewingView extends LitElement {
 @customElement("pp-frame-settings")
 export class FrameSettingsView extends PreviewingView {
   @property({ attribute: false }) frame!: Frame;
-  @property({ attribute: false }) photos: Photo[] = [];
+  @property({ attribute: false }) photos: LibraryItem[] = [];
   @property({ attribute: false }) defaults!: Defaults;
 
   @state() private draft: FrameSettings = {};
@@ -270,7 +270,7 @@ export class GlobalSettingsView extends PreviewingView {
 
   @state() private draft: FrameSettings = {};
   @state() private sampleFrameId: string | null = null;
-  @state() private samplePhotos: Photo[] = [];
+  @state() private samplePhotos: LibraryItem[] = [];
   @state() private samplePhotoId: string | null = null;
 
   protected override willUpdate(changed: PropertyValues) {

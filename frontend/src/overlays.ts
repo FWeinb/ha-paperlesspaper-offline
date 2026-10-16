@@ -15,7 +15,7 @@ import { ensureCodeEditor } from "./ha-editor";
 import { localizer } from "./localize";
 import { PreviewQueue } from "./preview-queue";
 import { icon, sharedStyles } from "./styles";
-import type { Anchor, Frame, HomeAssistant, Overlay, PaletteColor, Photo } from "./types";
+import type { Anchor, Frame, HomeAssistant, LibraryItem, Overlay, PaletteColor } from "./types";
 
 const ANCHORS: Anchor[] = [
   "top_left",
@@ -82,9 +82,9 @@ export class OverlayList extends LitElement {
   @property({ attribute: false }) hass!: HomeAssistant;
   @property({ attribute: false }) frame!: Frame;
   @property({ attribute: false }) frames: Frame[] = [];
-  @property({ attribute: false }) photos: Photo[] = [];
+  @property({ attribute: false }) photos: LibraryItem[] = [];
   /** Set: this list is the photo's own overlays (shown in the photo editor). */
-  @property({ attribute: false }) photo?: Photo;
+  @property({ attribute: false }) photo?: LibraryItem;
 
   @state() private overlays: Overlay[] = [];
   @state() private editing: Overlay | null = null;
@@ -281,11 +281,14 @@ export class OverlayList extends LitElement {
     const others = this.photo ? [] : this.frames.filter((f) => f.entry_id !== this.frame.entry_id);
     const otherPhotos = this.photo ? this.photos.filter((p) => p.photo_id !== this.photo!.photo_id) : [];
     const p = presets(l, this.hass);
+    const card = this.photo?.kind === "card";
     return html`<div class="card wrap">
       <div class="head">
         <div>
-          <h3>${l(this.photo ? "photo_overlays" : "global_overlays")}</h3>
-          <span class="muted">${l(this.photo ? "photo_overlays_hint" : "global_overlays_hint")}</span>
+          <h3>${l(this.photo ? (card ? "card_overlays" : "photo_overlays") : "global_overlays")}</h3>
+          <span class="muted"
+            >${l(this.photo ? (card ? "card_overlays_hint" : "photo_overlays_hint") : "global_overlays_hint")}</span
+          >
         </div>
         <div class="actions">
           ${others.length && this.overlays.length
@@ -351,7 +354,7 @@ export class OverlayList extends LitElement {
               </li>`,
             )}
           </ul>`
-        : html`<p class="muted empty">${l(this.photo ? "no_photo_overlays" : "no_overlays")}</p>`}
+        : html`<p class="muted empty">${l(this.photo && !card ? "no_photo_overlays" : "no_overlays")}</p>`}
       ${this.editing
         ? html`<pp-overlay-editor
             .hass=${this.hass}
@@ -568,11 +571,11 @@ export class OverlayList extends LitElement {
 export class OverlayEditor extends LitElement {
   @property({ attribute: false }) hass!: HomeAssistant;
   @property({ attribute: false }) frame!: Frame;
-  @property({ attribute: false }) photos: Photo[] = [];
+  @property({ attribute: false }) photos: LibraryItem[] = [];
   @property({ attribute: false }) overlays: Overlay[] = [];
   @property({ attribute: false }) overlay!: Overlay;
   /** Set: the overlay belongs to this photo, which is also the preview's sample. */
-  @property({ attribute: false }) photo?: Photo;
+  @property({ attribute: false }) photo?: LibraryItem;
 
   @state() private draft!: Overlay;
   @state() private preview: string | null = null;
@@ -736,7 +739,7 @@ export class OverlayEditor extends LitElement {
                 </div>
               </div>
               <div class="stack">
-                <label class="field">${l("text_size")} ${this.select("size", ["s", "m", "l", "xl"], (o) => l(`size_${o}` as never))}</label>
+                <label class="field">${l("text_size")} ${this.select("size", ["s", "m", "l", "xl", "xxl"], (o) => l(`size_${o}` as never))}</label>
                 <label class="field">${l("alignment")} ${this.select("align", ["left", "center", "right"], (o) => l(`align_${o}` as never))}</label>
               </div>
             </div>

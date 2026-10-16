@@ -15,7 +15,7 @@ from PIL import Image, ImageEnhance
 
 from .bmp import encode_bmp4
 from .dither import dither, nearest
-from .overlay import SENTINEL, OverlayStyle, draw_overlay, new_layer
+from .overlay import COLORS, SENTINEL, OverlayStyle, draw_overlay, new_layer
 from .palette import DEVICE_INDICES, PERCEIVED, PURE, get_palette, nibble_lut
 from .placeholder import PlaceholderText, draw_placeholder
 
@@ -325,6 +325,13 @@ def render_placeholder(text: PlaceholderText, canvas: Canvas) -> RenderResult:
     img = draw_placeholder(canvas.width, canvas.height, text)
     positions = dither(np.asarray(img, dtype=np.float32), get_palette("pure"), "none")
     return finish(positions, canvas)
+
+
+def render_fill(color: str, canvas: Canvas) -> RenderResult:
+    """Render a solid panel colour (a card background), without dithering. Blocking."""
+    rgb = np.array([[COLORS.get(color, COLORS["white"])]], dtype=np.float32)
+    position = nearest(rgb, PURE)[0, 0]
+    return finish(np.full((canvas.height, canvas.width), position, dtype=np.uint8), canvas)
 
 
 class TooManyPixelsError(ValueError):

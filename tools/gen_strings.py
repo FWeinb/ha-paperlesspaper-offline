@@ -1106,6 +1106,7 @@ def _overlays(lang: str) -> dict:
                     "m": t("Medium", "Mittel"),
                     "l": t("Large", "Groß"),
                     "xl": t("Extra large", "Sehr groß"),
+                    "xxl": t("Huge", "Riesig"),
                 }
             ),
             "overlay_align": opts(
@@ -1193,6 +1194,117 @@ def _overlays(lang: str) -> dict:
     }
 
 
+def _cards(lang: str) -> dict:
+    """Strings for text cards (Step B4)."""
+    L = lambda pair: pair[lang]  # noqa: E731
+    background = (
+        t("Background", "Hintergrund"),
+        t(
+            "A colour, or 'photo' to draw the card on a photo of this frame.",
+            "Eine Farbe, oder „Foto“, um die Karte auf ein Foto dieses Rahmens zu zeichnen.",
+        ),
+    )
+    background_photo = (
+        t("Background photo ID", "Hintergrundfoto-ID"),
+        t(
+            "The photo a card with a photo background is drawn on, with that photo's settings.",
+            "Das Foto, auf das eine Karte mit Foto-Hintergrund gezeichnet wird, mit dessen Einstellungen.",
+        ),
+    )
+
+    def field(pair: tuple) -> dict:
+        return {"name": L(pair[0]), "description": L(pair[1])}
+
+    return {
+        "selector": {
+            "card_preset": {
+                "options": {
+                    "blank": L(t("Blank", "Leer")),
+                    "info": L(t("Info: a title and values", "Info: ein Titel und Werte")),
+                    "notice": L(t("Notice: one big message", "Hinweis: eine große Nachricht")),
+                }
+            },
+            "card_background": {
+                "options": {
+                    "white": L(t("White", "Weiß")),
+                    "black": L(t("Black", "Schwarz")),
+                    "red": L(t("Red", "Rot")),
+                    "green": L(t("Green", "Grün")),
+                    "blue": L(t("Blue", "Blau")),
+                    "yellow": L(t("Yellow", "Gelb")),
+                    "photo": L(t("Photo", "Foto")),
+                }
+            },
+        },
+        "exceptions": {
+            "invalid_card_background": {
+                "message": L(
+                    t(
+                        "A photo background needs the ID of a photo (not a card) of this frame.",
+                        "Ein Foto-Hintergrund braucht die ID eines Fotos (keiner Karte) dieses Rahmens.",
+                    )
+                )
+            },
+            "card_has_no_render_settings": {
+                "message": L(
+                    t(
+                        "Cards have no render settings; change the background instead.",
+                        "Karten haben keine Darstellungseinstellungen; stattdessen den Hintergrund ändern.",
+                    )
+                )
+            },
+            "not_a_card": {
+                "message": L(
+                    t(
+                        "{photo_id} is a photo: its background is white or black, and only cards have a background photo.",
+                        "{photo_id} ist ein Foto: sein Hintergrund ist Weiß oder Schwarz, und nur Karten haben ein Hintergrundfoto.",
+                    )
+                )
+            },
+        },
+        "services": {
+            "add_card": {
+                "name": L(t("Add card", "Karte hinzufügen")),
+                "description": L(
+                    t(
+                        "Adds a text card to a frame's library. Its text is its overlays; edit them with the overlay actions and the card's photo ID.",
+                        "Fügt der Bibliothek eines Rahmens eine Textkarte hinzu. Ihr Text sind ihre Overlays; diese mit den Overlay-Aktionen und der Foto-ID der Karte bearbeiten.",
+                    )
+                ),
+                "fields": {
+                    "config_entry_id": field(FIELDS["config_entry_id"]),
+                    "name": field(FIELDS["name"]),
+                    "preset": field(
+                        (
+                            t("Preset", "Vorlage"),
+                            t(
+                                "What the card starts with, in Home Assistant's language.",
+                                "Womit die Karte beginnt, in der Sprache von Home Assistant.",
+                            ),
+                        )
+                    ),
+                    "background": field(background),
+                    "background_photo_id": field(background_photo),
+                },
+            },
+            "update_photo": {
+                "fields": {
+                    "background": field(
+                        (
+                            t("Background", "Hintergrund"),
+                            t(
+                                "On a photo: the border colour for 'fit with borders' (white or black). On a card: its background.",
+                                "Bei einem Foto: die Randfarbe für „Einpassen mit Rand“ (Weiß oder Schwarz). Bei einer Karte: ihr Hintergrund.",
+                            ),
+                        )
+                    ),
+                    "background_photo_id": field(background_photo),
+                }
+            },
+        },
+    }
+
+
 def _merge(base: dict, extra: dict) -> dict:
     for key, value in extra.items():
         if isinstance(value, dict) and isinstance(base.get(key), dict):
@@ -1204,7 +1316,7 @@ def _merge(base: dict, extra: dict) -> dict:
 
 def build(lang: str) -> dict:
     merged = _merge(_merge(_build_base(lang), _phase3(lang)), _url_host(lang))
-    return _merge(merged, _overlays(lang))
+    return _merge(_merge(merged, _overlays(lang)), _cards(lang))
 
 
 def main() -> None:

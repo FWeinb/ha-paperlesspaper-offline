@@ -133,7 +133,7 @@ class PhotoPreviewView(HomeAssistantView):
 
 
 class PhotoThumbView(HomeAssistantView):
-    """Serve small thumbnails of library originals to authenticated users."""
+    """Serve small thumbnails of library items to authenticated users."""
 
     url = "/api/paperlessoffline/thumb/{entry_id}/{photo_id}.jpg"
     name = f"api:{DOMAIN}:thumb"
@@ -151,8 +151,8 @@ class PhotoThumbView(HomeAssistantView):
             rotation = int(request.query.get("rotation", 0))
         except ValueError:
             return web.Response(status=400)
-        jpeg = await manager.async_thumbnail(photo_id, size, rotation)
-        return web.Response(body=jpeg, content_type="image/jpeg")
+        body, content_type = await manager.async_thumbnail(photo_id, size, rotation)
+        return web.Response(body=body, content_type=content_type)
 
 
 class PhotoUploadView(HomeAssistantView):

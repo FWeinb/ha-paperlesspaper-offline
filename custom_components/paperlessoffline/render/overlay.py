@@ -38,7 +38,7 @@ ANCHORS = (
     "bottom_center",
     "bottom_right",
 )
-SIZES = {"s": 18, "m": 24, "l": 32, "xl": 44}  # px at a 480 px short side
+SIZES = {"s": 18, "m": 24, "l": 32, "xl": 44, "xxl": 72}  # px at a 480 px short side
 HEADING_SCALE = {1: 1.6, 2: 1.35, 3: 1.15}
 ALIGNS = ("left", "center", "right")
 BACKINGS = ("box", "halo", "none")

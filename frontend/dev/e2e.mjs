@@ -193,6 +193,81 @@ const copyMsg = (await ws()).filter((m) => m.type === "paperlessoffline/overlays
 check(!!copyMsg?.photo_id && copyMsg.to_photo_ids?.length === 1 && copyMsg.replace === false, "copy to photos sends photo_id and one target");
 check(await (await photoOverlays()).evaluate((r) => !!r.querySelector(".chip.ok")), "copy to photos shows a confirmation");
 
+// 8. Library: "Add card" creates a card from a preset and opens it in card mode.
+await page.goto(`${BASE}?frame=kitchen`);
+await new Promise((r) => setTimeout(r, 1500));
+const library = () =>
+  page.evaluateHandle(() => document.querySelector("paperlessoffline-panel").shadowRoot.querySelector("pp-library").shadowRoot);
+check(await (await library()).evaluate((r) => r.querySelectorAll(".card-badge").length === 1), "library marks the sample card with a badge");
+await (await library()).evaluate((r) => r.querySelector(".add-card").click());
+await new Promise((r) => setTimeout(r, 200));
+await (await library()).evaluate((r) => {
+  const dlg = r.querySelector("pp-card-dialog").shadowRoot;
+  dlg.querySelector("input[value=notice]").click();
+  dlg.querySelector("pp-card-background").shadowRoot.querySelector("[data-bg=blue]").click();
+  const name = dlg.querySelector("input.card-name");
+  name.value = "Party";
+  name.dispatchEvent(new Event("input"));
+});
+await new Promise((r) => setTimeout(r, 100));
+await (await library()).evaluate((r) => r.querySelector("pp-card-dialog").shadowRoot.querySelector("button.create").click());
+await new Promise((r) => setTimeout(r, 1500));
+const addMsg = (await ws()).find((m) => m.type === "paperlessoffline/card/add");
+check(addMsg?.preset === "notice" && addMsg.background === "blue" && addMsg.name === "Party", `card/add sent (${JSON.stringify(addMsg)})`);
+const cardEditor = () =>
+  page.evaluateHandle(() => document.querySelector("paperlessoffline-panel").shadowRoot.querySelector("pp-photo-editor").shadowRoot);
+check(
+  await (await cardEditor()).evaluate(
+    (r) => !r.querySelector("pp-crop-area") && !r.querySelector("pp-render-settings") && !!r.querySelector("pp-card-background"),
+  ),
+  "new card opens in card mode (background instead of crop and render settings)",
+);
+check(
+  await (await cardEditor()).evaluate((r) => r.querySelector("pp-overlays").shadowRoot.querySelector("h3").textContent.trim() === "Card text"),
+  "card mode lists the card text",
+);
+check(
+  await (await cardEditor()).evaluate((r) => r.querySelector("pp-overlays").shadowRoot.querySelectorAll("li").length === 1),
+  "notice preset has one overlay",
+);
+check(await (await library()).evaluate((r) => r.querySelectorAll(".card-badge").length === 2), "library shows the new card");
+
+// 9. Card mode: a photo background is previewed unsaved, then saved without render settings.
+await page.goto(`${BASE}?frame=kitchen&edit=7`);
+await new Promise((r) => setTimeout(r, 1500));
+const bgPicker = () =>
+  page.evaluateHandle(() =>
+    document.querySelector("paperlessoffline-panel").shadowRoot.querySelector("pp-photo-editor")
+      .shadowRoot.querySelector("pp-card-background").shadowRoot);
+await (await bgPicker()).evaluate((r) => r.querySelector("[data-bg=photo]").click());
+await new Promise((r) => setTimeout(r, 200));
+await (await bgPicker()).evaluate((r) => {
+  const sel = r.querySelector("select.bg-photo");
+  sel.value = "pkitchen2";
+  sel.dispatchEvent(new Event("change"));
+});
+await new Promise((r) => setTimeout(r, 800));
+const cardPreview = (await ws()).filter((m) => m.type === "paperlessoffline/preview").pop();
+check(cardPreview?.background === "photo" && cardPreview.background_photo_id === "pkitchen2", "card preview uses the unsaved background photo");
+await (await cardEditor()).evaluate((r) => r.querySelector("footer button.primary").click());
+await new Promise((r) => setTimeout(r, 600));
+const cardUpdate = (await ws()).filter((m) => m.type === "paperlessoffline/photo/update").pop();
+check(
+  cardUpdate?.background === "photo" && cardUpdate.background_photo_id === "pkitchen2" && !("overrides" in cardUpdate),
+  `card saved with its background (${JSON.stringify(cardUpdate)})`,
+);
+
+// 10. Deleting a photo that is a card's background warns first.
+await page.evaluate(() => {
+  const panel = document.querySelector("paperlessoffline-panel");
+  panel.editing = panel.photos.find((p) => p.photo_id === "pkitchen2");
+  window.confirm = (msg) => ((window.__confirm = msg), false);
+});
+await new Promise((r) => setTimeout(r, 300));
+await (await cardEditor()).evaluate((r) => r.querySelector("footer button.danger").click());
+const confirmText = await page.evaluate(() => window.__confirm ?? "");
+check(confirmText.includes("background of a card"), `delete warns about the card (${JSON.stringify(confirmText)})`);
+
 await browser.close();
 console.log(failures.length ? `${failures.length} failure(s)` : "all interactions ok");
 process.exit(failures.length ? 1 : 0);
