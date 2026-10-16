@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
-from homeassistant.components.diagnostics import async_redact_data
+from homeassistant.components.diagnostics import REDACTED, async_redact_data
 from homeassistant.core import HomeAssistant
 
 from . import PaperlessConfigEntry
@@ -26,7 +26,14 @@ async def async_get_config_entry_diagnostics(
         "panel": asdict(manager.panel),
         "canvas": asdict(manager.canvas),
         "photos": [
-            {"id": p.id, "enabled": p.enabled, "overrides": p.overrides, "file": p.filename}
+            {
+                "id": p.id,
+                "enabled": p.enabled,
+                "overrides": p.overrides,
+                "file": p.filename,
+                "date": p.date,
+                "location": REDACTED if p.location else None,
+            }
             for p in manager.photos
         ],
         "state": asdict(manager.state),

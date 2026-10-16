@@ -26,6 +26,10 @@ class Photo:
     overrides: dict[str, Any] = field(default_factory=dict)
     hide_frame_overlays: bool = False
     overlays: list[OverlayDef] = field(default_factory=list)
+    # Capture data from EXIF, read once when the photo is added (or by the migration).
+    date: str | None = None  # ISO 8601 with offset
+    location: dict[str, float] | None = None  # latitude, longitude, optionally altitude
+    exif_read: bool = False
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Photo:

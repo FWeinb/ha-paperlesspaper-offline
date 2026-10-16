@@ -56,6 +56,8 @@ def photo_info(hass: HomeAssistant, manager: FrameManager, photo: Photo) -> dict
         "name": photo.name,
         "enabled": photo.enabled,
         "added": photo.added,
+	"date": photo.date,
+	"location": photo.location,
         "overrides": _jsonable(photo.overrides),
         "hide_frame_overlays": photo.hide_frame_overlays,
         "overlay_count": len(photo.overlays),

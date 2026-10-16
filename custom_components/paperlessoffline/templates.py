@@ -61,12 +61,33 @@ class FrameVars:
         return self.name
 
 
+class LocationVars:
+    """``photo.location``: raw coordinates, rendering as ``48.1372, 11.5756``."""
+
+    def __init__(self, latitude: float, longitude: float, altitude: float | None = None) -> None:
+        """Initialise."""
+        self.latitude = latitude
+        self.longitude = longitude
+        self.altitude = altitude
+
+    def __str__(self) -> str:
+        """Render as ``latitude, longitude``."""
+        return f"{self.latitude}, {self.longitude}"
+
+
 class PhotoVars:
     """``photo`` as seen by templates (``None`` where no photo is shown)."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(
+        self,
+        name: str,
+        date: datetime | None = None,
+        location: LocationVars | None = None,
+    ) -> None:
         """Initialise."""
         self.name = name
+        self.date = date
+        self.location = location
 
     def __str__(self) -> str:
         """Render as the photo's name."""
@@ -103,7 +124,7 @@ def _to_datetime(value: Any) -> datetime | date | None:
     if value is None or value == "":
         return None
     if isinstance(value, datetime):
-        return dt_util.as_local(value) if value.tzinfo else value
+        return value
     if isinstance(value, date):
         return value
     if isinstance(value, int | float):
@@ -144,15 +165,15 @@ def make_date_local(hass: HomeAssistant) -> Callable[..., str]:
 
 
 def template_variables(
-    hass: HomeAssistant, frame_name: str, photo_name: str | None = None
+    hass: HomeAssistant, frame_name: str, photo: PhotoVars | None = None
 ) -> dict[str, Any]:
     """Variables and helper functions available to overlay templates.
 
-    ``photo_name`` is None where no photo is shown (one-off images, the placeholder).
+    ``photo`` is None where no photo is shown (one-off images, the placeholder).
     """
     return {
         "frame": FrameVars(frame_name),
-        "photo": PhotoVars(photo_name) if photo_name is not None else None,
+        "photo": photo,
         "weather_icon": weather_icon,
         "entity_icon": make_entity_icon(hass),
         "date_local": make_date_local(hass),
@@ -172,3 +193,10 @@ def render_text(hass: HomeAssistant, source: str, variables: dict[str, Any]) -> 
 def is_truthy(text: str) -> bool:
     """How a "show if" result is interpreted."""
     return text.strip().lower() not in FALSY
+
+
+def photo_vars(photo: Any) -> PhotoVars:
+    """``photo`` for a library photo, from its stored capture data."""
+    date = dt_util.parse_datetime(photo.date) if photo.date else None
+    location = LocationVars(**photo.location) if photo.location else None
+    return PhotoVars(photo.name, date, location)

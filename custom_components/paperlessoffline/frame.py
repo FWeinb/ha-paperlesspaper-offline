@@ -67,6 +67,7 @@ from .const import (
     WAKE_DEBOUNCE_SECONDS,
     PanelSpec,
 )
+from .exif import read_capture
 from .issues import async_update_issues, reprovision_reason
 from .render import (
     Canvas,
@@ -86,7 +87,7 @@ from .render import (
 from .schedule import parse_time, quiet_sleep
 from .settings import resolve
 from .store import FrameState, FrameStore, GlobalStore, OverlayDef, Override, Photo
-from .templates import is_truthy, render_text, template_variables
+from .templates import is_truthy, photo_vars, render_text, template_variables
 from .urls import URL_HOST_AUTO, async_frame_base_url, frame_can_use_host, frame_urls
 
 if TYPE_CHECKING:
@@ -158,7 +159,21 @@ class FrameManager:
         """Load state and prepare directories."""
         await self.store.async_load()
         await self.hass.async_add_executor_job(self._make_dirs)
+	await self._async_read_missing_exif()
         self.base_url = await async_frame_base_url(self.hass, self.url_host)
+
+    async def _async_read_missing_exif(self) -> None:
+	"""One-time migration: fill in capture data of photos added before it existed."""
+	todo = [p for p in self.photos if not p.exif_read and p.filename]
+	if not todo:
+	    return
+	zone = dt_util.get_default_time_zone()
+	results = await self.hass.async_add_executor_job(
+	    lambda: [read_capture(self.originals / p.filename, zone) for p in todo]
+	)
+	for photo, (date, location) in zip(todo, results, strict=True):
+	    photo.date, photo.location, photo.exif_read = date, location, True
+	self.store.schedule_save()
 
     def _make_dirs(self) -> None:
         self.originals.mkdir(parents=True, exist_ok=True)
@@ -902,7 +917,7 @@ class FrameManager:
     def template_variables(self, photo: Photo | None = None) -> dict[str, Any]:
         """Variables for overlay templates on this frame (``photo`` is None off the library)."""
         return template_variables(
-            self.hass, self.display_name, photo.name if photo is not None else None
+	    self.hass, self.display_name, photo_vars(photo) if photo is not None else None
         )
 
     def evaluate_overlay(
@@ -1104,6 +1119,9 @@ class FrameManager:
         photo_id = secrets.token_hex(6)
         filename = f"{photo_id}.{_extension(fmt)}"
         await self.hass.async_add_executor_job((self.originals / filename).write_bytes, data)
+	date, location = await self.hass.async_add_executor_job(
+	    read_capture, data, dt_util.get_default_time_zone()
+	)
         photo = Photo(
             id=photo_id,
             filename=filename,
@@ -1112,6 +1130,9 @@ class FrameManager:
             added=dt_util.utcnow().isoformat(),
             enabled=enabled,
             overrides=dict(overrides or {}),
+	    date=date,
+	    location=location,
+	    exif_read=True,
         )
         self.photos.append(photo)
         self._changed()

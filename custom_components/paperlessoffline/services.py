@@ -145,6 +145,8 @@ def _photo_dict(manager: Any, photo: Any) -> dict[str, Any]:
         "name": photo.name,
         "enabled": photo.enabled,
         "added": photo.added,
+	"date": photo.date,
+	"location": photo.location,
         "overrides": {
             k: list(v) if isinstance(v, tuple) else v for k, v in photo.overrides.items()
         },
