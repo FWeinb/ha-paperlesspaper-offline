@@ -626,9 +626,9 @@ snapshot of that moment, not live.
 
 - **Panel**: an overlay editor for frame overlays (Settings tab), photo
   overlays (photo editor) and cards ("Add card" in the library). It has a
-  template/markdown text field with an "insert entity" helper and an icon
-  hint, the layout and backing controls, and a live preview with real current
-  values on a real photo.
+  template/markdown text field (entity autocompletion comes from HA's code
+  editor) and an icon hint, the layout and backing controls, and a live
+  preview with real current values on a real photo.
 - **Copying**: a frame's overlays can be copied to another frame, and a
   photo's overlays to other photos of the same frame, from the panel or with
   an action. `copy_photo` copies a card's background photo along (added
@@ -709,8 +709,6 @@ Each step is tested on a real frame before the next.
     off screen; that registers `ha-code-editor`.
   - If the element isn't defined within 3 s (a future frontend change, or the
     mock harness), plain text fields are used instead.
-  - "Insert entity" inserts at the cursor through the editor's CodeMirror view
-    (`codemirror.dispatch(state.replaceSelection(...))`).
   - Escape inside the editor is left to CodeMirror (e.g. closing
     autocompletion) instead of closing the dialog.
   - Checked against HA 2026.10 in a real browser: both fields render as

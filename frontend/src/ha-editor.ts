@@ -48,11 +48,3 @@ export function ensureCodeEditor(hass: HomeAssistant): Promise<boolean> {
   return loading;
 }
 
-/** Insert text at the cursor of an `ha-code-editor`; returns false if not possible. */
-export function insertIntoCodeEditor(element: Element | null, text: string): boolean {
-  const view = (element as unknown as { codemirror?: any } | null)?.codemirror;
-  if (!view?.dispatch || !view.state?.replaceSelection) return false;
-  view.dispatch(view.state.replaceSelection(text));
-  view.focus?.();
-  return true;
-}

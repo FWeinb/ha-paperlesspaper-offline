@@ -83,3 +83,31 @@ _Avoid_: Condition, visibility rule
 **Redraw policy**:
 Whether an overlay's new text is drawn at every wake where it changed, or only when the library item changes anyway.
 _Avoid_: Refresh mode, update interval
+
+**Template**:
+The text of an overlay: markdown with Home Assistant template expressions, rendered fresh at each wake.
+_Avoid_: Content, body, format string
+
+**Anchor**:
+The point of the base image an overlay is pinned to: one of nine (corners, edge centres, centre), kept clear of the edge by the overlay's margin. Shown as "Position" in the panel.
+_Avoid_: Placement, alignment
+
+**Box width**:
+How wide an overlay's box is, as a share of the image width, or fitted to its text when not set.
+_Avoid_: Size (size is the text size), span
+
+**Text size**:
+One of four fixed sizes for an overlay's text (small, medium, large, extra large).
+_Avoid_: Font size, scale
+
+**Backing**:
+What is drawn behind an overlay's text so it stays readable on a photo: a box in a panel colour, an outline (halo) around the letters, or nothing. Shown as "Behind the text" in the panel.
+_Avoid_: Background (a card background is something else), shadow
+
+**Panel colour**:
+One of the six colours the frame's panel can show (black, white, red, green, blue, yellow); text, box and solid card backgrounds use only these.
+_Avoid_: Palette entry, ink
+
+**Overlay preview**:
+The live render in the overlay editor of the edited overlay, together with the others, on a sample photo with current values.
+_Avoid_: Mockup, thumbnail

@@ -11,7 +11,7 @@ import {
   reorderOverlays,
   saveOverlay,
 } from "./api";
-import { ensureCodeEditor, insertIntoCodeEditor } from "./ha-editor";
+import { ensureCodeEditor } from "./ha-editor";
 import { localizer } from "./localize";
 import { PreviewQueue } from "./preview-queue";
 import { icon, sharedStyles } from "./styles";
@@ -580,7 +580,6 @@ export class OverlayEditor extends LitElement {
   @state() private result: { text: string | null; error: string | null } | null = null;
   @state() private sampleId: string | null = null;
   @state() private rendering = false;
-  @state() private entityQuery: string | null = null;
   @state() private error: string | null = null;
   /** Whether HA's code editor is available (else plain text fields). */
   @state() private codeEditor = false;
@@ -602,7 +601,7 @@ export class OverlayEditor extends LitElement {
   }
 
   private onKey = (ev: KeyboardEvent) => {
-    if (ev.key !== "Escape" || this.entityQuery !== null) return;
+    if (ev.key !== "Escape") return;
     // In the code editor, Escape belongs to CodeMirror (e.g. closing autocompletion).
     if ((ev.composedPath() as Element[]).some((el) => el.tagName === "HA-CODE-EDITOR")) return;
     this.close();
@@ -642,19 +641,6 @@ export class OverlayEditor extends LitElement {
     }
   }
 
-  private insertEntity(entityId: string) {
-    const unit = this.hass.states[entityId]?.attributes.unit_of_measurement;
-    const snippet = `{{ states('${entityId}') }}${unit ? ` ${unit}` : ""}`;
-    this.entityQuery = null;
-    if (insertIntoCodeEditor(this.renderRoot.querySelector("ha-code-editor.template"), snippet)) return;
-    const area = this.renderRoot.querySelector<HTMLTextAreaElement>("textarea.template");
-    const text = this.draft.template;
-    const start = area?.selectionStart ?? text.length;
-    const end = area?.selectionEnd ?? text.length;
-    this.set("template", text.slice(0, start) + snippet + text.slice(end));
-    this.entityQuery = null;
-  }
-
   private async save() {
     try {
       await saveOverlay(this.hass, this.frame.entry_id, this.draft, this.photo?.photo_id);
@@ -686,35 +672,6 @@ export class OverlayEditor extends LitElement {
     </select>`;
   }
 
-  private renderEntityPicker() {
-    const l = localizer(this.hass);
-    const query = (this.entityQuery ?? "").toLowerCase();
-    const matches = Object.keys(this.hass.states ?? {})
-      .filter((id) => {
-        const name = String(this.hass.states[id].attributes.friendly_name ?? "").toLowerCase();
-        return id.includes(query) || name.includes(query);
-      })
-      .sort()
-      .slice(0, 50);
-    return html`<div class="picker card">
-      <input
-        type="text"
-        placeholder=${l("search_entities")}
-        .value=${this.entityQuery ?? ""}
-        @input=${(e: Event) => (this.entityQuery = (e.target as HTMLInputElement).value)}
-        @keydown=${(e: KeyboardEvent) => e.key === "Escape" && (this.entityQuery = null)}
-      />
-      <ul>
-        ${matches.map(
-          (id) => html`<li @click=${() => this.insertEntity(id)}>
-            <span>${this.hass.states[id].attributes.friendly_name ?? id}</span>
-            <span class="muted">${id} · ${this.hass.states[id].state}</span>
-          </li>`,
-        )}
-      </ul>
-    </div>`;
-  }
-
   protected override render() {
     if (!this.draft) return nothing;
     const l = localizer(this.hass);
@@ -734,12 +691,7 @@ export class OverlayEditor extends LitElement {
         <div class="body">
           <section class="fields">
             <label class="field">
-              <span class="row">
-                ${l("overlay_text")}
-                <button class="btn small" @click=${() => (this.entityQuery = this.entityQuery === null ? "" : null)}>
-                  ${l("insert_entity")}
-                </button>
-              </span>
+              ${l("overlay_text")}
               ${this.codeEditor
                 ? html`<ha-code-editor
                     class="template"
@@ -763,7 +715,6 @@ export class OverlayEditor extends LitElement {
                     @input=${(e: Event) => this.set("template", (e.target as HTMLTextAreaElement).value)}
                   ></textarea>`}
             </label>
-            ${this.entityQuery !== null ? this.renderEntityPicker() : nothing}
             <span class="muted small">${l("overlay_help")}</span>
             ${this.result?.error
               ? html`<span class="error small">${l("overlay_error", { error: this.result.error })}</span>`
@@ -1061,31 +1012,6 @@ export class OverlayEditor extends LitElement {
       }
       .slider input {
         flex: 1;
-      }
-      .picker {
-        padding: 8px;
-        display: grid;
-        gap: 6px;
-      }
-      .picker ul {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-        max-height: 220px;
-        overflow: auto;
-      }
-      .picker li {
-        display: grid;
-        padding: 6px 8px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-      }
-      .picker li:hover {
-        background: color-mix(in srgb, var(--pp-text) 6%, transparent);
-      }
-      .picker li .muted {
-        font-size: 12px;
       }
       .preview {
         flex: none;
