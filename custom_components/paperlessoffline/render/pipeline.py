@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import io
 import math
+import os
 from pathlib import Path
 import re
 from typing import Any
@@ -356,7 +357,9 @@ def validate_image(data: bytes, max_pixels: int) -> tuple[str, int, int]:
 def make_thumbnail(source: Path, target: Path, size: int = 320, rotation: int = 0) -> bytes:
     """Create (or read) a cached JPEG of an original, optionally rotated clockwise."""
     if target.is_file() and target.stat().st_mtime >= source.stat().st_mtime:
-        return target.read_bytes()
+        data = target.read_bytes()
+        os.utime(target)  # mtime is the last use, for eviction
+        return data
     img = open_image(source.read_bytes())
     iw, ih = upright_size(img, rotation)
     scale = min(size / iw, size / ih, 1.0)

@@ -133,6 +133,7 @@ e-paper photo frames running the
   8. Encode as a top-down 4-bit BMP.
 - **Cache.** Every render is pre-computed and cached on disk. Each render gets
   a stable `Last-Modified`, and any settings change invalidates the cache.
+  Files that are no longer needed are deleted once unused for a while (§19).
 
 ## 6. Slideshow and scheduling
 
@@ -753,3 +754,43 @@ Each step is tested on a real frame before the next.
   decode; then only the transposes and copies are saved. Serpentine dithering
   remains the slowest step (about 0.4 s here, so seconds on a Pi).
 
+## 19. Implementation notes (cache eviction)
+
+- **Last use is the mtime.** `RenderCache` touches a file on every hit
+  (`has`) and read; thumbnails are touched when served from disk. The
+  thumbnail freshness check (`thumb mtime >= original mtime`) still holds.
+- **Needed set per frame**: the image the frame shows (`served_key`), its base
+  (`served_base_key`, to redraw overlays cheaply), and the next wake's base and
+  composite. Everything else in `cache/` (composites of old overlay values,
+  renders of other photos, overlay editor previews, `*.tmp` leftovers) is
+  deleted once unused for 10 minutes (`cache.GRACE_SECONDS`). The grace period
+  also protects a render between being written and being read. There is no
+  count or size cap.
+- **Thumbnails** (`thumbs/{id}_{size}_{rotation}.jpg`): the 320 px thumb at
+  rotation 0, which the library and media browser show, is kept for as long as
+  the photo exists. Editor-size (1280 px) thumbs and other rotations go after
+  a day unused (`housekeeping.THUMB_GRACE_SECONDS`), thumbs of photos no longer
+  in the library after the 10 minute grace period (photos are deleted with
+  their thumbs anyway; this catches leftovers).
+- **Crash leftovers**, after the grace period: originals the library doesn't
+  reference (a crash between writing the file and saving the library),
+  `override.*` files other than the current override, and per-frame
+  directories under `/config/paperlessoffline/` and
+  `.storage/paperlessoffline.<entry_id>` stores of config entries that no
+  longer exist. Only names that look like entry ids (ULIDs) are touched, and
+  the global store is never removed.
+- **When**: after each pre-render (already debounced after every change), so
+  also at entry setup, and per frame every hour
+  (`FrameManager.async_housekeeping`); orphaned entries at integration setup
+  and every hour. Housekeeping never renders: it computes the up-next keys
+  (with overlays at their current values) without rendering, and it still runs
+  when the pre-render fails.
+- **Races**: each file's last use is checked again right before it is deleted,
+  so an entry used during the scan stays. Orphaned entry directories and
+  stores must also be unchanged for the grace period, so a frame being added
+  during the scan is safe.
+- **Trade-off** (as agreed): no count cap means previews of library photos
+  that are neither shown nor up next are rendered again after 10 minutes
+  unused, and drafts from the overlay editor stay until the next run.
+- **Diagnostics** show file count and bytes for `cache/`, `thumbs/` and
+  `originals/`.

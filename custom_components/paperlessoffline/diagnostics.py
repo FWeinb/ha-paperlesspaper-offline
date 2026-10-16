@@ -32,4 +32,5 @@ async def async_get_config_entry_diagnostics(
         "state": asdict(manager.state),
         "pending": manager.pending_changes(),
         "up_next": manager.up_next(),
+        "storage": await hass.async_add_executor_job(manager.storage_usage),
     }

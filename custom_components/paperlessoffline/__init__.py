@@ -8,7 +8,7 @@ from pathlib import Path
 import shutil
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_CORE_CONFIG_UPDATE, Platform
+from homeassistant.const import EVENT_CORE_CONFIG_UPDATE, EVENT_HOMEASSISTANT_STOP, Platform
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -16,6 +16,7 @@ from homeassistant.helpers.event import async_track_time_interval
 from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
 
+from . import housekeeping
 from .const import (
     CONF_CLIENT_ID,
     CONF_PROVISIONED_BASE,
@@ -53,6 +54,7 @@ PLATFORMS = [
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 ISSUE_CHECK_INTERVAL = timedelta(minutes=5)
+HOUSEKEEPING_INTERVAL = timedelta(hours=1)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,7 +74,33 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async_setup_services(hass)
     async_setup_websocket(hass)
     await async_register_frontend(hass)
+
+    async def _remove_orphans(_now: object = None) -> None:
+        await _async_remove_orphan_entries(hass)
+
+    hass.async_create_background_task(_remove_orphans(), f"{DOMAIN} orphan cleanup")
+    cancel = async_track_time_interval(hass, _remove_orphans, HOUSEKEEPING_INTERVAL)
+
+    @callback
+    def _stop(_event: Event) -> None:
+        cancel()
+
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _stop)
     return True
+
+
+async def _async_remove_orphan_entries(hass: HomeAssistant) -> None:
+    """Delete libraries and state of frames that no longer exist (e.g. after a crash)."""
+    entry_ids = {entry.entry_id for entry in hass.config_entries.async_entries(DOMAIN)}
+    removed = await hass.async_add_executor_job(
+        housekeeping.remove_orphan_entries,
+        Path(hass.config.path(STORAGE_DIR)),
+        Path(hass.config.path(".storage")),
+        DOMAIN,
+        entry_ids,
+    )
+    if removed:
+        _LOGGER.info("Deleted files of removed frames: %s", ", ".join(removed))
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) -> bool:
@@ -105,6 +133,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) ->
         await manager.async_refresh_base_url()
 
     entry.async_on_unload(async_track_time_interval(hass, _check, ISSUE_CHECK_INTERVAL))
+
+    async def _housekeeping(_now: object) -> None:
+        try:
+            await manager.async_housekeeping()
+        except Exception:
+            _LOGGER.exception("Cleaning up files for %s failed", manager.client_id)
+
+    entry.async_on_unload(async_track_time_interval(hass, _housekeeping, HOUSEKEEPING_INTERVAL))
 
     @callback
     def _device_updated(event: Event[dr.EventDeviceRegistryUpdatedData]) -> None:
