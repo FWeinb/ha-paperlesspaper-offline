@@ -194,6 +194,18 @@ Other overlay actions: `update_overlay`, `remove_overlay`, `move_overlay`,
 `copy_overlays` (to another frame) and `list_overlays` (returns each overlay's
 last text and error).
 
+## Telemetry
+
+With the **Telemetry** switch on (the default), the firmware adds
+`voltage` (mV), `usb`, `charging`, `orientation` (0 to 3), `width`, `height`
+and `fw` to its image requests. The integration feeds battery voltage, USB
+power, charging and orientation from them, and shows `fw` as the device's
+software version. The last value is kept until the next report, so check
+`last_read` for its age. Frames on older firmware, or with the switch off,
+keep showing the last Bluetooth reading. `width` and `height` are ignored: the
+frame's client ID decides the panel. The raw query stays available in the
+`telemetry` attribute of *Last seen*.
+
 ## Bluetooth while the frame is in setup mode
 
 The frame can only be reached over Bluetooth in setup mode, right after a
@@ -231,11 +243,12 @@ Home Assistant raises a repair notice (*Settings → System → Repairs*) when:
 | Select *Slideshow order* | In order, or shuffle (no repeats until all photos have been shown) |
 | Button *Skip photo* | Skip the photo that's up next |
 | Number *Refresh interval* | Minutes between wakes |
-| Switches | Motion wake-up, auto rotation, charger mode |
+| Switches | Motion wake-up, auto rotation, charger mode, telemetry |
 | Sensors | Last seen, current photo, pending changes, photos in rotation |
 | Binary sensor *In sync* | Off while the frame still has changes to pick up |
-| Sensor *Battery voltage*, binary sensors *Charging* and *USB power* | Read over Bluetooth when the frame was last in setup mode (see `last_read`) |
-| Sensor *WiFi signal* | Same; disabled by default |
+| Sensor *Battery voltage*, binary sensors *Charging* and *USB power* | From the frame's last wake or Bluetooth read, whichever is newer (see `source` and `last_read`) |
+| Sensor *WiFi signal* | Bluetooth only; disabled by default |
+| Sensor *Orientation* | Raw accelerometer value 0 to 3 from the last wake; diagnostic, disabled by default |
 
 There is also a **device trigger**, *Frame woke up*, and the
 `paperlessoffline_frame_wake` event, whose data includes the photo that was

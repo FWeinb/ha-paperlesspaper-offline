@@ -15,12 +15,14 @@
       "last_seen": { "default": "mdi:clock-check-outline" },
       "current_photo": { "default": "mdi:image" },
       "pending_changes": { "default": "mdi:progress-clock" },
-      "photos": { "default": "mdi:image-multiple-outline" }
+      "photos": { "default": "mdi:image-multiple-outline" },
+      "orientation": { "default": "mdi:rotate-3d-variant" }
     },
     "switch": {
       "motion_wakeup": { "default": "mdi:motion-sensor" },
       "auto_rotation": { "default": "mdi:screen-rotation" },
-      "charger_mode": { "default": "mdi:battery-charging" }
+      "charger_mode": { "default": "mdi:battery-charging" },
+      "telemetry": { "default": "mdi:radio-tower" }
     }
   },
   "services": {

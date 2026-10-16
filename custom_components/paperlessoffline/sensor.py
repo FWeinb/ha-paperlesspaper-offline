@@ -18,8 +18,8 @@ from .frame import FrameManager
 
 PARALLEL_UPDATES = 0
 
-# Entity key -> key in the BLE status
-BLE_VALUES = {"battery_voltage": "voltage", "wifi_signal": "rssi"}
+# Entity key -> key in the frame status
+STATUS_VALUES = {"battery_voltage": "voltage", "wifi_signal": "rssi", "orientation": "orientation"}
 
 
 async def async_setup_entry(
@@ -37,6 +37,7 @@ async def async_setup_entry(
             PhotoCountSensor(manager, "photos"),
             BleValueSensor(manager, "battery_voltage"),
             BleValueSensor(manager, "wifi_signal"),
+            BleValueSensor(manager, "orientation"),
         ]
     )
 
@@ -99,30 +100,34 @@ class PhotoCountSensor(PaperlessEntity, SensorEntity):
 
 
 class BleValueSensor(PaperlessEntity, SensorEntity):
-    """A value read over Bluetooth when the frame was last in setup mode."""
+    """A value from the frame's wake requests or its last Bluetooth read."""
 
     def __init__(self, manager: FrameManager, key: str) -> None:
         """Initialise."""
-        self._status_key = BLE_VALUES[key]
+        self._status_key = STATUS_VALUES[key]
         if key == "battery_voltage":
             self._attr_device_class = SensorDeviceClass.VOLTAGE
             self._attr_native_unit_of_measurement = UnitOfElectricPotential.MILLIVOLT
             self._attr_suggested_unit_of_measurement = UnitOfElectricPotential.VOLT
             self._attr_suggested_display_precision = 2
+            self._attr_state_class = SensorStateClass.MEASUREMENT
+        elif key == "orientation":
+            # Raw accelerometer value; what it means depends on the panel and mounting.
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+            self._attr_entity_registry_enabled_default = False
         else:
             self._attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
             self._attr_native_unit_of_measurement = SIGNAL_STRENGTH_DECIBELS_MILLIWATT
             self._attr_entity_category = EntityCategory.DIAGNOSTIC
             self._attr_entity_registry_enabled_default = False
-        self._attr_state_class = SensorStateClass.MEASUREMENT
+            self._attr_state_class = SensorStateClass.MEASUREMENT
         super().__init__(manager, key)
 
     @callback
     def _update_from_manager(self) -> None:
-        st = self.manager.state
-        self._attr_native_value = st.ble_status.get(self._status_key)
+        reading = self.manager.status_reading(self._status_key)
+        self._attr_native_value = reading[0] if reading else None
         self._attr_extra_state_attributes = {
-            "last_read": dt_util.utc_from_timestamp(st.ble_read_at).isoformat()
-            if st.ble_read_at
-            else None,
+            "source": reading[1] if reading else None,
+            "last_read": dt_util.utc_from_timestamp(reading[2]).isoformat() if reading else None,
         }

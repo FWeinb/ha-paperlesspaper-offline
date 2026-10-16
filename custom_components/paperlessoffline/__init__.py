@@ -123,7 +123,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) ->
         model=manager.panel.model,
         name=entry.title,
         serial_number=manager.client_id,
-        sw_version="offline firmware",
+        sw_version=manager.state.fw or "offline firmware",
     )
 
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))

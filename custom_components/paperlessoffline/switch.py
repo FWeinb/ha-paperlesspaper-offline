@@ -10,13 +10,15 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import PaperlessConfigEntry
-from .const import CONF_AUTO_ROTATION, CONF_CHARGER_MODE, CONF_MOTION_WAKEUP
+from .const import CONF_AUTO_ROTATION, CONF_CHARGER_MODE, CONF_MOTION_WAKEUP, CONF_TELEMETRY
 from .entity import PaperlessEntity
 from .frame import FrameManager
 
 PARALLEL_UPDATES = 0
 
-SWITCHES = (CONF_MOTION_WAKEUP, CONF_AUTO_ROTATION, CONF_CHARGER_MODE)
+SWITCHES = (CONF_MOTION_WAKEUP, CONF_AUTO_ROTATION, CONF_CHARGER_MODE, CONF_TELEMETRY)
+# Switches that are on until the user turns them off
+DEFAULT_ON = {CONF_TELEMETRY}
 
 
 async def async_setup_entry(
@@ -40,7 +42,7 @@ class OptionSwitch(PaperlessEntity, SwitchEntity):
 
     @callback
     def _update_from_manager(self) -> None:
-        self._attr_is_on = bool(self.manager.options.get(self._key, False))
+        self._attr_is_on = bool(self.manager.options.get(self._key, self._key in DEFAULT_ON))
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Enable."""

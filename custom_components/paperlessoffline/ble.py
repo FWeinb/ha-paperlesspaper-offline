@@ -24,6 +24,7 @@ from .const import (
     BLE_CHAR_MOTION_WAKEUP,
     BLE_CHAR_SETTINGS_URL,
     BLE_CHAR_SYSTEM_INFO,
+    BLE_CHAR_TELEMETRY,
     BLE_CHAR_TIMEOUT,
     BLE_CHAR_WIFI_CONNECTED,
     BLE_CHAR_WIFI_INFO,
@@ -43,6 +44,7 @@ SETTING_CHARACTERISTICS: tuple[tuple[str, str], ...] = (
     ("motionWakeup", BLE_CHAR_MOTION_WAKEUP),
     ("autoRotation", BLE_CHAR_AUTO_ROTATION),
     ("chargerMode", BLE_CHAR_CHARGER_MODE),
+    ("telemetry", BLE_CHAR_TELEMETRY),
 )
 
 # The firmware tries a new WiFi network for up to 10 s, then reports via BLE.

@@ -100,6 +100,10 @@ class FrameState:
     ble_status: dict[str, Any] = field(default_factory=dict)
     ble_read_at: float | None = None
     ble_error: str | None = None
+    # Battery / power / orientation the frame sent with its image requests.
+    wake_status: dict[str, Any] = field(default_factory=dict)
+    wake_read_at: dict[str, float] = field(default_factory=dict)
+    fw: str | None = None
     telemetry: dict[str, str] = field(default_factory=dict)
 
     @classmethod

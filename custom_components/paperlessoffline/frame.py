@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
+import contextlib
 from dataclasses import asdict
 from datetime import datetime
 import hashlib
@@ -47,6 +48,7 @@ from .const import (
     CONF_QUIET_START,
     CONF_QUIET_SUPPRESS_MOTION,
     CONF_RENDER_DEFAULTS,
+    CONF_TELEMETRY,
     CONF_TOKEN,
     CONF_URL_HOST,
     DEFAULT_INTERVAL,
@@ -93,6 +95,20 @@ if TYPE_CHECKING:
 _LOGGER = logging.getLogger(__name__)
 
 MAX_TELEMETRY_KEYS = 16
+MAX_FW_LENGTH = 32
+
+
+def parse_wake_status(query: dict[str, str]) -> dict[str, Any]:
+    """Pick the firmware's telemetry values out of an image request, ignoring bad ones."""
+    status: dict[str, Any] = {}
+    with contextlib.suppress(KeyError, ValueError):
+        status["voltage"] = int(query["voltage"])
+    for key in ("usb", "charging"):
+        if query.get(key) in ("0", "1"):
+            status[key] = query[key] == "1"
+    if query.get("orientation") in ("0", "1", "2", "3"):
+        status["orientation"] = int(query["orientation"])
+    return status
 
 
 def signal_update(entry_id: str) -> str:
@@ -358,6 +374,8 @@ class FrameManager:
         if query:
             for key, value in list(query.items())[:MAX_TELEMETRY_KEYS]:
                 st.telemetry[key[:32]] = value[:64]
+            if kind == "image":
+                self._register_telemetry(query, now)
         if is_wake:
             st.last_wake = now
             st.wake_count += 1
@@ -365,6 +383,31 @@ class FrameManager:
             self._evaluate_overlays_for_wake()
             self._fire_wake()
         return is_wake
+
+    def _register_telemetry(self, query: dict[str, str], now: float) -> None:
+        """Take battery, power, orientation and firmware version from an image request."""
+        st = self.state
+        if status := parse_wake_status(query):
+            st.wake_status.update(status)
+            st.wake_read_at.update(dict.fromkeys(status, now))
+        fw = query.get("fw", "")[:MAX_FW_LENGTH]
+        if fw and fw != st.fw:
+            st.fw = fw
+            if device := self._device():
+                dr.async_get(self.hass).async_update_device(device.id, sw_version=fw)
+
+    def status_reading(self, key: str) -> tuple[Any, str, float] | None:
+        """Newest ``(value, source, read_at)`` of a status key from wake or Bluetooth."""
+        st = self.state
+        found = []
+        if key in st.ble_status and st.ble_read_at is not None:
+            found.append((st.ble_read_at, "bluetooth", st.ble_status[key]))
+        if key in st.wake_status and key in st.wake_read_at:
+            found.append((st.wake_read_at[key], "wake", st.wake_status[key]))
+        if not found:
+            return None
+        read_at, source, value = max(found, key=lambda r: r[0])
+        return value, source, read_at
 
     @callback
     def _fire_wake(self) -> None:
@@ -445,6 +488,7 @@ class FrameManager:
             "motionWakeup": bool(opts.get(CONF_MOTION_WAKEUP, False)),
             "chargerMode": bool(opts.get(CONF_CHARGER_MODE, False)),
             "autoRotation": bool(opts.get(CONF_AUTO_ROTATION, False)),
+            "telemetry": bool(opts.get(CONF_TELEMETRY, True)),
             "httpAuthUser": opts.get(CONF_AUTH_USER, "") if auth else "",
             "httpAuthPassword": opts.get(CONF_AUTH_PASSWORD, "") if auth else "",
         }

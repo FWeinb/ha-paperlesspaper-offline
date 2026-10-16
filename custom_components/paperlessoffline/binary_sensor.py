@@ -13,7 +13,7 @@ from .frame import FrameManager
 
 PARALLEL_UPDATES = 0
 
-# Entity key -> key in the BLE system info
+# Entity key -> key in the frame status
 BLE_FLAGS = {"charging": "charging", "usb_power": "usb"}
 
 
@@ -44,7 +44,7 @@ class InSyncSensor(PaperlessEntity, BinarySensorEntity):
 
 
 class BleFlagSensor(PaperlessEntity, BinarySensorEntity):
-    """Charging / USB power, read over Bluetooth in setup mode."""
+    """Charging / USB power, from the frame's wake requests or Bluetooth."""
 
     def __init__(self, manager: FrameManager, key: str) -> None:
         """Initialise."""
@@ -58,10 +58,9 @@ class BleFlagSensor(PaperlessEntity, BinarySensorEntity):
 
     @callback
     def _update_from_manager(self) -> None:
-        st = self.manager.state
-        self._attr_is_on = st.ble_status.get(self._status_key)
+        reading = self.manager.status_reading(self._status_key)
+        self._attr_is_on = reading[0] if reading else None
         self._attr_extra_state_attributes = {
-            "last_read": dt_util.utc_from_timestamp(st.ble_read_at).isoformat()
-            if st.ble_read_at
-            else None,
+            "source": reading[1] if reading else None,
+            "last_read": dt_util.utc_from_timestamp(reading[2]).isoformat() if reading else None,
         }

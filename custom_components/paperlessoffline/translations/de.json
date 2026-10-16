@@ -351,6 +351,9 @@
       },
       "wifi_signal": {
         "name": "WLAN-Signal"
+      },
+      "orientation": {
+        "name": "Ausrichtung"
       }
     },
     "switch": {
@@ -362,6 +365,9 @@
       },
       "charger_mode": {
         "name": "Lademodus"
+      },
+      "telemetry": {
+        "name": "Telemetrie"
       }
     }
   },
