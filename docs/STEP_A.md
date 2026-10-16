@@ -1,7 +1,6 @@
 # Overlays, Step A: engine and frame overlays
 
-**Status (2026-10-14):** A1 to A6 done, and A7 docs done. The check on a real
-frame is pending.
+**Status (2026-10-17):** done, including the check on a real frame.
 
 Design: [DESIGN.md §16](DESIGN.md#16-text-and-entity-overlays-agreed-design).
 

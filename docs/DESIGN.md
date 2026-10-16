@@ -544,11 +544,18 @@ snapshot of that moment, not live.
 - **Photo overlays**: text that belongs to one photo, e.g. a caption.
   `copy_photo` copies them along.
 - **Text cards**: a new kind of library item that is mostly text.
-  - Background: white, black, a panel colour, or a photo from the frame's
-    library (rendered with that photo's own settings).
+  - Stored in the library list like photos (`kind: card`, no file). A card's
+    content is its own overlays list.
+  - Background: white, black, a panel colour (a solid fill, not dithered), or
+    a photo from the frame's library (rendered with that photo's own settings,
+    without its overlays; white if that photo is deleted). Cards have no
+    render settings of their own.
   - Presets to start from: "Info" (a title plus key values) and "Notice" (one
-    big message).
+    big message), written in HA's language when the card is created.
   - Frame overlays are hidden on cards by default, with a per-card switch.
+  - On a card, `photo.name` is the card's name; `photo.date` and
+    `photo.location` are none.
+  - The thumbnail is the card's rendered preview.
   - Cards behave like photos everywhere: rotation order, shuffle, the eye
     toggle, the "Up next" select, *Skip*, the media browser, and
     `list_photos` (with a `kind: photo | card` field). They are marked with a
@@ -596,7 +603,7 @@ snapshot of that moment, not live.
   can be enabled or disabled and has an optional **"show if"** template.
 - **Box**: one of 9 anchor positions on the upright (mounted) canvas, a
   margin, auto or percentage width, text alignment, and a size preset
-  (S / M / L / XL) scaled by the panel's short side.
+  (S / M / L / XL / XXL) scaled by the panel's short side.
 - **Backing**: a white box with black text by default. Alternatives: a box in
   any panel colour, a contrasting halo around the letters, or nothing.
 - **Order**: photo or card overlays first, then frame overlays on top. No
@@ -622,11 +629,14 @@ snapshot of that moment, not live.
   template/markdown text field with an "insert entity" helper and an icon
   hint, the layout and backing controls, and a live preview with real current
   values on a real photo.
-- **Copying**: a frame's overlays can be copied to another frame, from the
-  panel or with an action.
+- **Copying**: a frame's overlays can be copied to another frame, and a
+  photo's overlays to other photos of the same frame, from the panel or with
+  an action. `copy_photo` copies a card's background photo along (added
+  disabled, or reused when the frame already has it).
 - **Actions**: `show_text` (a one-off card for N wakes or until cleared, the
-  counterpart of `show_image`) and actions to add, update, remove and copy
-  overlays and cards. `show_image` and `show_text` draw frame overlays by
+  counterpart of `show_image`, sharing its one-off slot and `clear_image`),
+  `add_card`, and actions to add, update, remove and copy overlays. Cards are
+  otherwise managed with the photo actions. `show_image` and `show_text` draw frame overlays by
   default; `overlays: false` turns that off per call.
 
 ### Delivery
@@ -639,6 +649,9 @@ snapshot of that moment, not live.
   images.
   - Shipped ahead of the rest: photo overlays with `photo.name` only (see
     section 20).
+  - Then in two releases: v0.6.0 with `photo.date`, `photo.location`,
+    copying overlays between photos and the overlay switch on `show_image`;
+    v0.7.0 with text cards and `show_text`.
 
 Each step is tested on a real frame before the next.
 
