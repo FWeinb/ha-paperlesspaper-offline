@@ -41,7 +41,7 @@ class ReprovisionFlow(RepairsFlow):
             if base
             else {"image_url": "-", "settings_url": "-"}
         )
-        return {"name": self.manager.entry.title, **urls}
+        return {"name": self.manager.display_name, **urls}
 
     async def async_step_init(self, user_input: dict[str, str] | None = None) -> RepairsFlowResult:
         """Ask how to update the frame."""

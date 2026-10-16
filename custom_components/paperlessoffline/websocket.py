@@ -76,7 +76,7 @@ def frame_info(hass: HomeAssistant, manager: FrameManager) -> dict[str, Any]:
     opts = manager.options
     return {
         "entry_id": manager.entry.entry_id,
-        "title": manager.entry.title,
+        "title": manager.display_name,
         "client_id": manager.client_id,
         "device_id": manager.device_id,
         "panel": {

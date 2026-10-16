@@ -503,6 +503,14 @@ Bluetooth against real hardware still needs a manual test.
   the placeholder gets the current version at its next wake (e.g. after a
   rename). A frame that has shown a photo keeps that photo when its rotation
   becomes empty, as before.
+- **Frame name**: the screen (like `frame.name` in overlay templates, the
+  panel, the media browser and repair notices) uses the frame's display name.
+  - That is the device name a user set in HA (Settings → Devices), otherwise
+    the device's own name, which follows the config entry title when the entry
+    is renamed.
+  - A device rename notifies the frame immediately: the "Up next" preview
+    refreshes, the panel updates, and "renamed frame" shows as a pending
+    change until the next wake serves the new screen.
 
 ## 15. Writing conventions
 

@@ -47,7 +47,7 @@ class FramePreview(PaperlessEntity, ImageEntity):
             return manager.photo_key(photo)
         if kind == "override" and manager.state.override:
             return f"override:{manager.state.override.sha256}:{manager.state.override.overrides}"
-        return f"placeholder:{manager.canvas}"
+        return manager.placeholder_key()
 
     @callback
     def _update_from_manager(self) -> None:

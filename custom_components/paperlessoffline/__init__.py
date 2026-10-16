@@ -107,6 +107,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: PaperlessConfigEntry) ->
     entry.async_on_unload(async_track_time_interval(hass, _check, ISSUE_CHECK_INTERVAL))
 
     @callback
+    def _device_updated(event: Event[dr.EventDeviceRegistryUpdatedData]) -> None:
+        # A device rename changes the frame's name (placeholder, templates, panel).
+        if event.data["action"] == "update" and event.data["device_id"] == manager.device_id:
+            manager.async_options_updated()
+            async_dispatcher_send(hass, SIGNAL_FRAMES_CHANGED)
+
+    entry.async_on_unload(hass.bus.async_listen(dr.EVENT_DEVICE_REGISTRY_UPDATED, _device_updated))
+
+    @callback
     def _core_config_updated(_event: Event) -> None:
         entry.async_create_background_task(hass, _check(), f"{DOMAIN} url check")
 
@@ -166,6 +175,12 @@ async def _async_entry_updated(hass: HomeAssistant, entry: PaperlessConfigEntry)
         if known is manager and token != manager.token:
             del data.tokens[token]
     data.tokens[manager.token] = manager
+    # Keep the device's own name in step with a renamed entry (a user-set
+    # device name still wins, see FrameManager.display_name).
+    registry = dr.async_get(hass)
+    device = registry.async_get(manager.device_id) if manager.device_id else None
+    if device is not None and device.name != entry.title:
+        registry.async_update_device(device.id, name=entry.title)
     manager.async_options_updated()
     # The chosen URL host may have changed.
     entry.async_create_background_task(

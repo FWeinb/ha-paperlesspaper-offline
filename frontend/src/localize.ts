@@ -159,6 +159,7 @@ const en = {
   copied_overlays: "Copied {n} overlays to {frame}",
   hide_frame_overlays: "Hide frame overlays on this photo",
   pending_overlays: "overlays",
+  pending_placeholder: "renamed frame",
 };
 
 type Key = keyof typeof en;
@@ -322,6 +323,7 @@ const de: Record<Key, string> = {
   copied_overlays: "{n} Overlays nach {frame} kopiert",
   hide_frame_overlays: "Rahmen-Overlays auf diesem Foto ausblenden",
   pending_overlays: "Overlays",
+  pending_placeholder: "umbenannter Rahmen",
 };
 
 export type Localize = (key: Key, vars?: Record<string, string | number>) => string;

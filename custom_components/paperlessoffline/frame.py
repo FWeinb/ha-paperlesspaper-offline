@@ -202,10 +202,21 @@ class FrameManager:
     @property
     def device_id(self) -> str | None:
         """Device registry id."""
-        device = dr.async_get(self.hass).async_get_device_by_identifier(
+        device = self._device()
+        return device.id if device else None
+
+    def _device(self) -> dr.DeviceEntry | None:
+        return dr.async_get(self.hass).async_get_device_by_identifier(
             (DOMAIN, self.client_id), self.entry.entry_id
         )
-        return device.id if device else None
+
+    @property
+    def display_name(self) -> str:
+        """The frame's name as the user sees it: a device rename wins over the entry title."""
+        device = self._device()
+        if device is not None and (device.name_by_user or device.name):
+            return str(device.name_by_user or device.name)
+        return self.entry.title
 
     def image_path(self) -> str:
         """Path of the image endpoint."""
@@ -602,6 +613,14 @@ class FrameManager:
         ov = self.state.override
         if ov is not None and ov.shown == 0:
             pending.append("image")
+        st = self.state
+        if (
+            st.served_name == PLACEHOLDER_NAME
+            and st.served_key != self.placeholder_key()
+            and self.up_next()[0] == "placeholder"
+        ):
+            # e.g. the frame was renamed while showing "No photos yet".
+            pending.append("placeholder")
         return pending
 
     # ------------------------------------------------------------- rendering
@@ -652,7 +671,7 @@ class FrameManager:
         """What the "no photos yet" screen says, in HA's language."""
         german = (self.hass.config.language or "").startswith("de")
         return PlaceholderText(
-            title=self.entry.title,
+            title=self.display_name,
             subtitle="Noch keine Fotos" if german else "No photos yet",
             hint=(
                 "Fotos in Home Assistant unter „Bilderrahmen“ hinzufügen."
@@ -662,11 +681,16 @@ class FrameManager:
             footer=self.client_id,
         )
 
+    def placeholder_key(self) -> str:
+        """Cache key of the current "no photos yet" screen (changes with its text)."""
+        return cache_key("placeholder", asdict(self.placeholder_text()), asdict(self.canvas))
+
     async def _async_render_placeholder(self) -> str:
         text = self.placeholder_text()
         canvas = self.canvas
-        key = cache_key("placeholder", asdict(text), asdict(canvas))
-        return await self._async_render_cached(key, lambda: render_placeholder(text, canvas))
+        return await self._async_render_cached(
+            self.placeholder_key(), lambda: render_placeholder(text, canvas)
+        )
 
     async def async_preview(self, which: str) -> bytes | None:
         """Preview PNG of what is showing ("showing") or will show ("up_next")."""
@@ -751,7 +775,7 @@ class FrameManager:
 
     def template_variables(self) -> dict[str, Any]:
         """Variables for overlay templates on this frame."""
-        return template_variables(self.hass, self.entry.title)
+        return template_variables(self.hass, self.display_name)
 
     def evaluate_overlay(
         self, overlay: OverlayDef, variables: dict[str, Any] | None = None
@@ -791,7 +815,7 @@ class FrameManager:
             if error:
                 errors[overlay.id] = error
                 _LOGGER.warning(
-                    "Overlay %r on %s left out: %s", overlay.name, self.entry.title, error
+                    "Overlay %r on %s left out: %s", overlay.name, self.display_name, error
                 )
         st.overlay_texts = texts
         st.overlay_errors = errors

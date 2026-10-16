@@ -73,7 +73,7 @@ class FrameMediaSource(MediaSource):
                         identifier=entry_id,
                         media_class=MediaClass.DIRECTORY,
                         media_content_type="",
-                        title=manager.entry.title,
+                        title=manager.display_name,
                         can_play=False,
                         can_expand=True,
                     )
@@ -88,7 +88,7 @@ class FrameMediaSource(MediaSource):
             identifier=entry_id,
             media_class=MediaClass.DIRECTORY,
             media_content_type="",
-            title=manager.entry.title,
+            title=manager.display_name,
             can_play=False,
             can_expand=True,
             children_media_class=MediaClass.IMAGE,

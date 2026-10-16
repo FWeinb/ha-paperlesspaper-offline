@@ -94,7 +94,7 @@ def async_update_issues(
         if manager.state.last_request
         else "-"
     )
-    placeholders = {"name": manager.entry.title, "last_seen": last_seen}
+    placeholders = {"name": manager.display_name, "last_seen": last_seen}
     if reason:
         ir.async_create_issue(
             hass,

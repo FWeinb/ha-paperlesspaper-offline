@@ -458,3 +458,31 @@ async def test_placeholder_follows_rename_and_language(
     assert third.headers["Last-Modified"] == second.headers["Last-Modified"]  # no needless redraw
     hass.config.language = "de"
     assert loaded_entry.runtime_data.placeholder_text().subtitle == "Noch keine Fotos"
+
+
+async def test_placeholder_follows_device_rename(
+    hass: HomeAssistant, hass_client_no_auth, loaded_entry, freezer
+) -> None:
+    """Renaming the device (not the entry) updates the "No photos yet" screen."""
+    from homeassistant.helpers import device_registry as dr
+
+    manager = loaded_entry.runtime_data
+    client = await hass_client_no_auth()
+    _, first = await _wake(client, freezer)
+    assert manager.placeholder_text().title == "Kitchen"
+    preview = hass.states.get("image.kitchen_up_next").state  # last-updated time
+
+    dr.async_get(hass).async_update_device(manager.device_id, name_by_user="Wohnküche")
+    await hass.async_block_till_done()
+    assert manager.display_name == "Wohnküche"
+    assert manager.placeholder_text().title == "Wohnküche"
+    assert manager.template_variables()["frame"].name == "Wohnküche"
+    assert "placeholder" in manager.pending_changes()
+    assert hass.states.get("binary_sensor.kitchen_in_sync").state == "off"
+    # The "Up next" preview refreshes right away.
+    assert hass.states.get("image.kitchen_up_next").state != preview
+
+    _, second = await _wake(client, freezer)
+    assert second.headers["Last-Modified"] != first.headers["Last-Modified"]
+    assert "placeholder" not in manager.pending_changes()
+    assert hass.states.get("binary_sensor.kitchen_in_sync").state == "on"
