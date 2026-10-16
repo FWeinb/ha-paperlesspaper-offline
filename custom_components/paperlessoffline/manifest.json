@@ -6,6 +6,7 @@
     "camera",
     "frontend",
     "image",
+    "network",
     "panel_custom"
   ],
   "bluetooth": [
