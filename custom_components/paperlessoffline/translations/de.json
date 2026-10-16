@@ -708,6 +708,10 @@
         "crop": {
           "name": "Ausschnitt",
           "description": "Ausschnitt als [x, y, Breite, Höhe] in Anteilen des Fotos."
+        },
+        "overlays": {
+          "name": "Overlays",
+          "description": "Die Overlays des Rahmens auf dieses Bild zeichnen. Aus zeigt das reine Bild."
         }
       }
     },

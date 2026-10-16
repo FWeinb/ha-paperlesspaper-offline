@@ -184,7 +184,9 @@ check(await (await photoOverlays()).evaluate((r) => r.querySelectorAll("li").len
 
 // 7. Photo editor: "Copy to photos…" copies this photo's overlays to the chosen photos.
 await (await photoOverlays()).evaluate((r) => r.querySelector(".open-copy").click());
-await (await photoOverlays()).evaluate((r) => r.querySelector(".targets input").click());
+await (await photoOverlays()).evaluate((r) => r.querySelector(".combo input[type=text]").focus());
+await (await photoOverlays()).evaluate((r) => r.querySelector(".option").click());
+check(await (await photoOverlays()).evaluate((r) => r.querySelectorAll(".chip.sel").length === 1), "picked photo shows as a chip");
 await (await photoOverlays()).evaluate((r) => r.querySelector(".do-copy").click());
 await new Promise((r) => setTimeout(r, 600));
 const copyMsg = (await ws()).filter((m) => m.type === "paperlessoffline/overlays/copy").pop();

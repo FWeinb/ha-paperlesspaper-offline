@@ -109,6 +109,7 @@ SERVICES = {
         **SOURCE,
         "name": NAME,
         "wakes": {"selector": {"number": {"min": 1, "max": 1000, "mode": "box"}}},
+        "overlays": {"default": True, "selector": {"boolean": {}}},
         **PHOTO_RENDER,
     },
     "clear_image": {"config_entry_id": FRAME},

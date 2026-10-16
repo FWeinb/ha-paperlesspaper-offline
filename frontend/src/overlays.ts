@@ -95,6 +95,8 @@ export class OverlayList extends LitElement {
   @state() private copyOpen = false;
   @state() private copyTargets = new Set<string>();
   @state() private copyReplace = false;
+  @state() private copyFilter = "";
+  @state() private copyListOpen = false;
 
   protected override willUpdate(changed: PropertyValues) {
     // Reload when the frame changes or the panel refreshed it (e.g. after a wake).
@@ -174,6 +176,8 @@ export class OverlayList extends LitElement {
       this.copyOpen = false;
       this.copyTargets = new Set();
       this.copyReplace = false;
+      this.copyFilter = "";
+      this.copyListOpen = false;
       this.dispatchEvent(new CustomEvent("overlays-copied", { bubbles: true, composed: true }));
     } catch (err) {
       this.error = errorMessage(err);
@@ -182,22 +186,77 @@ export class OverlayList extends LitElement {
 
   private renderCopyToPhotos(l: ReturnType<typeof localizer>) {
     const others = this.photos.filter((p) => p.photo_id !== this.photo?.photo_id);
+    const query = this.copyFilter.trim().toLowerCase();
+    const matches = others.filter((p) => p.name.toLowerCase().includes(query));
+    const chosen = others.filter((p) => this.copyTargets.has(p.photo_id));
     return html`<div class="copy-photos">
       <strong>${l("copy_to_photos")}</strong>
-      <ul class="targets">
-        ${others.map(
-          (p) => html`<li>
-            <label>
-              <input
-                type="checkbox"
-                .checked=${this.copyTargets.has(p.photo_id)}
-                @change=${(e: Event) => this.toggleTarget(p.photo_id, (e.target as HTMLInputElement).checked)}
-              />
+      <div
+        class="combo"
+        @focusout=${(e: FocusEvent) => {
+          if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node | null)) this.copyListOpen = false;
+        }}
+      >
+        <div class="combo-field" @click=${(e: Event) => (e.currentTarget as HTMLElement).querySelector("input")?.focus()}>
+          ${chosen.map(
+            (p) => html`<span class="chip sel">
               ${p.name}
-            </label>
-          </li>`,
-        )}
-      </ul>
+              <button
+                class="icon-btn"
+                title=${l("delete")}
+                @click=${(e: Event) => {
+                  e.stopPropagation();
+                  this.toggleTarget(p.photo_id, false);
+                }}
+              >
+                ${icon(mdiClose)}
+              </button>
+            </span>`,
+          )}
+          <input
+            type="text"
+            role="combobox"
+            aria-expanded=${this.copyListOpen}
+            aria-controls="copy-options"
+            placeholder=${l("copy_search")}
+            .value=${this.copyFilter}
+            @focus=${() => (this.copyListOpen = true)}
+            @input=${(e: Event) => {
+              this.copyFilter = (e.target as HTMLInputElement).value;
+              this.copyListOpen = true;
+            }}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === "Escape") this.copyListOpen = false;
+              else if (e.key === "Enter" && matches.length) {
+                e.preventDefault();
+                const first = matches[0]!;
+                this.toggleTarget(first.photo_id, !this.copyTargets.has(first.photo_id));
+              } else if (e.key === "Backspace" && !this.copyFilter && chosen.length) {
+                this.toggleTarget(chosen[chosen.length - 1]!.photo_id, false);
+              }
+            }}
+          />
+        </div>
+        ${this.copyListOpen
+          ? html`<ul class="options" id="copy-options" role="listbox" aria-multiselectable="true">
+              ${matches.length
+                ? matches.map((p) => {
+                    const on = this.copyTargets.has(p.photo_id);
+                    return html`<li
+                      class="option"
+                      role="option"
+                      aria-selected=${on}
+                      @mousedown=${(e: Event) => e.preventDefault()}
+                      @click=${() => this.toggleTarget(p.photo_id, !on)}
+                    >
+                      <input type="checkbox" tabindex="-1" .checked=${on} />
+                      ${p.name}
+                    </li>`;
+                  })
+                : html`<li class="none">${l("copy_no_match")}</li>`}
+            </ul>`
+          : nothing}
+      </div>
       <label>
         <input
           type="checkbox"
@@ -344,14 +403,72 @@ export class OverlayList extends LitElement {
         border: 1px solid var(--pp-border);
         border-radius: 10px;
       }
-      .copy-photos .targets {
-        max-height: 180px;
-        overflow-y: auto;
+      .combo {
+        position: relative;
       }
-      .copy-photos li {
-        cursor: default;
+      .combo-field {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        align-items: center;
+        padding: 4px 8px;
+        border: 1px solid var(--pp-border);
+        border-radius: 8px;
+        cursor: text;
+      }
+      .combo-field input {
+        flex: 1;
+        min-width: 120px;
         border: none;
-        padding: 2px 0;
+        outline: none;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        padding: 4px 0;
+      }
+      .combo-field:focus-within {
+        border-color: var(--pp-accent);
+      }
+      .chip.sel {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+      }
+      .chip.sel .icon-btn {
+        padding: 0;
+        --mdc-icon-size: 14px;
+      }
+      .options {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: calc(100% + 4px);
+        z-index: 3;
+        max-height: 220px;
+        overflow-y: auto;
+        margin: 0;
+        padding: 4px;
+        list-style: none;
+        background: var(--pp-surface);
+        border: 1px solid var(--pp-border);
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+      }
+      .options li {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 6px 8px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .options li:hover {
+        background: var(--pp-bg);
+      }
+      .options li.none {
+        cursor: default;
+        color: var(--pp-muted);
       }
       .copy-photos .actions {
         justify-content: flex-end;

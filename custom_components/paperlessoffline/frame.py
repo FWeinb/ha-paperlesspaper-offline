@@ -907,6 +907,8 @@ class FrameManager:
         """
         if kind not in ("photo", "override"):
             return []  # the placeholder stays as it is
+        if kind == "override" and self.state.override and not self.state.override.overlays:
+            return []
         applicable: list[OverlayDef] = []
         if kind == "photo" and photo is not None:
             applicable += [o for o in photo.overlays if o.enabled]
@@ -1321,6 +1323,7 @@ class FrameManager:
         name: str,
         overrides: dict[str, Any] | None,
         wakes: int | None,
+        overlays: bool = True,
     ) -> None:
         """Show a one-off image instead of the rotation."""
         fmt = await self._async_validate(data)
@@ -1332,6 +1335,7 @@ class FrameManager:
             sha256=hashlib.sha256(data).hexdigest(),
             overrides=dict(overrides or {}),
             wakes_remaining=wakes,
+            overlays=overlays,
         )
         self._changed()
 

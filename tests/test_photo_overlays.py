@@ -159,6 +159,33 @@ async def test_one_off_image_gets_only_global(
     assert list(manager.state.overlay_texts.values()) == ["m", "p"]
 
 
+async def test_show_image_overlays_false_draws_no_frame_overlays(
+    hass: HomeAssistant,
+    loaded_entry,
+    hass_client_no_auth,
+    photo_path,
+    freezer,
+) -> None:
+    manager = loaded_entry.runtime_data
+    await _add(hass, loaded_entry, "Global", "g")
+    client = await hass_client_no_auth()
+    for overlays, expected in ((True, ["g"]), (False, [])):
+        await hass.services.async_call(
+            DOMAIN,
+            "show_image",
+            {
+                "config_entry_id": loaded_entry.entry_id,
+                "file_path": str(photo_path),
+                "wakes": 1,
+                "overlays": overlays,
+            },
+            blocking=True,
+        )
+        await _wake(client, freezer)
+        assert manager.state.current_kind == "override"
+        assert list(manager.state.overlay_texts.values()) == expected
+
+
 async def test_copy_photo_copies_overlays_with_new_ids(
     hass: HomeAssistant,
     loaded_entry,

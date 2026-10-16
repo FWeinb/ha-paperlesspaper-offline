@@ -1163,6 +1163,19 @@ def _overlays(lang: str) -> dict:
                 }
                 for name, (title, desc, names) in services.items()
             },
+            "show_image": {
+                "fields": {
+                    "overlays": {
+                        "name": L(t("Overlays", "Overlays")),
+                        "description": L(
+                            t(
+                                "Draw the frame's overlays on this image. Off shows the bare image.",
+                                "Die Overlays des Rahmens auf dieses Bild zeichnen. Aus zeigt das reine Bild.",
+                            )
+                        ),
+                    }
+                }
+            },
             "update_photo": {
                 "fields": {
                     "hide_frame_overlays": {

@@ -82,6 +82,7 @@ class Override:
     overrides: dict[str, Any] = field(default_factory=dict)
     wakes_remaining: int | None = None
     shown: int = 0
+    overlays: bool = True  # draw the frame's overlays on it
 
 
 @dataclass

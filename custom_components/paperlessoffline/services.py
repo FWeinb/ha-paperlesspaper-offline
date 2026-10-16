@@ -51,6 +51,7 @@ SERVICE_COPY_OVERLAYS = "copy_overlays"
 SERVICE_LIST_OVERLAYS = "list_overlays"
 ATTR_OVERLAY = "overlay_id"
 ATTR_HIDE_OVERLAYS = "hide_frame_overlays"
+ATTR_OVERLAYS = "overlays"
 ATTR_REPLACE = "replace"
 
 _ENTRY = {vol.Required(ATTR_ENTRY): cv.string}
@@ -125,6 +126,7 @@ SCHEMAS: dict[str, vol.Schema] = {
             **_SOURCE,
             vol.Optional(ATTR_NAME): cv.string,
             vol.Optional(ATTR_WAKES): vol.All(vol.Coerce(int), vol.Range(min=1)),
+            vol.Optional(ATTR_OVERLAYS, default=True): cv.boolean,
             **_PHOTO_OVERRIDES,
         }
     ),
@@ -219,6 +221,7 @@ async def _show_image(call: ServiceCall) -> None:
         call.data.get(ATTR_NAME) or name,
         _overrides(call, _PHOTO_KEYS),
         call.data.get(ATTR_WAKES),
+        call.data[ATTR_OVERLAYS],
     )
 
 

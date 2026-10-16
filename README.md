@@ -155,6 +155,14 @@ value, the date or a caption.
 
 Both have a live preview with current values.
 
+**Copying overlays.** In the photo editor, *Copy to photos…* in the *Photo
+overlays* section copies that photo's overlays to the photos you pick (the
+copies get new IDs, and you can choose to replace the existing ones). The same
+works from automations with `copy_overlays`, `photo_id` and `to_photo_ids`.
+
+**One-off images.** Global photo overlays are drawn on images from
+`show_image` too. Set `overlays: false` to show an image bare.
+
 **Writing the text.** The text is markdown with Home Assistant templates, with
 autocompletion for entity IDs and icons:
 
@@ -167,6 +175,19 @@ autocompletion for entity IDs and icons:
   `long`, `month_year`, `weekday`, `time`
 - `frame.name` and `photo.name` (`photo` is `None` on one-off images, so
   `{% if photo %}` works)
+- `photo.date`: when the photo was taken, from its EXIF data. Use it with
+  `date_local`, for example `{{ date_local(photo.date, 'long') }}`. It shows
+  the clock time of the camera, using the photo's UTC offset when it has one
+  and your Home Assistant time zone otherwise.
+- `photo.location`: where the photo was taken, from its EXIF GPS data, with
+  `latitude`, `longitude` and `altitude`. On its own it prints as
+  `48.1372, 11.5756`, and it works with `distance()`, for example
+  `{{ distance(photo.location, states.zone.home) | round }} km`.
+
+Photos without that EXIF data have `photo.date` and `photo.location` set to
+`None`, so guard them with `{% if photo and photo.date %}`. Both are read once
+when a photo is added, and when you update from an older version. The
+location is included in the `list_photos` result and left out of diagnostics.
 
 ```text
 :mdi:thermometer: **{{ states('sensor.outdoor_temperature') }} °C**
@@ -200,11 +221,11 @@ Every action takes `config_entry_id`, which selects the frame.
 | `paperlessoffline.update_photo` | Change `name`, `enabled` or photo settings; `reset` clears settings (`all` clears every one). |
 | `paperlessoffline.remove_photo` / `move_photo` / `copy_photo` | Manage the library; `copy_photo` copies to another frame. |
 | `paperlessoffline.show_photo` / `next_photo` | Choose or skip the photo for the next wake. |
-| `paperlessoffline.show_image` / `clear_image` | Show a one-off image for `wakes` wakes, or until `clear_image`, without adding it to the library. |
+| `paperlessoffline.show_image` / `clear_image` | Show a one-off image for `wakes` wakes, or until `clear_image`, without adding it to the library. Set `overlays: false` to leave the frame's overlays off it. |
 | `paperlessoffline.list_photos` | Return the library and what's up next. |
 | `paperlessoffline.set_defaults` | Set the global defaults. |
 | `paperlessoffline.add_overlay` / `update_overlay` / `remove_overlay` / `move_overlay` | Manage overlays. Pass `photo_id` for a photo's overlays, leave it out for the global ones. |
-| `paperlessoffline.copy_overlays` | Copy overlays to another frame. |
+| `paperlessoffline.copy_overlays` | Copy a photo's overlays to other photos (`photo_id` and `to_photo_ids`), or the global overlays to another frame. |
 | `paperlessoffline.list_overlays` | Return the overlays with their last text and error. |
 
 For `file_path`, the folder must be listed under
