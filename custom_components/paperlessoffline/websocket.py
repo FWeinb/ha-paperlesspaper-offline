@@ -56,8 +56,8 @@ def photo_info(hass: HomeAssistant, manager: FrameManager, photo: Photo) -> dict
         "name": photo.name,
         "enabled": photo.enabled,
         "added": photo.added,
-	"date": photo.date,
-	"location": photo.location,
+        "date": photo.date,
+        "location": photo.location,
         "overrides": _jsonable(photo.overrides),
         "hide_frame_overlays": photo.hide_frame_overlays,
         "overlay_count": len(photo.overlays),
@@ -492,7 +492,10 @@ def ws_overlay_reorder(
     {
         vol.Required("type"): f"{DOMAIN}/overlays/copy",
         **_ENTRY,
-        vol.Required("target_entry_id"): str,
+        # Either another frame (global overlays) or photos of this frame (a photo's overlays).
+        vol.Exclusive("target_entry_id", "target"): str,
+        vol.Exclusive("to_photo_ids", "target"): [str],
+        vol.Optional("photo_id"): str,
         vol.Optional("replace", default=False): bool,
     }
 )
@@ -500,12 +503,22 @@ def ws_overlay_reorder(
 def ws_overlays_copy(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """Copy all overlays to another frame."""
+    """Copy the global overlays to another frame, or a photo's overlays to other photos."""
     source = get_manager(hass, msg["entry_id"])
-    target = get_manager(hass, msg["target_entry_id"])
-    connection.send_result(
-        msg["id"], {"copied": source.async_copy_overlays_to(target, msg["replace"])}
-    )
+    if "photo_id" in msg and "to_photo_ids" in msg:
+        copied = source.async_copy_photo_overlays(
+            msg["photo_id"], msg["to_photo_ids"], msg["replace"]
+        )
+    elif "target_entry_id" in msg and "photo_id" not in msg:
+        copied = source.async_copy_overlays_to(
+            get_manager(hass, msg["target_entry_id"]), msg["replace"]
+        )
+    else:
+        connection.send_error(
+            msg["id"], "invalid_format", "Give a target frame or photo_id with to_photo_ids"
+        )
+        return
+    connection.send_result(msg["id"], {"copied": copied})
 
 
 @websocket_api.require_admin

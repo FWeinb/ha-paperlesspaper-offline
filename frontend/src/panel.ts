@@ -281,6 +281,7 @@ export class PaperlessPanel extends LitElement {
             .hass=${this.hass}
             .frame=${frame}
             .frames=${this.frames}
+            .photos=${this.photos}
             .photo=${this.editing}
             .inherited=${resolveSettings(this.defaults.builtin, this.defaults.defaults, frame.render_defaults)}
             @closed=${() => (this.editing = null)}

@@ -159,21 +159,21 @@ class FrameManager:
         """Load state and prepare directories."""
         await self.store.async_load()
         await self.hass.async_add_executor_job(self._make_dirs)
-	await self._async_read_missing_exif()
+        await self._async_read_missing_exif()
         self.base_url = await async_frame_base_url(self.hass, self.url_host)
 
     async def _async_read_missing_exif(self) -> None:
-	"""One-time migration: fill in capture data of photos added before it existed."""
-	todo = [p for p in self.photos if not p.exif_read and p.filename]
-	if not todo:
-	    return
-	zone = dt_util.get_default_time_zone()
-	results = await self.hass.async_add_executor_job(
-	    lambda: [read_capture(self.originals / p.filename, zone) for p in todo]
-	)
-	for photo, (date, location) in zip(todo, results, strict=True):
-	    photo.date, photo.location, photo.exif_read = date, location, True
-	self.store.schedule_save()
+        """One-time migration: fill in capture data of photos added before it existed."""
+        todo = [p for p in self.photos if not p.exif_read and p.filename]
+        if not todo:
+            return
+        zone = dt_util.get_default_time_zone()
+        results = await self.hass.async_add_executor_job(
+            lambda: [read_capture(self.originals / p.filename, zone) for p in todo]
+        )
+        for photo, (date, location) in zip(todo, results, strict=True):
+            photo.date, photo.location, photo.exif_read = date, location, True
+        self.store.schedule_save()
 
     def _make_dirs(self) -> None:
         self.originals.mkdir(parents=True, exist_ok=True)
@@ -917,7 +917,7 @@ class FrameManager:
     def template_variables(self, photo: Photo | None = None) -> dict[str, Any]:
         """Variables for overlay templates on this frame (``photo`` is None off the library)."""
         return template_variables(
-	    self.hass, self.display_name, photo_vars(photo) if photo is not None else None
+            self.hass, self.display_name, photo_vars(photo) if photo is not None else None
         )
 
     def evaluate_overlay(
@@ -1097,6 +1097,28 @@ class FrameManager:
         return len(copies)
 
     @callback
+    def async_copy_photo_overlays(
+        self, photo_id: str, to_photo_ids: list[str], replace: bool = False
+    ) -> int:
+        """Copy a photo's overlays to other photos of this frame (new ids). Returns how many."""
+        source = self.require_photo(photo_id)
+        targets = [self.require_photo(i) for i in dict.fromkeys(to_photo_ids) if i != photo_id]
+        count = 0
+        for target in targets:
+            copies = [
+                OverlayDef.from_dict({**o.as_dict(), "id": secrets.token_hex(6)})
+                for o in source.overlays
+            ]
+            if replace:
+                target.overlays[:] = copies
+            else:
+                target.overlays.extend(copies)
+            count += len(copies)
+        if targets:
+            self._changed()
+        return count
+
+    @callback
     def async_set_photo_hide_overlays(self, photo_id: str, hide: bool) -> Photo:
         """Whether frame overlays are drawn on a photo."""
         photo = self.require_photo(photo_id)
@@ -1119,9 +1141,9 @@ class FrameManager:
         photo_id = secrets.token_hex(6)
         filename = f"{photo_id}.{_extension(fmt)}"
         await self.hass.async_add_executor_job((self.originals / filename).write_bytes, data)
-	date, location = await self.hass.async_add_executor_job(
-	    read_capture, data, dt_util.get_default_time_zone()
-	)
+        date, location = await self.hass.async_add_executor_job(
+            read_capture, data, dt_util.get_default_time_zone()
+        )
         photo = Photo(
             id=photo_id,
             filename=filename,
@@ -1130,9 +1152,9 @@ class FrameManager:
             added=dt_util.utcnow().isoformat(),
             enabled=enabled,
             overrides=dict(overrides or {}),
-	    date=date,
-	    location=location,
-	    exif_read=True,
+            date=date,
+            location=location,
+            exif_read=True,
         )
         self.photos.append(photo)
         self._changed()

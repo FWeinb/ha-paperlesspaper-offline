@@ -137,6 +137,21 @@ export const reorderOverlays = (hass: HomeAssistant, entryId: string, order: str
 export const copyOverlays = (hass: HomeAssistant, entryId: string, target: string) =>
   hass.callWS<{ copied: number }>({ type: `${D}/overlays/copy`, entry_id: entryId, target_entry_id: target });
 
+export const copyPhotoOverlays = (
+  hass: HomeAssistant,
+  entryId: string,
+  photoId: string,
+  toPhotoIds: string[],
+  replace: boolean,
+) =>
+  hass.callWS<{ copied: number }>({
+    type: `${D}/overlays/copy`,
+    entry_id: entryId,
+    photo_id: photoId,
+    to_photo_ids: toPhotoIds,
+    replace,
+  });
+
 export const previewOverlays = (
   hass: HomeAssistant,
   entryId: string,

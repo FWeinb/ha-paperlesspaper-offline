@@ -399,6 +399,9 @@
     "source_failed": {
       "message": "Couldn't get the image: {error}"
     },
+    "copy_overlays_needs_targets": {
+      "message": "Give a target frame, or a source photo together with target photos."
+    },
     "overlay_not_found": {
       "message": "Overlay {overlay_id} not found."
     }
@@ -948,7 +951,7 @@
     },
     "copy_overlays": {
       "name": "Copy overlays to frame",
-      "description": "Copies all global photo overlays of a frame to another frame.",
+      "description": "Copies the frame's global photo overlays to another frame, or a photo's overlays to other photos of the same frame.",
       "fields": {
         "config_entry_id": {
           "name": "Frame",
@@ -956,7 +959,15 @@
         },
         "target_config_entry_id": {
           "name": "Target frame",
-          "description": "Frame to copy the overlays to."
+          "description": "Frame to copy the frame's overlays to. Leave empty when copying a photo's overlays."
+        },
+        "photo_id": {
+          "name": "Source photo ID",
+          "description": "Copy this photo's overlays instead of the frame's overlays."
+        },
+        "to_photo_ids": {
+          "name": "Target photo IDs",
+          "description": "Photos of the same frame to copy the source photo's overlays to."
         },
         "replace": {
           "name": "Replace",

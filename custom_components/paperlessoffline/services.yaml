@@ -684,10 +684,17 @@ copy_overlays:
         config_entry:
           integration: paperlessoffline
     target_config_entry_id:
-      required: true
+      required: false
       selector:
         config_entry:
           integration: paperlessoffline
+    photo_id:
+      selector:
+        text: {}
+    to_photo_ids:
+      selector:
+        text:
+          multiple: true
     replace:
       default: false
       selector:

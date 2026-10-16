@@ -145,7 +145,9 @@ SERVICES = {
     },
     "copy_overlays": {
         "config_entry_id": FRAME,
-        "target_config_entry_id": FRAME,
+        "target_config_entry_id": {**FRAME, "required": False},
+        "photo_id": {"selector": {"text": {}}},
+        "to_photo_ids": {"selector": {"text": {"multiple": True}}},
         "replace": {"default": False, "selector": {"boolean": {}}},
     },
     "list_overlays": {"config_entry_id": FRAME, "photo_id": PHOTO_ID_OPTIONAL},

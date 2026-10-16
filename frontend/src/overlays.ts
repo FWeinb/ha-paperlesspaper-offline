@@ -3,6 +3,7 @@ import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
   copyOverlays,
+  copyPhotoOverlays,
   deleteOverlay,
   errorMessage,
   fetchOverlays,
@@ -91,6 +92,9 @@ export class OverlayList extends LitElement {
   @state() private error: string | null = null;
   @state() private notice: string | null = null;
   @state() private dragId: string | null = null;
+  @state() private copyOpen = false;
+  @state() private copyTargets = new Set<string>();
+  @state() private copyReplace = false;
 
   protected override willUpdate(changed: PropertyValues) {
     // Reload when the frame changes or the panel refreshed it (e.g. after a wake).
@@ -149,10 +153,74 @@ export class OverlayList extends LitElement {
     }
   }
 
+  private toggleTarget(id: string, on: boolean) {
+    const next = new Set(this.copyTargets);
+    if (on) next.add(id);
+    else next.delete(id);
+    this.copyTargets = next;
+  }
+
+  private async copyToPhotos() {
+    if (!this.photo || !this.copyTargets.size) return;
+    try {
+      const res = await copyPhotoOverlays(
+        this.hass,
+        this.frame.entry_id,
+        this.photo.photo_id,
+        [...this.copyTargets],
+        this.copyReplace,
+      );
+      this.notice = localizer(this.hass)("copied_photo_overlays", { n: res.copied, photos: this.copyTargets.size });
+      this.copyOpen = false;
+      this.copyTargets = new Set();
+      this.copyReplace = false;
+      this.dispatchEvent(new CustomEvent("overlays-copied", { bubbles: true, composed: true }));
+    } catch (err) {
+      this.error = errorMessage(err);
+    }
+  }
+
+  private renderCopyToPhotos(l: ReturnType<typeof localizer>) {
+    const others = this.photos.filter((p) => p.photo_id !== this.photo?.photo_id);
+    return html`<div class="copy-photos">
+      <strong>${l("copy_to_photos")}</strong>
+      <ul class="targets">
+        ${others.map(
+          (p) => html`<li>
+            <label>
+              <input
+                type="checkbox"
+                .checked=${this.copyTargets.has(p.photo_id)}
+                @change=${(e: Event) => this.toggleTarget(p.photo_id, (e.target as HTMLInputElement).checked)}
+              />
+              ${p.name}
+            </label>
+          </li>`,
+        )}
+      </ul>
+      <label>
+        <input
+          type="checkbox"
+          class="replace"
+          .checked=${this.copyReplace}
+          @change=${(e: Event) => (this.copyReplace = (e.target as HTMLInputElement).checked)}
+        />
+        ${l("copy_replace")}
+      </label>
+      <div class="actions">
+        <button class="btn" @click=${() => (this.copyOpen = false)}>${l("cancel")}</button>
+        <button class="btn primary do-copy" ?disabled=${!this.copyTargets.size} @click=${this.copyToPhotos}>
+          ${l("copy")}
+        </button>
+      </div>
+    </div>`;
+  }
+
   protected override render() {
     const l = localizer(this.hass);
-    // Copying is frame to frame only; a photo's overlays travel with the photo.
+    // Frame overlays copy to other frames; a photo's overlays copy to other photos of this frame.
     const others = this.photo ? [] : this.frames.filter((f) => f.entry_id !== this.frame.entry_id);
+    const otherPhotos = this.photo ? this.photos.filter((p) => p.photo_id !== this.photo!.photo_id) : [];
     const p = presets(l, this.hass);
     return html`<div class="card wrap">
       <div class="head">
@@ -170,6 +238,11 @@ export class OverlayList extends LitElement {
                 </select>
               </label>`
             : nothing}
+          ${otherPhotos.length && this.overlays.length
+            ? html`<button class="btn open-copy" @click=${() => (this.copyOpen = !this.copyOpen)}>
+                ${icon(mdiContentCopy)} ${l("copy_to_photos")}
+              </button>`
+            : nothing}
           <div class="menu-wrap">
             <button class="btn primary" @click=${() => (this.menuOpen = !this.menuOpen)}>
               ${icon(mdiPlus)} ${l("add_overlay")}
@@ -184,6 +257,7 @@ export class OverlayList extends LitElement {
           </div>
         </div>
       </div>
+      ${this.copyOpen ? this.renderCopyToPhotos(l) : nothing}
       ${this.notice ? html`<p class="chip ok">${this.notice}</p>` : nothing}
       ${this.error ? html`<p class="error">${l("error", { error: this.error })}</p>` : nothing}
       ${this.overlays.length
@@ -262,6 +336,25 @@ export class OverlayList extends LitElement {
         display: flex;
         gap: 8px;
         align-items: center;
+      }
+      .copy-photos {
+        display: grid;
+        gap: 8px;
+        padding: 12px;
+        border: 1px solid var(--pp-border);
+        border-radius: 10px;
+      }
+      .copy-photos .targets {
+        max-height: 180px;
+        overflow-y: auto;
+      }
+      .copy-photos li {
+        cursor: default;
+        border: none;
+        padding: 2px 0;
+      }
+      .copy-photos .actions {
+        justify-content: flex-end;
       }
       .copy {
         display: inline-flex;

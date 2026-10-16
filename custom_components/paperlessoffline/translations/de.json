@@ -399,6 +399,9 @@
     "source_failed": {
       "message": "Bild konnte nicht abgerufen werden: {error}"
     },
+    "copy_overlays_needs_targets": {
+      "message": "Gib einen Zielrahmen an, oder ein Quellfoto zusammen mit Zielfotos."
+    },
     "overlay_not_found": {
       "message": "Overlay {overlay_id} nicht gefunden."
     }
@@ -948,7 +951,7 @@
     },
     "copy_overlays": {
       "name": "Overlays in Rahmen kopieren",
-      "description": "Kopiert alle globalen Foto-Overlays eines Rahmens in einen anderen Rahmen.",
+      "description": "Kopiert die globalen Foto-Overlays eines Rahmens in einen anderen Rahmen, oder die Overlays eines Fotos in andere Fotos desselben Rahmens.",
       "fields": {
         "config_entry_id": {
           "name": "Rahmen",
@@ -956,7 +959,15 @@
         },
         "target_config_entry_id": {
           "name": "Zielrahmen",
-          "description": "Rahmen, in den die Overlays kopiert werden."
+          "description": "Rahmen, in den die Overlays des Rahmens kopiert werden. Leer lassen, wenn die Overlays eines Fotos kopiert werden."
+        },
+        "photo_id": {
+          "name": "Quell-Foto-ID",
+          "description": "Kopiert die Overlays dieses Fotos statt der Overlays des Rahmens."
+        },
+        "to_photo_ids": {
+          "name": "Ziel-Foto-IDs",
+          "description": "Fotos desselben Rahmens, in die die Overlays des Quellfotos kopiert werden."
         },
         "replace": {
           "name": "Ersetzen",

@@ -204,7 +204,7 @@ const hass: any = {
       }
       case "overlay/delete": overlays[scopeKey(msg)] = overlays[scopeKey(msg)].filter((o) => o.overlay_id !== msg.overlay_id); return delay(null);
       case "overlay/reorder": { const by = new Map(overlays[scopeKey(msg)].map((o) => [o.overlay_id, o])); overlays[scopeKey(msg)] = msg.order.map((i: string) => by.get(i)); return delay(null); }
-      case "overlays/copy": overlays[msg.target_entry_id].push(...overlays[msg.entry_id].map((o) => ({ ...o, overlay_id: `o${nextOverlay++}` }))); return delay({ copied: overlays[msg.entry_id].length });
+      case "overlays/copy": if (msg.photo_id) { const src = overlays[`photo:${msg.photo_id}`] ?? []; let n = 0; for (const t of msg.to_photo_ids) { const k = `photo:${t}`; const copies = src.map((o) => ({ ...o, overlay_id: `o${nextOverlay++}` })); overlays[k] = msg.replace ? copies : [...(overlays[k] ?? []), ...copies]; n += copies.length; } return delay({ copied: n }); } overlays[msg.target_entry_id].push(...overlays[msg.entry_id].map((o) => ({ ...o, overlay_id: `o${nextOverlay++}` }))); return delay({ copied: overlays[msg.entry_id].length });
       case "overlay/preview": {
         const frame = frames.find((f) => f.entry_id === msg.entry_id)!;
         const drafts = msg.overlays.map((o: any) => ({ ...o, overlay_id: o.id ?? o.overlay_id }));

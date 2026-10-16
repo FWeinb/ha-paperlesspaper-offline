@@ -895,7 +895,10 @@ def _overlays(lang: str) -> dict:
         ),
         "target_config_entry_id": (
             t("Target frame", "Zielrahmen"),
-            t("Frame to copy the overlays to.", "Rahmen, in den die Overlays kopiert werden."),
+            t(
+                "Frame to copy the frame's overlays to. Leave empty when copying a photo's overlays.",
+                "Rahmen, in den die Overlays des Rahmens kopiert werden. Leer lassen, wenn die Overlays eines Fotos kopiert werden.",
+            ),
         ),
         "photo_id": (
             t("Photo ID", "Foto-ID"),
@@ -1062,10 +1065,10 @@ def _overlays(lang: str) -> dict:
         "copy_overlays": (
             t("Copy overlays to frame", "Overlays in Rahmen kopieren"),
             t(
-                "Copies all global photo overlays of a frame to another frame.",
-                "Kopiert alle globalen Foto-Overlays eines Rahmens in einen anderen Rahmen.",
+                "Copies the frame's global photo overlays to another frame, or a photo's overlays to other photos of the same frame.",
+                "Kopiert die globalen Foto-Overlays eines Rahmens in einen anderen Rahmen, oder die Overlays eines Fotos in andere Fotos desselben Rahmens.",
             ),
-            ["config_entry_id", "target_config_entry_id", "replace"],
+            ["config_entry_id", "target_config_entry_id", "photo_id", "to_photo_ids", "replace"],
         ),
         "list_overlays": (
             t("List overlays", "Overlays auflisten"),
@@ -1076,6 +1079,24 @@ def _overlays(lang: str) -> dict:
             ["config_entry_id", "photo_id"],
         ),
     }
+    # Fields whose texts differ from the shared ones for one action.
+    copy_texts = {
+        "photo_id": (
+            t("Source photo ID", "Quell-Foto-ID"),
+            t(
+                "Copy this photo's overlays instead of the frame's overlays.",
+                "Kopiert die Overlays dieses Fotos statt der Overlays des Rahmens.",
+            ),
+        ),
+        "to_photo_ids": (
+            t("Target photo IDs", "Ziel-Foto-IDs"),
+            t(
+                "Photos of the same frame to copy the source photo's overlays to.",
+                "Fotos desselben Rahmens, in die die Overlays des Quellfotos kopiert werden.",
+            ),
+        ),
+    }
+    field_texts = {name: (copy_texts if name == "copy_overlays" else {}) for name in services}
     return {
         "selector": {
             "overlay_anchor": opts(anchors),
@@ -1113,6 +1134,14 @@ def _overlays(lang: str) -> dict:
             ),
         },
         "exceptions": {
+            "copy_overlays_needs_targets": {
+                "message": L(
+                    t(
+                        "Give a target frame, or a source photo together with target photos.",
+                        "Gib einen Zielrahmen an, oder ein Quellfoto zusammen mit Zielfotos.",
+                    )
+                )
+            },
             "overlay_not_found": {
                 "message": L(
                     t("Overlay {overlay_id} not found.", "Overlay {overlay_id} nicht gefunden.")
@@ -1125,7 +1154,11 @@ def _overlays(lang: str) -> dict:
                     "name": L(title),
                     "description": L(desc),
                     "fields": {
-                        f: {"name": L(fields[f][0]), "description": L(fields[f][1])} for f in names
+                        f: {
+                            "name": L((field_texts[name].get(f) or fields[f])[0]),
+                            "description": L((field_texts[name].get(f) or fields[f])[1]),
+                        }
+                        for f in names
                     },
                 }
                 for name, (title, desc, names) in services.items()

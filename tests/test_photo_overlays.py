@@ -246,3 +246,85 @@ async def test_photo_overlay_websocket(
 
     await call(8, type=f"{DOMAIN}/overlay/delete", overlay_id=first["overlay_id"], **scope)
     assert [o.name for o in loaded_entry.runtime_data.photos[0].overlays] == ["B"]
+
+
+async def test_copy_overlays_between_photos(hass: HomeAssistant, loaded_entry, photo_path) -> None:
+    manager = loaded_entry.runtime_data
+    src = await _add_photo(hass, loaded_entry, photo_path)
+    a = await _add_photo(hass, loaded_entry, photo_path)
+    b = await _add_photo(hass, loaded_entry, photo_path)
+    first = await _add(hass, loaded_entry, "One", "1", src)
+    second = await _add(hass, loaded_entry, "Two", "2", src)
+    await _add(hass, loaded_entry, "Existing", "e", a)
+    await _add(hass, loaded_entry, "Global", "g")
+
+    result = await _call(
+        hass,
+        "copy_overlays",
+        config_entry_id=loaded_entry.entry_id,
+        photo_id=src,
+        to_photo_ids=[a, b, src],
+    )
+    assert result == {"copied": 4}
+    photos = {p.id: p for p in manager.photos}
+    assert [o.name for o in photos[a].overlays] == ["Existing", "One", "Two"]
+    assert [o.name for o in photos[b].overlays] == ["One", "Two"]
+    assert [o.name for o in photos[src].overlays] == ["One", "Two"]
+    copied_ids = {o.id for p in (photos[a], photos[b]) for o in p.overlays if o.name != "Existing"}
+    assert len(copied_ids) == 4 and copied_ids.isdisjoint({first, second})
+    assert [o.name for o in manager.overlays] == ["Global"]
+
+    await _call(
+        hass,
+        "copy_overlays",
+        config_entry_id=loaded_entry.entry_id,
+        photo_id=src,
+        to_photo_ids=[a],
+        replace=True,
+    )
+    assert [o.name for o in photos[a].overlays] == ["One", "Two"]
+
+
+async def test_copy_overlays_validation(hass: HomeAssistant, loaded_entry, photo_path) -> None:
+    manager = loaded_entry.runtime_data
+    src = await _add_photo(hass, loaded_entry, photo_path)
+    a = await _add_photo(hass, loaded_entry, photo_path)
+    await _add(hass, loaded_entry, "One", "1", src)
+    entry_id = loaded_entry.entry_id
+    with pytest.raises(ServiceValidationError):
+        await _call(
+            hass, "copy_overlays", config_entry_id=entry_id, photo_id=src, to_photo_ids=[a, "nope"]
+        )
+    with pytest.raises(ServiceValidationError):
+        await _call(
+            hass, "copy_overlays", config_entry_id=entry_id, photo_id="nope", to_photo_ids=[a]
+        )
+    with pytest.raises(ServiceValidationError):
+        await _call(hass, "copy_overlays", config_entry_id=entry_id, photo_id=src)
+    with pytest.raises(ServiceValidationError):
+        await _call(hass, "copy_overlays", config_entry_id=entry_id)
+    assert manager.photos[1].overlays == []
+
+
+async def test_copy_overlays_websocket(
+    hass: HomeAssistant, loaded_entry, photo_path, hass_ws_client
+) -> None:
+    manager = loaded_entry.runtime_data
+    src = await _add_photo(hass, loaded_entry, photo_path)
+    a = await _add_photo(hass, loaded_entry, photo_path)
+    await _add(hass, loaded_entry, "One", "1", src)
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id(
+        {
+            "type": f"{DOMAIN}/overlays/copy",
+            "entry_id": loaded_entry.entry_id,
+            "photo_id": src,
+            "to_photo_ids": [a],
+        }
+    )
+    assert (await client.receive_json())["result"] == {"copied": 1}
+    assert [o.name for o in manager.photos[1].overlays] == ["One"]
+    await client.send_json_auto_id(
+        {"type": f"{DOMAIN}/overlays/copy", "entry_id": loaded_entry.entry_id, "photo_id": src}
+    )
+    assert not (await client.receive_json())["success"]

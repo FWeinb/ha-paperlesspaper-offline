@@ -21,6 +21,7 @@ export class PhotoEditor extends LitElement {
   @property({ attribute: false }) hass!: HomeAssistant;
   @property({ attribute: false }) frame!: Frame;
   @property({ attribute: false }) frames: Frame[] = [];
+  @property({ attribute: false }) photos: Photo[] = [];
   @property({ attribute: false }) photo!: Photo;
   /** Resolved frame-level settings the photo inherits from. */
   @property({ attribute: false }) inherited!: ResolvedSettings;
@@ -280,7 +281,7 @@ export class PhotoEditor extends LitElement {
               />
               ${l("hide_frame_overlays")}
             </label>
-            <pp-overlays .hass=${this.hass} .frame=${this.frame} .photos=${[this.photo]} .photo=${this.photo}></pp-overlays>
+            <pp-overlays .hass=${this.hass} .frame=${this.frame} .photos=${this.photos.length ? this.photos : [this.photo]} .photo=${this.photo}></pp-overlays>
             <div class="section-title"><span>${l("rendering_settings")}</span></div>
             <pp-render-settings
               .hass=${this.hass}

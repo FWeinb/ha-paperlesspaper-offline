@@ -11,6 +11,7 @@ from homeassistant.core import (
     SupportsResponse,
     callback,
 )
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 import probatio as vol
 
@@ -24,6 +25,7 @@ from .store import OverlayDef
 ATTR_ENTRY = "config_entry_id"
 ATTR_TARGET_ENTRY = "target_config_entry_id"
 ATTR_PHOTO = "photo_id"
+ATTR_TO_PHOTOS = "to_photo_ids"
 ATTR_NAME = "name"
 ATTR_ENABLED = "enabled"
 ATTR_POSITION = "position"
@@ -84,7 +86,9 @@ SCHEMAS: dict[str, vol.Schema] = {
     SERVICE_COPY_OVERLAYS: vol.Schema(
         {
             **_ENTRY,
-            vol.Required(ATTR_TARGET_ENTRY): cv.string,
+            vol.Optional(ATTR_TARGET_ENTRY): cv.string,
+            vol.Optional(ATTR_PHOTO): cv.string,
+            vol.Optional(ATTR_TO_PHOTOS): vol.All(cv.ensure_list, [cv.string]),
             vol.Optional(ATTR_REPLACE, default=False): cv.boolean,
         }
     ),
@@ -145,8 +149,8 @@ def _photo_dict(manager: Any, photo: Any) -> dict[str, Any]:
         "name": photo.name,
         "enabled": photo.enabled,
         "added": photo.added,
-	"date": photo.date,
-	"location": photo.location,
+        "date": photo.date,
+        "location": photo.location,
         "overrides": {
             k: list(v) if isinstance(v, tuple) else v for k, v in photo.overrides.items()
         },
@@ -291,6 +295,19 @@ async def _move_overlay(call: ServiceCall) -> None:
 
 async def _copy_overlays(call: ServiceCall) -> ServiceResponse:
     manager = get_manager(call.hass, call.data[ATTR_ENTRY])
+    if ATTR_PHOTO in call.data:
+        if ATTR_TO_PHOTOS not in call.data:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="copy_overlays_needs_targets"
+            )
+        count = manager.async_copy_photo_overlays(
+            call.data[ATTR_PHOTO], call.data[ATTR_TO_PHOTOS], call.data[ATTR_REPLACE]
+        )
+        return {"copied": count}
+    if ATTR_TARGET_ENTRY not in call.data:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN, translation_key="copy_overlays_needs_targets"
+        )
     target = get_manager(call.hass, call.data[ATTR_TARGET_ENTRY])
     count = manager.async_copy_overlays_to(target, call.data[ATTR_REPLACE])
     return {"copied": count}

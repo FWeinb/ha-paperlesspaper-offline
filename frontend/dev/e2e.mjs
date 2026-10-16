@@ -182,6 +182,15 @@ const photoSave = (await ws()).filter((m) => m.type === "paperlessoffline/overla
 check(!!photoSave?.photo_id && !photoSave.overlay.id, "photo overlay saved with its photo_id");
 check(await (await photoOverlays()).evaluate((r) => r.querySelectorAll("li").length === 1), "photo editor shows the new photo overlay");
 
+// 7. Photo editor: "Copy to photos…" copies this photo's overlays to the chosen photos.
+await (await photoOverlays()).evaluate((r) => r.querySelector(".open-copy").click());
+await (await photoOverlays()).evaluate((r) => r.querySelector(".targets input").click());
+await (await photoOverlays()).evaluate((r) => r.querySelector(".do-copy").click());
+await new Promise((r) => setTimeout(r, 600));
+const copyMsg = (await ws()).filter((m) => m.type === "paperlessoffline/overlays/copy").pop();
+check(!!copyMsg?.photo_id && copyMsg.to_photo_ids?.length === 1 && copyMsg.replace === false, "copy to photos sends photo_id and one target");
+check(await (await photoOverlays()).evaluate((r) => !!r.querySelector(".chip.ok")), "copy to photos shows a confirmation");
+
 await browser.close();
 console.log(failures.length ? `${failures.length} failure(s)` : "all interactions ok");
 process.exit(failures.length ? 1 : 0);
