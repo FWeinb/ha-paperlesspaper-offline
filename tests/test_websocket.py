@@ -194,9 +194,13 @@ async def test_non_admin_rejected(
     assert msg["error"]["code"] == "unauthorized"
 
 
-async def test_register_frontend(hass: HomeAssistant) -> None:
+async def test_register_frontend(hass: HomeAssistant, tmp_path: Path) -> None:
     # Skipped silently without the frontend.
     await async_register_frontend(hass)
+
+    # The bundles are build output (not committed), so stand in dummies.
+    for name in ("paperlessoffline-panel.js", "paperlessoffline-card.js"):
+        (tmp_path / name).write_text("export {};")
 
     hass.config.components.add("frontend")
     frontend = MagicMock(DATA_PANELS="frontend_panels")
@@ -212,6 +216,7 @@ async def test_register_frontend(hass: HomeAssistant) -> None:
         ),
         patch("homeassistant.components.frontend", frontend, create=True),
         patch("homeassistant.components.panel_custom", panel_custom, create=True),
+        patch("custom_components.paperlessoffline.frontend.FRONTEND_DIR", tmp_path),
     ):
         await async_register_frontend(hass)
     kwargs = panel_custom.async_register_panel.call_args.kwargs

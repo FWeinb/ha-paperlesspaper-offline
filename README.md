@@ -370,9 +370,10 @@ not the generated files.
 ### Frontend
 
 The panel and card are Lit + TypeScript in `frontend/`. They are built with Vite
-straight into `custom_components/paperlessoffline/frontend/`. That built bundle
-is committed, so HACS users need no build step. Rebuild it after every frontend
-change:
+into `custom_components/paperlessoffline/frontend/`. That directory is build
+output and is not committed. The release workflow builds it and attaches the
+whole integration as `paperlessoffline.zip` to each GitHub release, which is
+what HACS installs. Build it locally to run the integration from a checkout:
 
 ```sh
 cd frontend

@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
 
-// Builds straight into the integration so HACS users need no build step.
+// Builds into the integration; the release workflow ships it in the zip.
 export default defineConfig({
   build: {
     outDir: resolve(__dirname, "../custom_components/paperlessoffline/frontend"),

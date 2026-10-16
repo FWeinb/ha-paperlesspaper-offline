@@ -9,3 +9,5 @@ htmlcov/
 .DS_Store
 .firmware/
 .ha-dev/
+custom_components/paperlessoffline/frontend/
+frontend/node_modules/

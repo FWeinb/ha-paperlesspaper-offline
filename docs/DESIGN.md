@@ -56,9 +56,11 @@ e-paper photo frames running the
 - Translations: English and German.
 - CI (GitHub Actions): hassfest, HACS validation, ruff, mypy, and
   `pytest-homeassistant-custom-component`.
-- Sidebar panel: Lit + TypeScript + Vite. The built bundle is committed under
-  `custom_components/paperlessoffline/frontend/`, so HACS users need no build
-  step.
+- Sidebar panel: Lit + TypeScript + Vite, built into
+  `custom_components/paperlessoffline/frontend/` (not committed).
+- Releases: publishing a GitHub release builds the frontend, sets the manifest
+  version from the tag and attaches `paperlessoffline.zip`, which HACS installs
+  (`zip_release`).
 
 ## 3. Frames and setup
 
