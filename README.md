@@ -60,7 +60,10 @@ fails, press the button again and retry.
 Home Assistant's local URL must be reachable by the frame. If it is
 `localhost`, a loopback address (`127.0.0.1`) or a `*.local` name, Home
 Assistant gives the frame its LAN IP address instead: loopback would point at
-the frame itself, and the frame can't resolve mDNS names.
+the frame itself, and the frame can't resolve mDNS names. In that case (and
+when you choose an address, below) the URL uses Home Assistant's own port, so
+`http://homeassistant.local` becomes e.g. `http://192.168.1.20:8123`. The port
+is always included unless it is the default (80 for http, 443 for https).
 
 **Address the frame uses.** If Home Assistant is reachable on several
 networks or IPs (e.g. a separate IoT VLAN), choose which one goes into the

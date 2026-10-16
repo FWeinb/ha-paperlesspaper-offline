@@ -449,8 +449,8 @@ rotation direction is assumed by symmetry with the 7".
     so the next button press fixes it.
   - Found in manual testing: the dev instance had `internal_url:
     http://127.0.0.1:8124` and wrote that to the frame.
-- **Chosen frame address** (option `url_host`, default `auto`): replaces the
-  host of HA's internal URL, keeping its scheme and port.
+- **Chosen frame address** (option `url_host`, default `auto`): points the
+  URLs at HA's own web server at that address.
   - Offered in both setup paths and in the options. The choices are HA's IPv4
     addresses from the network integration (adapters HA uses first, loopback
     and link-local excluded), plus free text.
@@ -692,3 +692,16 @@ Each step is tested on a real frame before the next.
     autocompletion) instead of closing the dialog.
   - Checked against HA 2026.10 in a real browser: both fields render as
     `ha-code-editor` with highlighting, and insertion works.
+- **Ports in frame URLs**: yarl writes the port whenever it isn't the scheme's
+  default (80 for http, 443 for https), so configured ports such as 8123 always
+  survive.
+  - When the integration picks the host itself (a loopback, `localhost` or
+    `.local` internal URL replaced by the LAN IP) or the user chooses an
+    address, the URL uses HA's own HTTP server port and scheme
+    (`hass.config.api`), not the internal URL's. Otherwise
+    `http://homeassistant.local` (implicitly port 80) would have become
+    `http://<ip>`, with nothing listening on port 80.
+  - An internal URL with a usable host is kept exactly as configured, so a
+    reverse proxy on port 80 keeps working.
+  - The settings JSON's `downloadUrl` reuses the host and port the frame
+    itself requested.

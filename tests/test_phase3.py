@@ -441,3 +441,42 @@ async def test_options_choose_url_host(hass: HomeAssistant, loaded_entry, fake_s
     assert await manager.async_ble_sync(ADDRESS)
     assert fake_session.instances[0].written[0]["settingsUrl"].startswith("http://10.0.0.7:8123/")
     assert _issue(hass, ISSUE_REPROVISION, loaded_entry) is None
+
+
+def _api(hass: HomeAssistant, port: int = 8123, ssl: bool = False) -> None:
+    from homeassistant.components.http import ApiConfig
+
+    hass.config.api = ApiConfig("192.168.1.20", "0.0.0.0", port, ssl)
+
+
+@pytest.mark.parametrize(
+    ("internal", "port", "ssl", "expected"),
+    [
+        # Used as configured, port kept whenever it isn't the default.
+        ("http://192.168.1.10:8123", 8123, False, "http://192.168.1.10:8123"),
+        ("http://ha.lan", 8123, False, "http://ha.lan"),  # e.g. a proxy on port 80
+        ("https://ha.lan:8443", 8443, True, "https://ha.lan:8443"),
+        # Unusable host: HA's own server at the LAN IP, with HA's real port.
+        ("http://homeassistant.local", 8123, False, "http://192.168.1.20:8123"),
+        ("http://127.0.0.1:8124", 8124, False, "http://192.168.1.20:8124"),
+        ("http://localhost", 80, False, "http://192.168.1.20"),
+        ("https://homeassistant.local", 8123, True, "https://192.168.1.20:8123"),
+    ],
+)
+async def test_base_url_ports(hass: HomeAssistant, internal, port, ssl, expected) -> None:
+    _api(hass, port, ssl)
+    hass.config.internal_url = internal
+    with patch(
+        "homeassistant.components.network.async_get_source_ip",
+        AsyncMock(return_value="192.168.1.20"),
+    ):
+        assert await async_frame_base_url(hass) == expected
+
+
+async def test_chosen_host_uses_ha_port(hass: HomeAssistant) -> None:
+    """A chosen address points at HA itself, even if the internal URL has no port."""
+    _api(hass, 8123)
+    hass.config.internal_url = "http://ha.lan"
+    assert await async_frame_base_url(hass, "10.0.0.7") == "http://10.0.0.7:8123"
+    _api(hass, 80)
+    assert await async_frame_base_url(hass, "10.0.0.7") == "http://10.0.0.7"

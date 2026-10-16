@@ -18,18 +18,23 @@ _HOST_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
 async def async_frame_base_url(hass: HomeAssistant, host: str | None = None) -> str | None:
     """HA's local URL as the frame can use it, or None if there is none.
 
-    ``host`` (an IP or name chosen by the user) replaces the URL's host while
-    keeping its scheme and port. Otherwise hosts the frame can't use - loopback
-    addresses (they point at the frame itself), ``localhost`` and ``*.local``
-    names (the ESP32 firmware has no mDNS resolver) - are replaced by this
-    machine's LAN IP address.
+    - With ``host`` (an IP or name chosen by the user), the URL points at HA's
+      own web server at that address: HA's port, and https if HA serves https.
+    - Otherwise HA's internal URL is used as configured (including its port),
+      unless its host is unusable for the frame: loopback addresses (they point
+      at the frame itself), ``localhost`` or ``*.local`` names (the ESP32
+      firmware has no mDNS resolver). Those are replaced by this machine's LAN
+      IP address, again with HA's own port and scheme.
+
+    The port appears in the URL whenever it isn't the scheme's default (80 for
+    http, 443 for https).
     """
     try:
         base = URL(get_url(hass, allow_external=False, allow_cloud=False, prefer_external=False))
     except NoURLAvailableError:
         return None
     if host and host != URL_HOST_AUTO:
-        return str(base.with_host(host).origin())
+        return _ha_server_url(hass, host, base)
     if base.host and not frame_can_use_host(base.host):
         # Imported lazily: the network integration is always loaded in a real
         # install, but keep this module importable without it.
@@ -39,8 +44,17 @@ async def async_frame_base_url(hass: HomeAssistant, host: str | None = None) -> 
             ip = await network.async_get_source_ip(hass)
         except Exception:
             return str(base.origin())
-        base = base.with_host(ip)
+        return _ha_server_url(hass, ip, base)
     return str(base.origin())
+
+
+def _ha_server_url(hass: HomeAssistant, host: str, fallback: URL) -> str:
+    """URL of HA's own web server at ``host`` (port and scheme from HA's HTTP config)."""
+    api = hass.config.api
+    if api is None:  # HTTP not set up (tests): keep the configured URL's scheme and port
+        return str(fallback.with_host(host).origin())
+    scheme = "https" if api.use_ssl else "http"
+    return str(URL.build(scheme=scheme, host=host, port=api.port).origin())
 
 
 def frame_urls(base_url: str, token: str) -> dict[str, str]:

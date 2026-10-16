@@ -486,3 +486,14 @@ async def test_placeholder_follows_device_rename(
     assert second.headers["Last-Modified"] != first.headers["Last-Modified"]
     assert "placeholder" not in manager.pending_changes()
     assert hass.states.get("binary_sensor.kitchen_in_sync").state == "on"
+
+
+async def test_settings_download_url_keeps_port(
+    hass: HomeAssistant, hass_client_no_auth, loaded_entry
+) -> None:
+    """The image URL in the settings JSON uses the host and port the frame used."""
+    client = await hass_client_no_auth()
+    resp = await client.get(SETTINGS_URL, headers={"Host": "192.168.1.10:8123"})
+    assert (await resp.json())["downloadUrl"] == f"http://192.168.1.10:8123{IMAGE_URL}"
+    resp = await client.get(SETTINGS_URL, headers={"Host": "192.168.1.10"})
+    assert (await resp.json())["downloadUrl"] == f"http://192.168.1.10{IMAGE_URL}"
