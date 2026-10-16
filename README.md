@@ -137,10 +137,20 @@ title: Kitchen                # optional
 
 ## Text and entity overlays
 
-Overlays are text boxes drawn crisply on top of every photo a frame shows.
-They suit sensor values, the weather or the date. Edit them in the panel
-(*Settings* tab of a frame, section *Overlays*) with a live preview using
-current values, or with the overlay actions.
+Overlays are text boxes drawn crisply on top of photos. They suit sensor
+values, the weather, the date or a caption. There are two kinds:
+
+- **Global photo overlays** are drawn on every photo of a frame. Edit them in
+  the panel (*Settings* tab of a frame, section *Global photo overlays*).
+- **Photo overlays** belong to one photo and are drawn only on it, below the
+  global ones. Edit them in the photo editor (section *Photo overlays*).
+  They are copied along with `copy_photo`. One-off images (`show_image`) get
+  only global photo overlays.
+
+Both have a live preview using current values. The overlay actions
+(`add_overlay`, `update_overlay`, `remove_overlay`, `move_overlay`,
+`list_overlays`) work on the global ones, or on one photo's when you pass
+`photo_id`.
 
 The text and "show if" fields use Home Assistant's own code editor (as in
 *Developer tools → Template*), with Jinja highlighting and autocompletion for
@@ -157,6 +167,8 @@ plain text fields.
   - `entity_icon(entity_id)`: an icon set on an entity;
   - `date_local(value, preset)`: dates in your language, with presets
     `short`, `long`, `month_year`, `weekday` and `time`.
+- **Variables**: `frame.name`, and `photo.name` (empty on one-off images and the
+  placeholder, where `photo` is `None`, so `{% if photo %}` works).
 - **Placement**: one of nine positions, a size from S to XL (scaled to the
   panel), a width (fit to text or a percentage) and an alignment.
 - **Behind the text**: a box in any panel colour, an outline around the
@@ -166,7 +178,8 @@ plain text fields.
 - **Update**: *every wake when the text changed* (the default), or *only when
   the photo changes*, to avoid extra panel refreshes for slowly changing
   values.
-- **Per photo**: *Hide frame overlays on this photo* in the photo editor.
+- **Per photo**: *Hide global photo overlays on this photo* in the photo editor.
+  It does not hide that photo's own overlays.
 
 Values are read when the frame wakes, so the frame shows them as of its last
 update. A broken template leaves only that box out; the panel shows the error.

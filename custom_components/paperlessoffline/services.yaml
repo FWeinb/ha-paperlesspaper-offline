@@ -423,6 +423,10 @@ add_overlay:
       selector:
         config_entry:
           integration: paperlessoffline
+    photo_id:
+      example: a1b2c3d4e5f6
+      selector:
+        text: {}
     name:
       required: true
       selector:
@@ -528,6 +532,10 @@ update_overlay:
       selector:
         config_entry:
           integration: paperlessoffline
+    photo_id:
+      example: a1b2c3d4e5f6
+      selector:
+        text: {}
     overlay_id:
       required: true
       example: a1b2c3d4e5f6
@@ -636,6 +644,10 @@ remove_overlay:
       selector:
         config_entry:
           integration: paperlessoffline
+    photo_id:
+      example: a1b2c3d4e5f6
+      selector:
+        text: {}
     overlay_id:
       required: true
       example: a1b2c3d4e5f6
@@ -648,6 +660,10 @@ move_overlay:
       selector:
         config_entry:
           integration: paperlessoffline
+    photo_id:
+      example: a1b2c3d4e5f6
+      selector:
+        text: {}
     overlay_id:
       required: true
       example: a1b2c3d4e5f6
@@ -683,6 +699,10 @@ list_overlays:
       selector:
         config_entry:
           integration: paperlessoffline
+    photo_id:
+      example: a1b2c3d4e5f6
+      selector:
+        text: {}
 set_defaults:
   fields:
     palette:

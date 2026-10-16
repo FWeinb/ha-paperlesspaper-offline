@@ -1,40 +1,40 @@
-import { s as A, i as E, n as d, r as l, a as j, l as m, A as n, d as u, f as gt, b as o, g as H, h as mt, j as vt, k as yt, t as I, o as bt, p as $t, q as xt, u as wt, v as _t, w as nt, x as kt, y as Pt, z as Ot, B as lt, C as Et, D as It, E as St, F as Dt, c as q, G as Ct, e as Tt, H as jt } from "./chunk-DMimEvLu.js";
+import { s as A, i as E, n as d, r as l, a as j, l as m, A as n, d as u, f as mt, b as o, g as K, h as vt, j as yt, k as bt, t as S, o as $t, p as xt, q as wt, u as _t, v as kt, w as lt, x as Pt, y as Ot, z as Et, B as pt, C as St, D as It, E as Dt, F as Ct, c as U, G as Tt, e as jt, H as zt } from "./chunk-DY6Sag5H.js";
 /**
  * @license
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const zt = (t, e, s) => (s.configurable = !0, s.enumerable = !0, Reflect.decorate && typeof e != "object" && Object.defineProperty(t, e, s), s);
+const Mt = (t, e, s) => (s.configurable = !0, s.enumerable = !0, Reflect.decorate && typeof e != "object" && Object.defineProperty(t, e, s), s);
 /**
  * @license
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-function Mt(t, e) {
+function At(t, e) {
   return (s, i, r) => {
     const a = (p) => p.renderRoot?.querySelector(t) ?? null;
-    return zt(s, i, { get() {
+    return Mt(s, i, { get() {
       return a(this);
     } });
   };
 }
-const f = "paperlessoffline", et = (t) => t.callWS({ type: `${f}/frames` }).then((e) => e.frames), G = (t, e) => t.callWS({ type: `${f}/photos`, entry_id: e }).then((s) => s.photos), At = (t, e) => t.connection.subscribeMessage((s) => e(s.entry_id), {
+const f = "paperlessoffline", st = (t) => t.callWS({ type: `${f}/frames` }).then((e) => e.frames), H = (t, e) => t.callWS({ type: `${f}/photos`, entry_id: e }).then((s) => s.photos), Ft = (t, e) => t.connection.subscribeMessage((s) => e(s.entry_id), {
   type: `${f}/subscribe`
-}), pt = (t, e, s, i) => t.callWS({ type: `${f}/photo/update`, entry_id: e, photo_id: s, ...i }), Ft = (t, e, s) => t.callWS({ type: `${f}/photo/delete`, entry_id: e, photo_id: s }), Wt = (t, e, s) => t.callWS({ type: `${f}/photo/reorder`, entry_id: e, order: s }), Rt = (t, e, s, i) => t.callWS({
+}), dt = (t, e, s, i) => t.callWS({ type: `${f}/photo/update`, entry_id: e, photo_id: s, ...i }), Wt = (t, e, s) => t.callWS({ type: `${f}/photo/delete`, entry_id: e, photo_id: s }), Rt = (t, e, s) => t.callWS({ type: `${f}/photo/reorder`, entry_id: e, order: s }), Nt = (t, e, s, i) => t.callWS({
   type: `${f}/photo/copy`,
   entry_id: e,
   photo_id: s,
   target_entry_id: i
-}), Nt = (t, e, s) => t.callWS({ type: `${f}/photo/show`, entry_id: e, photo_id: s }), Lt = (t, e) => t.callWS({ type: `${f}/frame/skip`, entry_id: e }), dt = (t, e, s) => t.callWS({ type: `${f}/frame/update`, entry_id: e, ...s }), qt = (t, e, s) => t.callWS({ type: `${f}/import`, entry_id: e, media_content_id: s }), ht = (t, e, s, i) => t.callWS({
+}), Lt = (t, e, s) => t.callWS({ type: `${f}/photo/show`, entry_id: e, photo_id: s }), qt = (t, e) => t.callWS({ type: `${f}/frame/skip`, entry_id: e }), ht = (t, e, s) => t.callWS({ type: `${f}/frame/update`, entry_id: e, ...s }), Ut = (t, e, s) => t.callWS({ type: `${f}/import`, entry_id: e, media_content_id: s }), ct = (t, e, s, i) => t.callWS({
   type: `${f}/preview`,
   entry_id: e,
   photo_id: s,
   ...i
-}), Ut = (t) => t.callWS({ type: `${f}/defaults` }), Qt = (t, e) => t.callWS({ type: `${f}/defaults/set`, defaults: e }), Yt = (t, e) => t.callWS({
+}), Qt = (t) => t.callWS({ type: `${f}/defaults` }), Yt = (t, e) => t.callWS({ type: `${f}/defaults/set`, defaults: e }), Bt = (t, e) => t.callWS({
   type: "media_source/browse_media",
   ...e ? { media_content_id: e } : {}
 });
-async function Bt(t, e, s) {
+async function Gt(t, e, s) {
   const i = new FormData();
   for (const a of s) i.append("file", a, a.name);
   const r = await t.fetchWithAuth(`/api/${f}/upload/${e}`, {
@@ -44,21 +44,22 @@ async function Bt(t, e, s) {
   if (!r.ok) throw new Error(`Upload failed (${r.status})`);
   return r.json();
 }
-const c = (t) => t?.message ?? String(t), ct = (t) => {
+const c = (t) => t?.message ?? String(t), ut = (t) => {
   const { overlay_id: e, last_text: s, last_error: i, ...r } = t;
   return e ? { id: e, ...r } : r;
-}, Gt = (t, e) => t.callWS({ type: `${f}/overlays`, entry_id: e }).then((s) => s.overlays), ut = (t, e, s) => t.callWS({ type: `${f}/overlay/save`, entry_id: e, overlay: ct(s) }), Ht = (t, e, s) => t.callWS({ type: `${f}/overlay/delete`, entry_id: e, overlay_id: s }), Kt = (t, e, s) => t.callWS({ type: `${f}/overlay/reorder`, entry_id: e, order: s }), Jt = (t, e, s) => t.callWS({ type: `${f}/overlays/copy`, entry_id: e, target_entry_id: s }), Xt = (t, e, s, i) => t.callWS({
+}, q = (t, e) => e ? { entry_id: t, photo_id: e } : { entry_id: t }, Ht = (t, e, s) => t.callWS({ type: `${f}/overlays`, ...q(e, s) }).then((i) => i.overlays), ft = (t, e, s, i) => t.callWS({ type: `${f}/overlay/save`, ...q(e, i), overlay: ut(s) }), Kt = (t, e, s, i) => t.callWS({ type: `${f}/overlay/delete`, ...q(e, i), overlay_id: s }), Jt = (t, e, s, i) => t.callWS({ type: `${f}/overlay/reorder`, ...q(e, i), order: s }), Xt = (t, e, s) => t.callWS({ type: `${f}/overlays/copy`, entry_id: e, target_entry_id: s }), Vt = (t, e, s, i, r = !1) => t.callWS({
   type: `${f}/overlay/preview`,
   entry_id: e,
   photo_id: i ?? null,
-  overlays: s.map(ct)
+  for_photo: r,
+  overlays: s.map(ut)
 });
-var Vt = Object.defineProperty, Zt = Object.getOwnPropertyDescriptor, z = (t, e, s, i) => {
-  for (var r = i > 1 ? void 0 : i ? Zt(e, s) : e, a = t.length - 1, p; a >= 0; a--)
+var Zt = Object.defineProperty, te = Object.getOwnPropertyDescriptor, z = (t, e, s, i) => {
+  for (var r = i > 1 ? void 0 : i ? te(e, s) : e, a = t.length - 1, p; a >= 0; a--)
     (p = t[a]) && (r = (i ? p(e, s, r) : p(r)) || r);
-  return i && r && Vt(e, s, r), r;
+  return i && r && Zt(e, s, r), r;
 };
-const te = "media-source://paperlessoffline", st = (t) => t.media_class === "image" || t.media_content_type?.startsWith("image/");
+const ee = "media-source://paperlessoffline", it = (t) => t.media_class === "image" || t.media_content_type?.startsWith("image/");
 let _ = class extends j {
   constructor() {
     super(...arguments), this.item = null, this.stack = [], this.selected = /* @__PURE__ */ new Set(), this.loading = !1, this.importing = !1, this.error = null;
@@ -69,7 +70,7 @@ let _ = class extends j {
   async open(t, e = !0) {
     this.loading = !0, this.error = null;
     try {
-      const s = await Yt(this.hass, t);
+      const s = await Bt(this.hass, t);
       e && this.item && (this.stack = [...this.stack, this.item.media_content_id]), this.item = s;
     } catch (s) {
       this.error = c(s);
@@ -89,7 +90,7 @@ let _ = class extends j {
     this.importing = !0, this.error = null;
     try {
       for (const t of this.selected)
-        await qt(this.hass, this.frame.entry_id, t);
+        await Ut(this.hass, this.frame.entry_id, t);
       this.close();
     } catch (t) {
       this.error = c(t);
@@ -102,27 +103,27 @@ let _ = class extends j {
   }
   render() {
     const t = m(this.hass), e = (this.item?.children ?? []).filter(
-      (s) => !s.media_content_id.startsWith(te) && (s.can_expand || st(s))
+      (s) => !s.media_content_id.startsWith(ee) && (s.can_expand || it(s))
     );
     return o`<div class="scrim" @click=${(s) => s.target === s.currentTarget && this.close()}>
       <div class="dialog card" role="dialog" aria-modal="true" aria-label=${t("import")}>
         <header>
-          ${this.stack.length ? o`<button class="icon-btn" title=${t("back")} @click=${this.back}>${u(gt)}</button>` : n}
+          ${this.stack.length ? o`<button class="icon-btn" title=${t("back")} @click=${this.back}>${u(mt)}</button>` : n}
           <h2>${this.item?.title || t("media_root")}</h2>
-          <button class="icon-btn" title=${t("close")} @click=${this.close}>${u(H)}</button>
+          <button class="icon-btn" title=${t("close")} @click=${this.close}>${u(K)}</button>
         </header>
         <div class="grid">
           ${this.loading ? o`<p class="muted">${t("loading")}</p>` : n}
           ${!this.loading && !e.length ? o`<p class="muted">${t("no_media")}</p>` : n}
           ${e.map((s) => {
-      const i = this.selected.has(s.media_content_id), r = !s.can_expand && st(s);
+      const i = this.selected.has(s.media_content_id), r = !s.can_expand && it(s);
       return o`<button
               class="tile ${i ? "selected" : ""}"
               @click=${() => r ? this.toggle(s.media_content_id) : this.open(s.media_content_id)}
             >
               <div class="thumb">
-                ${s.thumbnail ? o`<img src=${s.thumbnail} alt="" loading="lazy" />` : u(r ? mt : vt)}
-                ${i ? o`<span class="tick">${u(yt)}</span>` : n}
+                ${s.thumbnail ? o`<img src=${s.thumbnail} alt="" loading="lazy" />` : u(r ? vt : yt)}
+                ${i ? o`<span class="tick">${u(bt)}</span>` : n}
               </div>
               <span class="label">${s.title}</span>
             </button>`;
@@ -281,15 +282,15 @@ z([
   l()
 ], _.prototype, "error", 2);
 _ = z([
-  I("pp-media-import")
+  S("pp-media-import")
 ], _);
-var ee = Object.defineProperty, se = Object.getOwnPropertyDescriptor, P = (t, e, s, i) => {
-  for (var r = i > 1 ? void 0 : i ? se(e, s) : e, a = t.length - 1, p; a >= 0; a--)
+var se = Object.defineProperty, ie = Object.getOwnPropertyDescriptor, P = (t, e, s, i) => {
+  for (var r = i > 1 ? void 0 : i ? ie(e, s) : e, a = t.length - 1, p; a >= 0; a--)
     (p = t[a]) && (r = (i ? p(e, s, r) : p(r)) || r);
-  return i && r && ee(e, s, r), r;
+  return i && r && se(e, s, r), r;
 };
-const U = "application/x-paperlessoffline-photo";
-let $ = class extends j {
+const Q = "application/x-paperlessoffline-photo";
+let x = class extends j {
   constructor() {
     super(...arguments), this.photos = [], this.dropActive = !1, this.uploading = 0, this.uploadErrors = [], this.error = null, this.importOpen = !1, this.dragId = null, this.dragOverId = null;
   }
@@ -298,7 +299,7 @@ let $ = class extends j {
     if (e.length) {
       this.uploading = e.length, this.uploadErrors = [], this.error = null;
       try {
-        const s = await Bt(this.hass, this.frame.entry_id, e);
+        const s = await Gt(this.hass, this.frame.entry_id, e);
         this.uploadErrors = s.errors;
       } catch (s) {
         this.error = c(s);
@@ -318,13 +319,13 @@ let $ = class extends j {
     t.dataTransfer?.types.includes("Files") && (t.preventDefault(), this.dropActive = !1, this.upload([...t.dataTransfer.files]));
   }
   onTileDragStart(t, e) {
-    this.dragId = e.photo_id, t.dataTransfer?.setData(U, e.photo_id), t.dataTransfer && (t.dataTransfer.effectAllowed = "move");
+    this.dragId = e.photo_id, t.dataTransfer?.setData(Q, e.photo_id), t.dataTransfer && (t.dataTransfer.effectAllowed = "move");
   }
   onTileDragOver(t, e) {
-    !this.dragId || !t.dataTransfer?.types.includes(U) || (t.preventDefault(), this.dragOverId = e.photo_id);
+    !this.dragId || !t.dataTransfer?.types.includes(Q) || (t.preventDefault(), this.dragOverId = e.photo_id);
   }
   async onTileDrop(t, e) {
-    const s = t.dataTransfer?.getData(U);
+    const s = t.dataTransfer?.getData(Q);
     if (this.dragOverId = null, this.dragId = null, !s || s === e.photo_id) return;
     t.preventDefault(), t.stopPropagation();
     const i = this.photos.map((a) => a.photo_id).filter((a) => a !== s);
@@ -332,7 +333,7 @@ let $ = class extends j {
     const r = new Map(this.photos.map((a) => [a.photo_id, a]));
     this.photos = i.map((a) => r.get(a));
     try {
-      await Wt(this.hass, this.frame.entry_id, i);
+      await Rt(this.hass, this.frame.entry_id, i);
     } catch (a) {
       this.error = c(a);
     }
@@ -340,14 +341,14 @@ let $ = class extends j {
   async toggleEnabled(t, e) {
     t.stopPropagation();
     try {
-      await pt(this.hass, this.frame.entry_id, e.photo_id, { enabled: !e.enabled });
+      await dt(this.hass, this.frame.entry_id, e.photo_id, { enabled: !e.enabled });
     } catch (s) {
       this.error = c(s);
     }
   }
   async setOrder(t) {
     try {
-      await dt(this.hass, this.frame.entry_id, { order: t });
+      await ht(this.hass, this.frame.entry_id, { order: t });
     } catch (e) {
       this.error = c(e);
     }
@@ -360,10 +361,10 @@ let $ = class extends j {
     return o`
       <div class="toolbar">
         <label class="btn primary">
-          ${u(bt)} ${t("upload")}
+          ${u($t)} ${t("upload")}
           <input type="file" accept="image/*,.heic,.heif" multiple hidden @change=${this.onFileInput} />
         </label>
-        <button class="btn" @click=${() => this.importOpen = !0}>${u($t)} ${t("import")}</button>
+        <button class="btn" @click=${() => this.importOpen = !0}>${u(xt)} ${t("import")}</button>
         <span class="spacer"></span>
         <label class="order">
           <span class="muted">${t("order")}</span>
@@ -411,7 +412,7 @@ let $ = class extends j {
                   <div class="badges">
                     ${i.photo_id === e ? o`<span class="chip ok">${t("showing")}</span>` : n}
                     ${i.photo_id === s ? o`<span class="chip">${t("up_next")}</span>` : n}
-                    ${r ? o`<span class="chip" title=${t("custom")}>${u(xt)}</span>` : n}
+                    ${r ? o`<span class="chip" title=${t("custom")}>${u(wt)}</span>` : n}
                   </div>
                   <div class="caption">
                     <span class="name" title=${i.name}>${i.name}</span>
@@ -420,7 +421,7 @@ let $ = class extends j {
                       title=${i.enabled ? t("in_rotation") : t("not_in_rotation")}
                       @click=${(a) => this.toggleEnabled(a, i)}
                     >
-                      ${u(i.enabled ? wt : _t)}
+                      ${u(i.enabled ? _t : kt)}
                     </button>
                   </div>
                 </div>`;
@@ -436,7 +437,7 @@ let $ = class extends j {
     `;
   }
 };
-$.styles = [
+x.styles = [
   A,
   E`
       :host {
@@ -568,42 +569,42 @@ $.styles = [
 ];
 P([
   d({ attribute: !1 })
-], $.prototype, "hass", 2);
+], x.prototype, "hass", 2);
 P([
   d({ attribute: !1 })
-], $.prototype, "frame", 2);
+], x.prototype, "frame", 2);
 P([
   d({ attribute: !1 })
-], $.prototype, "photos", 2);
+], x.prototype, "photos", 2);
 P([
   l()
-], $.prototype, "dropActive", 2);
+], x.prototype, "dropActive", 2);
 P([
   l()
-], $.prototype, "uploading", 2);
+], x.prototype, "uploading", 2);
 P([
   l()
-], $.prototype, "uploadErrors", 2);
+], x.prototype, "uploadErrors", 2);
 P([
   l()
-], $.prototype, "error", 2);
+], x.prototype, "error", 2);
 P([
   l()
-], $.prototype, "importOpen", 2);
+], x.prototype, "importOpen", 2);
 P([
   l()
-], $.prototype, "dragId", 2);
+], x.prototype, "dragId", 2);
 P([
   l()
-], $.prototype, "dragOverId", 2);
-$ = P([
-  I("pp-library")
-], $);
-const ie = 3e3;
-let Q = null;
-const re = (t) => new Promise((e) => setTimeout(e, t));
-function ae(t) {
-  return customElements.get("ha-code-editor") ? Promise.resolve(!0) : (Q || (Q = (async () => {
+], x.prototype, "dragOverId", 2);
+x = P([
+  S("pp-library")
+], x);
+const re = 3e3;
+let Y = null;
+const ae = (t) => new Promise((e) => setTimeout(e, t));
+function oe(t) {
+  return customElements.get("ha-code-editor") ? Promise.resolve(!0) : (Y || (Y = (async () => {
     let e = null;
     try {
       const s = await window.loadCardHelpers?.();
@@ -611,19 +612,19 @@ function ae(t) {
         const r = await (await s.createCardElement({ type: "markdown", content: "" }))?.constructor?.getConfigElement?.();
         r && (r.hass = t, r.setConfig?.({ type: "markdown", content: "" }), e = document.createElement("div"), e.style.cssText = "position:fixed;left:-10000px;top:0;width:400px;height:300px;overflow:hidden", e.setAttribute("aria-hidden", "true"), e.append(r), document.body.append(e));
       }
-      await Promise.race([customElements.whenDefined("ha-code-editor"), re(ie)]);
+      await Promise.race([customElements.whenDefined("ha-code-editor"), ae(re)]);
     } catch {
     } finally {
       e?.remove();
     }
     return !!customElements.get("ha-code-editor");
-  })()), Q);
+  })()), Y);
 }
-function oe(t, e) {
+function ne(t, e) {
   const s = t?.codemirror;
   return !s?.dispatch || !s.state?.replaceSelection ? !1 : (s.dispatch(s.state.replaceSelection(e)), s.focus?.(), !0);
 }
-class K {
+class J {
   /**
    * `run` reads the current draft itself and should drop its result (or error)
    * when `stale()` says a newer draft is waiting. `onBusy` reports whether work
@@ -659,12 +660,12 @@ class K {
     }
   }
 }
-var ne = Object.defineProperty, le = Object.getOwnPropertyDescriptor, h = (t, e, s, i) => {
-  for (var r = i > 1 ? void 0 : i ? le(e, s) : e, a = t.length - 1, p; a >= 0; a--)
+var le = Object.defineProperty, pe = Object.getOwnPropertyDescriptor, h = (t, e, s, i) => {
+  for (var r = i > 1 ? void 0 : i ? pe(e, s) : e, a = t.length - 1, p; a >= 0; a--)
     (p = t[a]) && (r = (i ? p(e, s, r) : p(r)) || r);
-  return i && r && ne(e, s, r), r;
+  return i && r && le(e, s, r), r;
 };
-const pe = [
+const de = [
   "top_left",
   "top_center",
   "top_right",
@@ -674,14 +675,14 @@ const pe = [
   "bottom_left",
   "bottom_center",
   "bottom_right"
-], it = ["black", "white", "red", "green", "blue", "yellow"], rt = {
+], rt = ["black", "white", "red", "green", "blue", "yellow"], at = {
   black: "#1f2226",
   white: "#f2f2f2",
   red: "#ea4843",
   green: "#067406",
   blue: "#416ce1",
   yellow: "#dbd529"
-}, de = "draft", he = 500, Y = "application/x-paperlessoffline-overlay", L = (t, e, s = "bottom_right") => ({
+}, he = "draft", ce = 500, B = "application/x-paperlessoffline-overlay", L = (t, e, s = "bottom_right") => ({
   name: t,
   template: e,
   enabled: !0,
@@ -696,7 +697,7 @@ const pe = [
   backing_color: "white",
   redraw: "change"
 });
-function ce(t, e) {
+function ue(t, e) {
   const s = Object.keys(e.states ?? {}).find((r) => r.startsWith("weather.")) ?? "weather.home", i = Object.keys(e.states ?? {}).find(
     (r) => r.startsWith("sensor.") && e.states[r].attributes.device_class === "temperature"
   ) ?? "sensor.outdoor_temperature";
@@ -711,16 +712,16 @@ function ce(t, e) {
     blank: L(t("preset_blank"), "")
   };
 }
-let x = class extends j {
+let $ = class extends j {
   constructor() {
     super(...arguments), this.frames = [], this.photos = [], this.overlays = [], this.editing = null, this.menuOpen = !1, this.error = null, this.notice = null, this.dragId = null;
   }
   willUpdate(t) {
-    t.has("frame") && this.load();
+    (t.has("frame") || t.has("photo")) && this.load();
   }
   async load() {
     try {
-      this.overlays = await Gt(this.hass, this.frame.entry_id);
+      this.overlays = await Ht(this.hass, this.frame.entry_id, this.photo?.photo_id);
     } catch (t) {
       this.error = c(t);
     }
@@ -731,13 +732,13 @@ let x = class extends j {
   async toggle(t, e) {
     t.stopPropagation();
     try {
-      await ut(this.hass, this.frame.entry_id, { ...e, enabled: !e.enabled }), await this.load();
+      await ft(this.hass, this.frame.entry_id, { ...e, enabled: !e.enabled }, this.photo?.photo_id), await this.load();
     } catch (s) {
       this.error = c(s);
     }
   }
   async drop(t, e) {
-    const s = t.dataTransfer?.getData(Y);
+    const s = t.dataTransfer?.getData(B);
     if (this.dragId = null, !s || s === e.overlay_id) return;
     t.preventDefault();
     const i = this.overlays.map((a) => a.overlay_id).filter((a) => a !== s);
@@ -745,7 +746,7 @@ let x = class extends j {
     const r = new Map(this.overlays.map((a) => [a.overlay_id, a]));
     this.overlays = i.map((a) => r.get(a));
     try {
-      await Kt(this.hass, this.frame.entry_id, i);
+      await Jt(this.hass, this.frame.entry_id, i, this.photo?.photo_id);
     } catch (a) {
       this.error = c(a);
     }
@@ -754,23 +755,23 @@ let x = class extends j {
     const e = t.target, s = this.frames.find((i) => i.entry_id === e.value);
     if (e.value = "", !!s)
       try {
-        const i = await Jt(this.hass, this.frame.entry_id, s.entry_id);
+        const i = await Xt(this.hass, this.frame.entry_id, s.entry_id);
         this.notice = m(this.hass)("copied_overlays", { n: i.copied, frame: s.title });
       } catch (i) {
         this.error = c(i);
       }
   }
   render() {
-    const t = m(this.hass), e = this.frames.filter((i) => i.entry_id !== this.frame.entry_id), s = ce(t, this.hass);
+    const t = m(this.hass), e = this.photo ? [] : this.frames.filter((i) => i.entry_id !== this.frame.entry_id), s = ue(t, this.hass);
     return o`<div class="card wrap">
       <div class="head">
         <div>
-          <h3>${t("overlays")}</h3>
-          <span class="muted">${t("overlays_hint")}</span>
+          <h3>${t(this.photo ? "photo_overlays" : "global_overlays")}</h3>
+          <span class="muted">${t(this.photo ? "photo_overlays_hint" : "global_overlays_hint")}</span>
         </div>
         <div class="actions">
           ${e.length && this.overlays.length ? o`<label class="copy">
-                ${u(nt)}
+                ${u(lt)}
                 <select @change=${this.copyTo} aria-label=${t("copy_overlays_to")}>
                   <option value="">${t("copy_overlays_to")}</option>
                   ${e.map((i) => o`<option value=${i.entry_id}>${i.title}</option>`)}
@@ -778,7 +779,7 @@ let x = class extends j {
               </label>` : n}
           <div class="menu-wrap">
             <button class="btn primary" @click=${() => this.menuOpen = !this.menuOpen}>
-              ${u(kt)} ${t("add_overlay")}
+              ${u(Pt)} ${t("add_overlay")}
             </button>
             ${this.menuOpen ? o`<div class="menu card">
                   ${["sensor", "weather", "date", "blank"].map(
@@ -796,16 +797,16 @@ let x = class extends j {
                 class=${this.dragId === i.overlay_id ? "dragging" : ""}
                 draggable="true"
                 @dragstart=${(r) => {
-        this.dragId = i.overlay_id, r.dataTransfer?.setData(Y, i.overlay_id);
+        this.dragId = i.overlay_id, r.dataTransfer?.setData(B, i.overlay_id);
       }}
-                @dragover=${(r) => r.dataTransfer?.types.includes(Y) && r.preventDefault()}
+                @dragover=${(r) => r.dataTransfer?.types.includes(B) && r.preventDefault()}
                 @drop=${(r) => this.drop(r, i)}
                 @dragend=${() => this.dragId = null}
                 @click=${() => this.editing = { ...i }}
               >
-                <span class="grip">${u(Pt)}</span>
+                <span class="grip">${u(Ot)}</span>
                 <span class="body">
-                  <span class="name">${u(Ot)} ${i.name}</span>
+                  <span class="name">${u(Et)} ${i.name}</span>
                   <code>${i.template.split(`
 `)[0]}</code>
                   ${i.last_error ? o`<span class="error small">${t("overlay_error", { error: i.last_error })}</span>` : i.last_text ? o`<span class="muted small">${t("shows_now", { text: i.last_text })}</span>` : n}
@@ -816,19 +817,22 @@ let x = class extends j {
                 </label>
               </li>`
     )}
-          </ul>` : o`<p class="muted empty">${t("no_overlays")}</p>`}
+          </ul>` : o`<p class="muted empty">${t(this.photo ? "no_photo_overlays" : "no_overlays")}</p>`}
       ${this.editing ? o`<pp-overlay-editor
             .hass=${this.hass}
             .frame=${this.frame}
             .photos=${this.photos}
+            .photo=${this.photo}
             .overlays=${this.overlays}
             .overlay=${this.editing}
-            @closed=${() => (this.editing = null, this.load())}
+            @closed=${(i) => {
+      i.stopPropagation(), this.editing = null, this.load();
+    }}
           ></pp-overlay-editor>` : n}
     </div>`;
   }
 };
-x.styles = [
+$.styles = [
   A,
   E`
       .wrap {
@@ -943,40 +947,43 @@ x.styles = [
 ];
 h([
   d({ attribute: !1 })
-], x.prototype, "hass", 2);
+], $.prototype, "hass", 2);
 h([
   d({ attribute: !1 })
-], x.prototype, "frame", 2);
+], $.prototype, "frame", 2);
 h([
   d({ attribute: !1 })
-], x.prototype, "frames", 2);
+], $.prototype, "frames", 2);
 h([
   d({ attribute: !1 })
-], x.prototype, "photos", 2);
+], $.prototype, "photos", 2);
+h([
+  d({ attribute: !1 })
+], $.prototype, "photo", 2);
 h([
   l()
-], x.prototype, "overlays", 2);
+], $.prototype, "overlays", 2);
 h([
   l()
-], x.prototype, "editing", 2);
+], $.prototype, "editing", 2);
 h([
   l()
-], x.prototype, "menuOpen", 2);
+], $.prototype, "menuOpen", 2);
 h([
   l()
-], x.prototype, "error", 2);
+], $.prototype, "error", 2);
 h([
   l()
-], x.prototype, "notice", 2);
+], $.prototype, "notice", 2);
 h([
   l()
-], x.prototype, "dragId", 2);
-x = h([
-  I("pp-overlays")
-], x);
-let y = class extends j {
+], $.prototype, "dragId", 2);
+$ = h([
+  S("pp-overlays")
+], $);
+let v = class extends j {
   constructor() {
-    super(...arguments), this.photos = [], this.overlays = [], this.preview = null, this.aspect = "3 / 5", this.result = null, this.sampleId = null, this.rendering = !1, this.entityQuery = null, this.error = null, this.codeEditor = !1, this.queue = new K(
+    super(...arguments), this.photos = [], this.overlays = [], this.preview = null, this.aspect = "3 / 5", this.result = null, this.sampleId = null, this.rendering = !1, this.entityQuery = null, this.error = null, this.codeEditor = !1, this.queue = new J(
       (t) => this.loadPreview(t),
       (t) => this.rendering = t
     ), this.onKey = (t) => {
@@ -984,24 +991,24 @@ let y = class extends j {
     };
   }
   connectedCallback() {
-    super.connectedCallback(), window.addEventListener("keydown", this.onKey), ae(this.hass).then((t) => this.codeEditor = t);
+    super.connectedCallback(), window.addEventListener("keydown", this.onKey), oe(this.hass).then((t) => this.codeEditor = t);
   }
   disconnectedCallback() {
     super.disconnectedCallback(), window.removeEventListener("keydown", this.onKey), this.queue.cancel();
   }
   willUpdate(t) {
-    t.has("overlay") && (this.draft = { ...this.overlay }, this.sampleId = this.photos[0]?.photo_id ?? null, this.schedule(0));
+    t.has("overlay") && (this.draft = { ...this.overlay }, this.sampleId = this.photo?.photo_id ?? this.photos[0]?.photo_id ?? null, this.schedule(0));
   }
   set(t, e) {
     this.draft = { ...this.draft, [t]: e }, this.schedule();
   }
-  schedule(t = he) {
+  schedule(t = ce) {
     this.queue.schedule(t);
   }
   async loadPreview(t) {
-    const e = this.draft.overlay_id ?? de, s = { ...this.draft, overlay_id: e }, i = this.overlays.some((r) => r.overlay_id === e) ? this.overlays.map((r) => r.overlay_id === e ? s : r) : [...this.overlays, s];
+    const e = this.draft.overlay_id ?? he, s = { ...this.draft, overlay_id: e }, i = this.overlays.some((r) => r.overlay_id === e) ? this.overlays.map((r) => r.overlay_id === e ? s : r) : [...this.overlays, s];
     try {
-      const r = await Xt(this.hass, this.frame.entry_id, i, this.sampleId);
+      const r = await Vt(this.hass, this.frame.entry_id, i, this.sampleId, !!this.photo);
       if (t()) return;
       this.preview = r.image, this.aspect = `${r.width} / ${r.height}`, this.result = r.results[e] ?? null;
     } catch (r) {
@@ -1010,13 +1017,13 @@ let y = class extends j {
   }
   insertEntity(t) {
     const e = this.hass.states[t]?.attributes.unit_of_measurement, s = `{{ states('${t}') }}${e ? ` ${e}` : ""}`;
-    if (this.entityQuery = null, oe(this.renderRoot.querySelector("ha-code-editor.template"), s)) return;
+    if (this.entityQuery = null, ne(this.renderRoot.querySelector("ha-code-editor.template"), s)) return;
     const i = this.renderRoot.querySelector("textarea.template"), r = this.draft.template, a = i?.selectionStart ?? r.length, p = i?.selectionEnd ?? r.length;
     this.set("template", r.slice(0, a) + s + r.slice(p)), this.entityQuery = null;
   }
   async save() {
     try {
-      await ut(this.hass, this.frame.entry_id, this.draft), this.close();
+      await ft(this.hass, this.frame.entry_id, this.draft, this.photo?.photo_id), this.close();
     } catch (t) {
       this.error = c(t);
     }
@@ -1024,7 +1031,7 @@ let y = class extends j {
   async deleteClicked() {
     if (!this.draft.overlay_id) return this.close();
     try {
-      await Ht(this.hass, this.frame.entry_id, this.draft.overlay_id), this.close();
+      await Kt(this.hass, this.frame.entry_id, this.draft.overlay_id, this.photo?.photo_id), this.close();
     } catch (t) {
       this.error = c(t);
     }
@@ -1075,7 +1082,7 @@ let y = class extends j {
             aria-label=${t("overlay_name")}
             @input=${(s) => this.set("name", s.target.value)}
           />
-          <button class="icon-btn" title=${t("close")} @click=${this.close}>${u(H)}</button>
+          <button class="icon-btn" title=${t("close")} @click=${this.close}>${u(K)}</button>
         </header>
         <div class="body">
           <section class="fields">
@@ -1113,7 +1120,7 @@ let y = class extends j {
               <div class="field">
                 ${t("position")}
                 <div class="anchors">
-                  ${pe.map(
+                  ${de.map(
       (s) => o`<button
                       class=${e.anchor === s ? "on" : ""}
                       title=${s}
@@ -1156,10 +1163,10 @@ let y = class extends j {
               <div class="field">
                 ${t("text_color")}
                 <div class="swatches">
-                  ${it.map(
+                  ${rt.map(
       (s) => o`<button
                       class=${e.text_color === s ? "on" : ""}
-                      style="background:${rt[s]}"
+                      style="background:${at[s]}"
                       title=${t(`color_${s}`)}
                       @click=${() => this.set("text_color", s)}
                     ></button>`
@@ -1171,10 +1178,10 @@ let y = class extends j {
             ${e.backing === "box" ? o`<div class="field">
                   ${t("box_color")}
                   <div class="swatches">
-                    ${it.map(
+                    ${rt.map(
       (s) => o`<button
                         class=${e.backing_color === s ? "on" : ""}
-                        style="background:${rt[s]}"
+                        style="background:${at[s]}"
                         title=${t(`color_${s}`)}
                         @click=${() => this.set("backing_color", s)}
                       ></button>`
@@ -1212,7 +1219,7 @@ let y = class extends j {
               <span class="h">${t("preview")}</span>
               ${this.rendering ? o`<span class="muted small">${t("rendering")}</span>` : n}
             </div>
-            ${this.photos.length ? o`<select
+            ${this.photos.length && !this.photo ? o`<select
                   aria-label=${t("sample_photo")}
                   @change=${(s) => {
       this.sampleId = s.target.value, this.schedule(0);
@@ -1228,7 +1235,7 @@ let y = class extends j {
         </div>
         ${this.error ? o`<div class="msg error">${t("error", { error: this.error })}</div>` : n}
         <footer>
-          <button class="btn danger" @click=${this.deleteClicked}>${u(lt)} ${t("delete")}</button>
+          <button class="btn danger" @click=${this.deleteClicked}>${u(pt)} ${t("delete")}</button>
           <span class="spacer"></span>
           <button class="btn" @click=${this.close}>${t("cancel")}</button>
           <button class="btn primary" @click=${this.save}>${t("save")}</button>
@@ -1237,7 +1244,7 @@ let y = class extends j {
     </div>`;
   }
 };
-y.styles = [
+v.styles = [
   A,
   E`
       .scrim {
@@ -1455,55 +1462,58 @@ y.styles = [
 ];
 h([
   d({ attribute: !1 })
-], y.prototype, "hass", 2);
+], v.prototype, "hass", 2);
 h([
   d({ attribute: !1 })
-], y.prototype, "frame", 2);
+], v.prototype, "frame", 2);
 h([
   d({ attribute: !1 })
-], y.prototype, "photos", 2);
+], v.prototype, "photos", 2);
 h([
   d({ attribute: !1 })
-], y.prototype, "overlays", 2);
+], v.prototype, "overlays", 2);
 h([
   d({ attribute: !1 })
-], y.prototype, "overlay", 2);
+], v.prototype, "overlay", 2);
+h([
+  d({ attribute: !1 })
+], v.prototype, "photo", 2);
 h([
   l()
-], y.prototype, "draft", 2);
+], v.prototype, "draft", 2);
 h([
   l()
-], y.prototype, "preview", 2);
+], v.prototype, "preview", 2);
 h([
   l()
-], y.prototype, "aspect", 2);
+], v.prototype, "aspect", 2);
 h([
   l()
-], y.prototype, "result", 2);
+], v.prototype, "result", 2);
 h([
   l()
-], y.prototype, "sampleId", 2);
+], v.prototype, "sampleId", 2);
 h([
   l()
-], y.prototype, "rendering", 2);
+], v.prototype, "rendering", 2);
 h([
   l()
-], y.prototype, "entityQuery", 2);
+], v.prototype, "entityQuery", 2);
 h([
   l()
-], y.prototype, "error", 2);
+], v.prototype, "error", 2);
 h([
   l()
-], y.prototype, "codeEditor", 2);
-y = h([
-  I("pp-overlay-editor")
-], y);
-var ue = Object.defineProperty, fe = Object.getOwnPropertyDescriptor, W = (t, e, s, i) => {
-  for (var r = i > 1 ? void 0 : i ? fe(e, s) : e, a = t.length - 1, p; a >= 0; a--)
+], v.prototype, "codeEditor", 2);
+v = h([
+  S("pp-overlay-editor")
+], v);
+var fe = Object.defineProperty, ge = Object.getOwnPropertyDescriptor, W = (t, e, s, i) => {
+  for (var r = i > 1 ? void 0 : i ? ge(e, s) : e, a = t.length - 1, p; a >= 0; a--)
     (p = t[a]) && (r = (i ? p(e, s, r) : p(r)) || r);
-  return i && r && ue(e, s, r), r;
+  return i && r && fe(e, s, r), r;
 };
-const at = 5, M = (t, e = 0, s = 1) => Math.min(s, Math.max(e, t));
+const ot = 5, M = (t, e = 0, s = 1) => Math.min(s, Math.max(e, t));
 let D = class extends j {
   constructor() {
     super(...arguments), this.src = "", this.crop = null, this.focal = { x: 0.5, y: 0.5 }, this.aspect = null, this.draft = null, this.start = null;
@@ -1523,11 +1533,11 @@ let D = class extends j {
     this.start = { x: e.x, y: e.y, px: t.clientX, py: t.clientY, mode: s ? "move" : "new", orig: this.crop ?? void 0 };
   }
   onMove(t) {
-    if (!this.start || Math.hypot(t.clientX - this.start.px, t.clientY - this.start.py) < at) return;
+    if (!this.start || Math.hypot(t.clientX - this.start.px, t.clientY - this.start.py) < ot) return;
     const e = this.point(t);
     if (this.start.mode === "move" && this.start.orig) {
-      const [R, ft, Z, tt] = this.start.orig;
-      this.draft = [M(R + e.x - this.start.x, 0, 1 - Z), M(ft + e.y - this.start.y, 0, 1 - tt), Z, tt];
+      const [R, gt, tt, et] = this.start.orig;
+      this.draft = [M(R + e.x - this.start.x, 0, 1 - tt), M(gt + e.y - this.start.y, 0, 1 - et), tt, et];
       return;
     }
     let s = Math.abs(e.x - this.start.x), i = Math.abs(e.y - this.start.y);
@@ -1535,12 +1545,12 @@ let D = class extends j {
       const R = this.aspect * e.r.height / e.r.width;
       s / i > R ? s = i * R : i = s / R;
     }
-    const r = e.x < this.start.x ? this.start.x - s : this.start.x, a = e.y < this.start.y ? this.start.y - i : this.start.y, p = M(r, 0, 1 - s), V = M(a, 0, 1 - i);
-    this.draft = [p, V, Math.min(s, 1 - p), Math.min(i, 1 - V)];
+    const r = e.x < this.start.x ? this.start.x - s : this.start.x, a = e.y < this.start.y ? this.start.y - i : this.start.y, p = M(r, 0, 1 - s), Z = M(a, 0, 1 - i);
+    this.draft = [p, Z, Math.min(s, 1 - p), Math.min(i, 1 - Z)];
   }
   onUp(t) {
     if (!this.start) return;
-    const e = Math.hypot(t.clientX - this.start.px, t.clientY - this.start.py) >= at;
+    const e = Math.hypot(t.clientX - this.start.px, t.clientY - this.start.py) >= ot;
     if (e && this.draft && this.draft[2] > 0.02 && this.draft[3] > 0.02)
       this.fire("crop-changed", { crop: this.draft.map((s) => Math.round(s * 1e4) / 1e4) });
     else if (!e) {
@@ -1629,33 +1639,33 @@ W([
   l()
 ], D.prototype, "draft", 2);
 W([
-  Mt("img")
+  At("img")
 ], D.prototype, "img", 2);
 D = W([
-  I("pp-crop-area")
+  S("pp-crop-area")
 ], D);
-var ge = Object.defineProperty, me = Object.getOwnPropertyDescriptor, N = (t, e, s, i) => {
-  for (var r = i > 1 ? void 0 : i ? me(e, s) : e, a = t.length - 1, p; a >= 0; a--)
+var me = Object.defineProperty, ve = Object.getOwnPropertyDescriptor, N = (t, e, s, i) => {
+  for (var r = i > 1 ? void 0 : i ? ve(e, s) : e, a = t.length - 1, p; a >= 0; a--)
     (p = t[a]) && (r = (i ? p(e, s, r) : p(r)) || r);
-  return i && r && ge(e, s, r), r;
+  return i && r && me(e, s, r), r;
 };
-const B = {
+const G = {
   dither: ["floyd_steinberg", "atkinson", "jarvis_judice_ninke", "sierra2", "bayer", "none"],
   fit: ["cover", "contain", "stretch"],
   background: ["white", "black"],
   palette: ["perceived", "pure"]
-}, ve = ["brightness", "contrast", "saturation"];
+}, ye = ["brightness", "contrast", "saturation"];
 let F = class extends j {
   constructor() {
     super(...arguments), this.value = {}, this.withPalette = !1;
   }
   get fields() {
     const t = [];
-    return this.withPalette && t.push("palette"), t.push("dither", "serpentine", "fit", "background", ...ve), t;
+    return this.withPalette && t.push("palette"), t.push("dither", "serpentine", "fit", "background", ...ye), t;
   }
   label(t, e) {
     const s = m(this.hass);
-    return typeof e == "boolean" ? s(e ? "on" : "off") : typeof e == "number" ? e.toFixed(2) : B[t] ? s(`${t}_${e}`) : String(e);
+    return typeof e == "boolean" ? s(e ? "on" : "off") : typeof e == "number" ? e.toFixed(2) : G[t] ? s(`${t}_${e}`) : String(e);
   }
   emit(t) {
     this.dispatchEvent(new CustomEvent("value-changed", { detail: { value: t }, bubbles: !0, composed: !0 }));
@@ -1669,13 +1679,13 @@ let F = class extends j {
   }
   control(t, e, s) {
     const i = m(this.hass);
-    if (B[t])
+    if (G[t])
       return o`<select
         .value=${String(e)}
         ?disabled=${s}
         @change=${(a) => this.setField(t, a.target.value)}
       >
-        ${B[t].map(
+        ${G[t].map(
         (a) => o`<option value=${a} ?selected=${a === e}>${i(`${t}_${a}`)}</option>`
       )}
       </select>`;
@@ -1791,24 +1801,24 @@ N([
   d({ type: Boolean, attribute: "with-palette" })
 ], F.prototype, "withPalette", 2);
 F = N([
-  I("pp-render-settings")
+  S("pp-render-settings")
 ], F);
-function J(t, ...e) {
+function X(t, ...e) {
   const s = { ...t };
   for (const i of e)
     for (const [r, a] of Object.entries(i ?? {}))
       a != null && r in t && (s[r] = a);
   return s;
 }
-var ye = Object.defineProperty, be = Object.getOwnPropertyDescriptor, b = (t, e, s, i) => {
-  for (var r = i > 1 ? void 0 : i ? be(e, s) : e, a = t.length - 1, p; a >= 0; a--)
+var be = Object.defineProperty, $e = Object.getOwnPropertyDescriptor, b = (t, e, s, i) => {
+  for (var r = i > 1 ? void 0 : i ? $e(e, s) : e, a = t.length - 1, p; a >= 0; a--)
     (p = t[a]) && (r = (i ? p(e, s, r) : p(r)) || r);
-  return i && r && ye(e, s, r), r;
+  return i && r && be(e, s, r), r;
 };
-const $e = 350, ot = ["dither", "serpentine", "fit", "background", "brightness", "contrast", "saturation"];
-let v = class extends j {
+const xe = 350, nt = ["dither", "serpentine", "fit", "background", "brightness", "contrast", "saturation"];
+let y = class extends j {
   constructor() {
-    super(...arguments), this.frames = [], this.draft = {}, this.name = "", this.enabled = !0, this.hideOverlays = !1, this.preview = null, this.rendering = !1, this.lockAspect = !0, this.error = null, this.notice = null, this.busy = !1, this.previewQueue = new K(
+    super(...arguments), this.frames = [], this.draft = {}, this.name = "", this.enabled = !0, this.hideOverlays = !1, this.preview = null, this.rendering = !1, this.lockAspect = !0, this.error = null, this.notice = null, this.busy = !1, this.previewQueue = new J(
       (t) => this.loadPreview(t),
       (t) => this.rendering = t
     ), this.onKey = (t) => {
@@ -1825,7 +1835,7 @@ let v = class extends j {
     t.has("photo") && this.photo && (this.draft = structuredClone(this.photo.overrides ?? {}), this.name = this.photo.name, this.enabled = this.photo.enabled, this.hideOverlays = this.photo.hide_frame_overlays ?? !1, this.lockAspect = !0, this.schedulePreview(0));
   }
   get resolved() {
-    return J(this.inherited, this.draft);
+    return X(this.inherited, this.draft);
   }
   get rotation() {
     return this.draft.rotation ?? 0;
@@ -1841,12 +1851,12 @@ let v = class extends j {
     for (const i of e) delete s[i];
     this.draft = s, this.schedulePreview();
   }
-  schedulePreview(t = $e) {
+  schedulePreview(t = xe) {
     this.previewQueue.schedule(t);
   }
   async loadPreview(t) {
     try {
-      const e = await ht(this.hass, this.frame.entry_id, this.photo.photo_id, {
+      const e = await ct(this.hass, this.frame.entry_id, this.photo.photo_id, {
         overrides: this.draft
       });
       t() || (this.preview = e.image);
@@ -1865,14 +1875,14 @@ let v = class extends j {
   }
   onSettings(t) {
     const e = t.detail.value, s = { ...this.draft };
-    for (const i of ot)
+    for (const i of nt)
       e[i] === void 0 ? delete s[i] : s[i] = e[i];
     this.draft = s, this.schedulePreview();
   }
   async save() {
     this.busy = !0, this.error = null;
     try {
-      await pt(this.hass, this.frame.entry_id, this.photo.photo_id, {
+      await dt(this.hass, this.frame.entry_id, this.photo.photo_id, {
         name: this.name.trim() || this.photo.name,
         enabled: this.enabled,
         overrides: this.draft,
@@ -1888,14 +1898,14 @@ let v = class extends j {
     const t = m(this.hass);
     if (confirm(t("delete_confirm", { name: this.photo.name })))
       try {
-        await Ft(this.hass, this.frame.entry_id, this.photo.photo_id), this.close();
+        await Wt(this.hass, this.frame.entry_id, this.photo.photo_id), this.close();
       } catch (e) {
         this.error = c(e);
       }
   }
   async showNext() {
     try {
-      await Nt(this.hass, this.frame.entry_id, this.photo.photo_id), this.notice = m(this.hass)("pending");
+      await Lt(this.hass, this.frame.entry_id, this.photo.photo_id), this.notice = m(this.hass)("pending");
     } catch (t) {
       this.error = c(t);
     }
@@ -1904,7 +1914,7 @@ let v = class extends j {
     const e = t.target, s = this.frames.find((i) => i.entry_id === e.value);
     if (e.value = "", !!s)
       try {
-        await Rt(this.hass, this.frame.entry_id, this.photo.photo_id, s.entry_id), this.notice = m(this.hass)("copied", { frame: s.title });
+        await Nt(this.hass, this.frame.entry_id, this.photo.photo_id, s.entry_id), this.notice = m(this.hass)("copied", { frame: s.title });
       } catch (i) {
         this.error = c(i);
       }
@@ -1915,7 +1925,7 @@ let v = class extends j {
   render() {
     if (!this.photo) return n;
     const t = m(this.hass), e = this.resolved.fit === "cover", s = this.frames.filter((a) => a.entry_id !== this.frame.entry_id), i = {};
-    for (const a of ot)
+    for (const a of nt)
       this.draft[a] !== void 0 && (i[a] = this.draft[a]);
     const r = `aspect-ratio:${this.frame.canvas.width}/${this.frame.canvas.height}`;
     return o`<div class="scrim" @click=${(a) => a.target === a.currentTarget && this.close()}>
@@ -1928,7 +1938,7 @@ let v = class extends j {
             aria-label=${t("name")}
             @input=${(a) => this.name = a.target.value}
           />
-          <button class="icon-btn" title=${t("close")} @click=${this.close}>${u(H)}</button>
+          <button class="icon-btn" title=${t("close")} @click=${this.close}>${u(K)}</button>
         </header>
         <div class="body">
           <section class="visual">
@@ -1936,7 +1946,7 @@ let v = class extends j {
               <span>${t("crop")}</span>
               <span class="tools">
                 <button class="icon-btn" title=${t("rotate_left")} @click=${() => this.rotate(-90)}>
-                  ${u(Et)}
+                  ${u(St)}
                 </button>
                 <button class="icon-btn" title=${t("rotate_right")} @click=${() => this.rotate(90)}>
                   ${u(It)}
@@ -1998,6 +2008,7 @@ let v = class extends j {
               />
               ${t("hide_frame_overlays")}
             </label>
+            <pp-overlays .hass=${this.hass} .frame=${this.frame} .photos=${[this.photo]} .photo=${this.photo}></pp-overlays>
             <div class="section-title"><span>${t("rendering_settings")}</span></div>
             <pp-render-settings
               .hass=${this.hass}
@@ -2010,10 +2021,10 @@ let v = class extends j {
         ${this.error ? o`<div class="msg error">${t("error", { error: this.error })}</div>` : n}
         ${this.notice ? o`<div class="msg">${this.notice}</div>` : n}
         <footer>
-          <button class="btn danger" @click=${this.deleteClicked}>${u(lt)} ${t("delete")}</button>
-          <button class="btn" @click=${this.showNext}>${u(St)} ${t("show_next")}</button>
+          <button class="btn danger" @click=${this.deleteClicked}>${u(pt)} ${t("delete")}</button>
+          <button class="btn" @click=${this.showNext}>${u(Dt)} ${t("show_next")}</button>
           ${s.length ? o`<label class="copy">
-                ${u(nt)}
+                ${u(lt)}
                 <select @change=${this.copyTo} aria-label=${t("copy_to")}>
                   <option value="">${t("copy_to")}</option>
                   ${s.map((a) => o`<option value=${a.entry_id}>${a.title}</option>`)}
@@ -2030,7 +2041,7 @@ let v = class extends j {
     </div>`;
   }
 };
-v.styles = [
+y.styles = [
   A,
   E`
       .scrim {
@@ -2164,60 +2175,60 @@ v.styles = [
 ];
 b([
   d({ attribute: !1 })
-], v.prototype, "hass", 2);
+], y.prototype, "hass", 2);
 b([
   d({ attribute: !1 })
-], v.prototype, "frame", 2);
+], y.prototype, "frame", 2);
 b([
   d({ attribute: !1 })
-], v.prototype, "frames", 2);
+], y.prototype, "frames", 2);
 b([
   d({ attribute: !1 })
-], v.prototype, "photo", 2);
+], y.prototype, "photo", 2);
 b([
   d({ attribute: !1 })
-], v.prototype, "inherited", 2);
+], y.prototype, "inherited", 2);
 b([
   l()
-], v.prototype, "draft", 2);
+], y.prototype, "draft", 2);
 b([
   l()
-], v.prototype, "name", 2);
+], y.prototype, "name", 2);
 b([
   l()
-], v.prototype, "enabled", 2);
+], y.prototype, "enabled", 2);
 b([
   l()
-], v.prototype, "hideOverlays", 2);
+], y.prototype, "hideOverlays", 2);
 b([
   l()
-], v.prototype, "preview", 2);
+], y.prototype, "preview", 2);
 b([
   l()
-], v.prototype, "rendering", 2);
+], y.prototype, "rendering", 2);
 b([
   l()
-], v.prototype, "lockAspect", 2);
+], y.prototype, "lockAspect", 2);
 b([
   l()
-], v.prototype, "error", 2);
+], y.prototype, "error", 2);
 b([
   l()
-], v.prototype, "notice", 2);
+], y.prototype, "notice", 2);
 b([
   l()
-], v.prototype, "busy", 2);
-v = b([
-  I("pp-photo-editor")
-], v);
-var xe = Object.defineProperty, we = Object.getOwnPropertyDescriptor, g = (t, e, s, i) => {
-  for (var r = i > 1 ? void 0 : i ? we(e, s) : e, a = t.length - 1, p; a >= 0; a--)
+], y.prototype, "busy", 2);
+y = b([
+  S("pp-photo-editor")
+], y);
+var we = Object.defineProperty, _e = Object.getOwnPropertyDescriptor, g = (t, e, s, i) => {
+  for (var r = i > 1 ? void 0 : i ? _e(e, s) : e, a = t.length - 1, p; a >= 0; a--)
     (p = t[a]) && (r = (i ? p(e, s, r) : p(r)) || r);
-  return i && r && xe(e, s, r), r;
+  return i && r && we(e, s, r), r;
 };
-const _e = 400, ke = ["portrait", "landscape", "portrait_flipped", "landscape_flipped"], X = class X extends j {
+const ke = 400, Pe = ["portrait", "landscape", "portrait_flipped", "landscape_flipped"], V = class V extends j {
   constructor() {
-    super(...arguments), this.preview = null, this.previewAspect = "5 / 3", this.rendering = !1, this.error = null, this.status = null, this.queue = new K(
+    super(...arguments), this.preview = null, this.previewAspect = "5 / 3", this.rendering = !1, this.error = null, this.status = null, this.queue = new J(
       (e) => this.loadPreview(e),
       (e) => this.rendering = e
     );
@@ -2225,7 +2236,7 @@ const _e = 400, ke = ["portrait", "landscape", "portrait_flipped", "landscape_fl
   disconnectedCallback() {
     super.disconnectedCallback(), this.queue.cancel();
   }
-  schedulePreview(e = _e) {
+  schedulePreview(e = ke) {
     this.queue.schedule(e);
   }
   async loadPreview(e) {
@@ -2235,7 +2246,7 @@ const _e = 400, ke = ["portrait", "landscape", "portrait_flipped", "landscape_fl
       return;
     }
     try {
-      const i = await ht(this.hass, s.frame.entry_id, s.photoId, s.settings);
+      const i = await ct(this.hass, s.frame.entry_id, s.photoId, s.settings);
       if (e()) return;
       this.preview = i.image, this.previewAspect = `${i.width} / ${i.height}`;
     } catch (i) {
@@ -2257,7 +2268,7 @@ const _e = 400, ke = ["portrait", "landscape", "portrait_flipped", "landscape_fl
     </div>`;
   }
 };
-X.styles = [
+V.styles = [
   A,
   E`
       :host {
@@ -2325,7 +2336,7 @@ X.styles = [
       }
     `
 ];
-let k = X;
+let k = V;
 g([
   d({ attribute: !1 })
 ], k.prototype, "hass", 2);
@@ -2363,7 +2374,7 @@ let C = class extends k {
   async save() {
     this.error = null;
     try {
-      await dt(this.hass, this.frame.entry_id, {
+      await ht(this.hass, this.frame.entry_id, {
         render_defaults: this.draft,
         mounting: this.mounting,
         interval: Math.max(1, this.intervalMin) * 60
@@ -2374,7 +2385,7 @@ let C = class extends k {
   }
   render() {
     if (!this.defaults) return n;
-    const t = m(this.hass), e = J(this.defaults.builtin, this.defaults.defaults), s = this.photos.length ? o`<label class="field">
+    const t = m(this.hass), e = X(this.defaults.builtin, this.defaults.defaults), s = this.photos.length ? o`<label class="field">
           <span class="muted">${t("sample_photo")}</span>
           <select
             @change=${(i) => {
@@ -2392,7 +2403,7 @@ let C = class extends k {
         <label class="field">
           ${t("mounting")}
           <select @change=${(i) => this.mounting = i.target.value}>
-            ${ke.map(
+            ${Pe.map(
       (i) => o`<option value=${i} ?selected=${i === this.mounting}>${t(`mounting_${i}`)}</option>`
     )}
           </select>
@@ -2453,7 +2464,7 @@ g([
   l()
 ], C.prototype, "sampleId", 2);
 C = g([
-  I("pp-frame-settings")
+  S("pp-frame-settings")
 ], C);
 let T = class extends k {
   constructor() {
@@ -2463,7 +2474,7 @@ let T = class extends k {
     t.has("defaults") && this.defaults && !t.get("defaults") && (this.draft = structuredClone(this.defaults.defaults ?? {})), t.has("frames") && !this.sampleFrameId && this.frames.length && this.pickFrame(this.frames.find((e) => e.photo_count)?.entry_id ?? this.frames[0].entry_id);
   }
   async pickFrame(t) {
-    this.sampleFrameId = t, this.samplePhotos = await G(this.hass, t), this.samplePhotoId = this.samplePhotos[0]?.photo_id ?? null, this.schedulePreview(0);
+    this.sampleFrameId = t, this.samplePhotos = await H(this.hass, t), this.samplePhotoId = this.samplePhotos[0]?.photo_id ?? null, this.schedulePreview(0);
   }
   get dirty() {
     return JSON.stringify(this.draft) !== JSON.stringify(this.defaults?.defaults ?? {});
@@ -2475,7 +2486,7 @@ let T = class extends k {
   async save() {
     this.error = null;
     try {
-      const t = await Qt(this.hass, this.draft);
+      const t = await Yt(this.hass, this.draft);
       this.defaults = { ...this.defaults, defaults: t.defaults }, this.status = "saved";
     } catch (t) {
       this.error = c(t);
@@ -2569,14 +2580,14 @@ g([
   l()
 ], T.prototype, "samplePhotoId", 2);
 T = g([
-  I("pp-global-settings")
+  S("pp-global-settings")
 ], T);
-var Pe = Object.defineProperty, Oe = Object.getOwnPropertyDescriptor, O = (t, e, s, i) => {
-  for (var r = i > 1 ? void 0 : i ? Oe(e, s) : e, a = t.length - 1, p; a >= 0; a--)
+var Oe = Object.defineProperty, Ee = Object.getOwnPropertyDescriptor, O = (t, e, s, i) => {
+  for (var r = i > 1 ? void 0 : i ? Ee(e, s) : e, a = t.length - 1, p; a >= 0; a--)
     (p = t[a]) && (r = (i ? p(e, s, r) : p(r)) || r);
-  return i && r && Pe(e, s, r), r;
+  return i && r && Oe(e, s, r), r;
 };
-const S = "global", Ee = 250;
+const I = "global", Se = 250;
 let w = class extends j {
   constructor() {
     super(...arguments), this.narrow = !1, this.frames = null, this.selected = null, this.tab = "photos", this.photos = [], this.defaults = null, this.editing = null, this.error = null, this.dirtyEntries = /* @__PURE__ */ new Set();
@@ -2592,15 +2603,15 @@ let w = class extends j {
     t.has("hass") && this.hass && !this.unsubscribe && this.isConnected && this.start();
   }
   start() {
-    this.unsubscribe = At(this.hass, (t) => {
-      this.dirtyEntries.add(t), window.clearTimeout(this.refreshTimer), this.refreshTimer = window.setTimeout(() => this.refresh(), Ee);
+    this.unsubscribe = Ft(this.hass, (t) => {
+      this.dirtyEntries.add(t), window.clearTimeout(this.refreshTimer), this.refreshTimer = window.setTimeout(() => this.refresh(), Se);
     }), this.loadAll();
   }
   async loadAll() {
     try {
-      const [t, e] = await Promise.all([et(this.hass), Ut(this.hass)]);
+      const [t, e] = await Promise.all([st(this.hass), Qt(this.hass)]);
       this.frames = t, this.defaults = e;
-      const s = this.route?.path?.replace(/^\//, "").split("/")[0], i = s && (s === S || t.some((r) => r.entry_id === s)) && s || t[0]?.entry_id || null;
+      const s = this.route?.path?.replace(/^\//, "").split("/")[0], i = s && (s === I || t.some((r) => r.entry_id === s)) && s || t[0]?.entry_id || null;
       i && await this.select(i);
     } catch (t) {
       this.error = c(t);
@@ -2610,18 +2621,18 @@ let w = class extends j {
     const t = new Set(this.dirtyEntries);
     this.dirtyEntries.clear();
     try {
-      this.frames = await et(this.hass), this.selected && this.selected !== S && (this.frames.some((e) => e.entry_id === this.selected) ? (t.has(this.selected) || t.has(null)) && (this.photos = await G(this.hass, this.selected)) : await this.select(this.frames[0]?.entry_id ?? S));
+      this.frames = await st(this.hass), this.selected && this.selected !== I && (this.frames.some((e) => e.entry_id === this.selected) ? (t.has(this.selected) || t.has(null)) && (this.photos = await H(this.hass, this.selected)) : await this.select(this.frames[0]?.entry_id ?? I));
     } catch (e) {
       this.error = c(e);
     }
   }
   async select(t) {
-    if (this.selected = t, this.editing = null, history.replaceState(null, "", `/paperlessoffline/${t}`), t === S) {
+    if (this.selected = t, this.editing = null, history.replaceState(null, "", `/paperlessoffline/${t}`), t === I) {
       this.photos = [];
       return;
     }
     try {
-      this.photos = await G(this.hass, t);
+      this.photos = await H(this.hass, t);
     } catch (e) {
       this.error = c(e);
     }
@@ -2647,7 +2658,7 @@ let w = class extends j {
           ${(this.frames ?? []).map(
       (e) => o`<option value=${e.entry_id} ?selected=${e.entry_id === this.selected}>${e.title}</option>`
     )}
-          <option value=${S} ?selected=${this.selected === S}>${t("global_defaults")}</option>
+          <option value=${I} ?selected=${this.selected === I}>${t("global_defaults")}</option>
         </select>
       </div>` : o`<nav>
       <div class="nav-title muted">${t("frames")}</div>
@@ -2656,20 +2667,20 @@ let w = class extends j {
           class="nav-item ${e.entry_id === this.selected ? "active" : ""}"
           @click=${() => this.select(e.entry_id)}
         >
-          ${u(Dt)}
+          ${u(Ct)}
           <span class="nav-text">
             <span>${e.title}</span>
-            <span class="muted small">${q(e.last_seen, this.hass, t("never"))}</span>
+            <span class="muted small">${U(e.last_seen, this.hass, t("never"))}</span>
           </span>
           ${e.pending.length ? o`<span class="dot" title=${t("pending")}></span>` : n}
         </button>`
     )}
       <hr />
       <button
-        class="nav-item ${this.selected === S ? "active" : ""}"
-        @click=${() => this.select(S)}
+        class="nav-item ${this.selected === I ? "active" : ""}"
+        @click=${() => this.select(I)}
       >
-        ${u(Ct)} <span class="nav-text">${t("global_defaults")}</span>
+        ${u(Tt)} <span class="nav-text">${t("global_defaults")}</span>
       </button>
     </nav>`;
   }
@@ -2692,14 +2703,14 @@ let w = class extends j {
         <h1>${t.title}</h1>
         <div class="muted">${t.panel.model} · ${t.client_id}</div>
         <div>
-          ${e("last_seen")}: <strong>${q(t.last_seen, this.hass, e("never"))}</strong>
+          ${e("last_seen")}: <strong>${U(t.last_seen, this.hass, e("never"))}</strong>
         </div>
         <div class="chips">
           ${t.pending.length ? o`<span class="chip warn">
                 ${e("pending")}: ${t.pending.map((a) => e(`pending_${a}`)).join(", ")}
               </span>` : o`<span class="chip ok">${e("in_sync")}</span>`}
           ${t.needs_reprovision ? o`<span class="chip warn">${e("needs_urls")}</span>` : t.overdue ? o`<span class="chip warn">${e("overdue")}</span>` : n}
-          ${t.ble?.voltage !== void 0 ? o`<span class="chip" title=${e("read_ago", { when: q(t.ble.read_at, this.hass, e("never")) })}>
+          ${t.ble?.voltage !== void 0 ? o`<span class="chip" title=${e("read_ago", { when: U(t.ble.read_at, this.hass, e("never")) })}>
                 ${e("battery", { volts: (t.ble.voltage / 1e3).toFixed(2) })}${t.ble.charging ? ` · ${e("charging")}` : t.ble.usb ? ` · ${e("usb")}` : ""}
               </span>` : n}
           ${t.override ? o`<span class="chip">
@@ -2711,9 +2722,9 @@ let w = class extends j {
           <button
             class="btn"
             ?disabled=${t.up_next.kind !== "photo" || t.enabled_count < 2}
-            @click=${() => Lt(this.hass, t.entry_id).catch((a) => this.error = c(a))}
+            @click=${() => qt(this.hass, t.entry_id).catch((a) => this.error = c(a))}
           >
-            ${u(Tt)} ${e("skip")}
+            ${u(jt)} ${e("skip")}
           </button>
         </div>
       </div>
@@ -2722,7 +2733,7 @@ let w = class extends j {
   renderMain() {
     const t = m(this.hass);
     if (this.frames === null) return o`<p class="muted">${t("loading")}</p>`;
-    if (this.selected === S)
+    if (this.selected === I)
       return o`<pp-global-settings
         .hass=${this.hass}
         .frames=${this.frames}
@@ -2765,7 +2776,7 @@ let w = class extends j {
             .frame=${e}
             .frames=${this.frames}
             .photo=${this.editing}
-            .inherited=${J(this.defaults.builtin, this.defaults.defaults, e.render_defaults)}
+            .inherited=${X(this.defaults.builtin, this.defaults.defaults, e.render_defaults)}
             @closed=${() => this.editing = null}
           ></pp-photo-editor>` : n}
     ` : o`<p class="muted empty">${t("no_frames")}</p>`;
@@ -2774,7 +2785,7 @@ let w = class extends j {
     const t = m(this.hass);
     return o`
       <header class="toolbar">
-        ${this.narrow ? o`<button class="icon-btn" title="Menu" @click=${this.toggleMenu}>${u(jt)}</button>` : n}
+        ${this.narrow ? o`<button class="icon-btn" title="Menu" @click=${this.toggleMenu}>${u(zt)}</button>` : n}
         <div class="app-title">${t("title")}</div>
       </header>
       <div class="layout">
@@ -3009,7 +3020,7 @@ O([
   l()
 ], w.prototype, "error", 2);
 w = O([
-  I("paperlessoffline-panel")
+  S("paperlessoffline-panel")
 ], w);
 export {
   w as PaperlessPanel

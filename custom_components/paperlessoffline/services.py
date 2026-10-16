@@ -64,12 +64,13 @@ _PHOTO_KEYS = RENDER_KEYS_SHARED + RENDER_KEYS_PHOTO_ONLY
 _FRAME_KEYS = RENDER_KEYS_SHARED + RENDER_KEYS_FRAME_ONLY
 
 _OVERLAY_OPTIONAL = {vol.Optional(k): v for k, v in OVERLAY_FIELDS.items()}
-_OVERLAY_REF = {**_ENTRY, vol.Required(ATTR_OVERLAY): cv.string}
+_OVERLAY_ENTRY: dict[Any, Any] = {**_ENTRY, vol.Optional(ATTR_PHOTO): cv.string}
+_OVERLAY_REF = {**_OVERLAY_ENTRY, vol.Required(ATTR_OVERLAY): cv.string}
 
 SCHEMAS: dict[str, vol.Schema] = {
     SERVICE_ADD_OVERLAY: vol.Schema(
         {
-            **_ENTRY,
+            **_OVERLAY_ENTRY,
             vol.Required("name"): cv.string,
             vol.Required("template"): cv.string,
             **{k: v for k, v in _OVERLAY_OPTIONAL.items() if str(k) not in ("name", "template")},
@@ -87,7 +88,7 @@ SCHEMAS: dict[str, vol.Schema] = {
             vol.Optional(ATTR_REPLACE, default=False): cv.boolean,
         }
     ),
-    SERVICE_LIST_OVERLAYS: vol.Schema(_ENTRY),
+    SERVICE_LIST_OVERLAYS: vol.Schema(_OVERLAY_ENTRY),
     SERVICE_ADD_PHOTO: vol.Schema(
         {
             **_ENTRY,
@@ -148,6 +149,7 @@ def _photo_dict(manager: Any, photo: Any) -> dict[str, Any]:
             k: list(v) if isinstance(v, tuple) else v for k, v in photo.overrides.items()
         },
         "hide_frame_overlays": photo.hide_frame_overlays,
+        "overlay_count": len(photo.overlays),
         "preview_url": f"/api/{DOMAIN}/preview/{manager.entry.entry_id}/{photo.id}.png",
     }
 
@@ -258,27 +260,31 @@ def overlay_dict(manager: Any, overlay: OverlayDef) -> dict[str, Any]:
 
 async def _add_overlay(call: ServiceCall) -> ServiceResponse:
     manager = get_manager(call.hass, call.data[ATTR_ENTRY])
-    overlay = manager.async_save_overlay(build_overlay(dict(call.data)))
+    overlay = manager.async_save_overlay(build_overlay(dict(call.data)), call.data.get(ATTR_PHOTO))
     return overlay_dict(manager, overlay)
 
 
 async def _update_overlay(call: ServiceCall) -> ServiceResponse:
     manager = get_manager(call.hass, call.data[ATTR_ENTRY])
-    existing = manager.require_overlay(call.data[ATTR_OVERLAY])
-    overlay = manager.async_save_overlay(build_overlay(dict(call.data), existing))
+    photo_id = call.data.get(ATTR_PHOTO)
+    existing = manager.require_overlay(call.data[ATTR_OVERLAY], photo_id)
+    overlay = manager.async_save_overlay(build_overlay(dict(call.data), existing), photo_id)
     return overlay_dict(manager, overlay)
 
 
 async def _remove_overlay(call: ServiceCall) -> None:
-    get_manager(call.hass, call.data[ATTR_ENTRY]).async_delete_overlay(call.data[ATTR_OVERLAY])
+    get_manager(call.hass, call.data[ATTR_ENTRY]).async_delete_overlay(
+        call.data[ATTR_OVERLAY], call.data.get(ATTR_PHOTO)
+    )
 
 
 async def _move_overlay(call: ServiceCall) -> None:
     manager = get_manager(call.hass, call.data[ATTR_ENTRY])
-    overlay = manager.require_overlay(call.data[ATTR_OVERLAY])
-    order = [o.id for o in manager.overlays if o.id != overlay.id]
+    photo_id = call.data.get(ATTR_PHOTO)
+    overlay = manager.require_overlay(call.data[ATTR_OVERLAY], photo_id)
+    order = [o.id for o in manager.overlays_of(photo_id) if o.id != overlay.id]
     order.insert(min(call.data[ATTR_POSITION], len(order)), overlay.id)
-    manager.async_reorder_overlays(order)
+    manager.async_reorder_overlays(order, photo_id)
 
 
 async def _copy_overlays(call: ServiceCall) -> ServiceResponse:
@@ -290,7 +296,8 @@ async def _copy_overlays(call: ServiceCall) -> ServiceResponse:
 
 async def _list_overlays(call: ServiceCall) -> ServiceResponse:
     manager = get_manager(call.hass, call.data[ATTR_ENTRY])
-    return {"overlays": [overlay_dict(manager, o) for o in manager.overlays]}
+    overlays = manager.overlays_of(call.data.get(ATTR_PHOTO))
+    return {"overlays": [overlay_dict(manager, o) for o in overlays]}
 
 
 HANDLERS: dict[str, tuple[Any, SupportsResponse]] = {

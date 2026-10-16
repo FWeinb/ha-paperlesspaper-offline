@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
 
 from homeassistant.core import HomeAssistant
 from PIL import Image
@@ -79,3 +80,11 @@ def config_entry_factory(hass: HomeAssistant):
         return entry
 
     return _create
+
+
+@pytest.fixture
+def photo_path(hass: HomeAssistant, tmp_path: Path) -> Path:
+    hass.config.allowlist_external_dirs = {str(tmp_path)}
+    path = tmp_path / "a.jpg"
+    path.write_bytes(make_jpeg((60, 120, 200)))
+    return path

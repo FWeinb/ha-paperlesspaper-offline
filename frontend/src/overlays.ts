@@ -75,13 +75,15 @@ function presets(l: ReturnType<typeof localizer>, hass: HomeAssistant): Record<s
   };
 }
 
-/** The frame's overlay list: add, edit, toggle, reorder, copy to another frame. */
+/** The global photo overlays of a frame, or (with `photo`) one photo's overlays: add, edit, toggle, reorder, copy. */
 @customElement("pp-overlays")
 export class OverlayList extends LitElement {
   @property({ attribute: false }) hass!: HomeAssistant;
   @property({ attribute: false }) frame!: Frame;
   @property({ attribute: false }) frames: Frame[] = [];
   @property({ attribute: false }) photos: Photo[] = [];
+  /** Set: this list is the photo's own overlays (shown in the photo editor). */
+  @property({ attribute: false }) photo?: Photo;
 
   @state() private overlays: Overlay[] = [];
   @state() private editing: Overlay | null = null;
@@ -92,12 +94,12 @@ export class OverlayList extends LitElement {
 
   protected override willUpdate(changed: PropertyValues) {
     // Reload when the frame changes or the panel refreshed it (e.g. after a wake).
-    if (changed.has("frame")) this.load();
+    if (changed.has("frame") || changed.has("photo")) this.load();
   }
 
   private async load() {
     try {
-      this.overlays = await fetchOverlays(this.hass, this.frame.entry_id);
+      this.overlays = await fetchOverlays(this.hass, this.frame.entry_id, this.photo?.photo_id);
     } catch (err) {
       this.error = errorMessage(err);
     }
@@ -111,7 +113,7 @@ export class OverlayList extends LitElement {
   private async toggle(ev: Event, overlay: Overlay) {
     ev.stopPropagation();
     try {
-      await saveOverlay(this.hass, this.frame.entry_id, { ...overlay, enabled: !overlay.enabled });
+      await saveOverlay(this.hass, this.frame.entry_id, { ...overlay, enabled: !overlay.enabled }, this.photo?.photo_id);
       await this.load();
     } catch (err) {
       this.error = errorMessage(err);
@@ -128,7 +130,7 @@ export class OverlayList extends LitElement {
     const byId = new Map(this.overlays.map((o) => [o.overlay_id, o]));
     this.overlays = order.map((o) => byId.get(o)!);
     try {
-      await reorderOverlays(this.hass, this.frame.entry_id, order);
+      await reorderOverlays(this.hass, this.frame.entry_id, order, this.photo?.photo_id);
     } catch (err) {
       this.error = errorMessage(err);
     }
@@ -149,13 +151,14 @@ export class OverlayList extends LitElement {
 
   protected override render() {
     const l = localizer(this.hass);
-    const others = this.frames.filter((f) => f.entry_id !== this.frame.entry_id);
+    // Copying is frame to frame only; a photo's overlays travel with the photo.
+    const others = this.photo ? [] : this.frames.filter((f) => f.entry_id !== this.frame.entry_id);
     const p = presets(l, this.hass);
     return html`<div class="card wrap">
       <div class="head">
         <div>
-          <h3>${l("overlays")}</h3>
-          <span class="muted">${l("overlays_hint")}</span>
+          <h3>${l(this.photo ? "photo_overlays" : "global_overlays")}</h3>
+          <span class="muted">${l(this.photo ? "photo_overlays_hint" : "global_overlays_hint")}</span>
         </div>
         <div class="actions">
           ${others.length && this.overlays.length
@@ -215,15 +218,21 @@ export class OverlayList extends LitElement {
               </li>`,
             )}
           </ul>`
-        : html`<p class="muted empty">${l("no_overlays")}</p>`}
+        : html`<p class="muted empty">${l(this.photo ? "no_photo_overlays" : "no_overlays")}</p>`}
       ${this.editing
         ? html`<pp-overlay-editor
             .hass=${this.hass}
             .frame=${this.frame}
             .photos=${this.photos}
+            .photo=${this.photo}
             .overlays=${this.overlays}
             .overlay=${this.editing}
-            @closed=${() => ((this.editing = null), this.load())}
+            @closed=${(e: Event) => {
+              // Don't let it reach a photo editor this list may sit in.
+              e.stopPropagation();
+              this.editing = null;
+              this.load();
+            }}
           ></pp-overlay-editor>`
         : nothing}
     </div>`;
@@ -352,6 +361,8 @@ export class OverlayEditor extends LitElement {
   @property({ attribute: false }) photos: Photo[] = [];
   @property({ attribute: false }) overlays: Overlay[] = [];
   @property({ attribute: false }) overlay!: Overlay;
+  /** Set: the overlay belongs to this photo, which is also the preview's sample. */
+  @property({ attribute: false }) photo?: Photo;
 
   @state() private draft!: Overlay;
   @state() private preview: string | null = null;
@@ -390,7 +401,7 @@ export class OverlayEditor extends LitElement {
   protected override willUpdate(changed: PropertyValues) {
     if (changed.has("overlay")) {
       this.draft = { ...this.overlay };
-      this.sampleId = this.photos[0]?.photo_id ?? null;
+      this.sampleId = this.photo?.photo_id ?? this.photos[0]?.photo_id ?? null;
       this.schedule(0);
     }
   }
@@ -411,7 +422,7 @@ export class OverlayEditor extends LitElement {
       ? this.overlays.map((o) => (o.overlay_id === editedId ? draft : o))
       : [...this.overlays, draft];
     try {
-      const res = await previewOverlays(this.hass, this.frame.entry_id, list, this.sampleId);
+      const res = await previewOverlays(this.hass, this.frame.entry_id, list, this.sampleId, !!this.photo);
       if (stale()) return;
       this.preview = res.image;
       this.aspect = `${res.width} / ${res.height}`;
@@ -436,7 +447,7 @@ export class OverlayEditor extends LitElement {
 
   private async save() {
     try {
-      await saveOverlay(this.hass, this.frame.entry_id, this.draft);
+      await saveOverlay(this.hass, this.frame.entry_id, this.draft, this.photo?.photo_id);
       this.close();
     } catch (err) {
       this.error = errorMessage(err);
@@ -446,7 +457,7 @@ export class OverlayEditor extends LitElement {
   private async deleteClicked() {
     if (!this.draft.overlay_id) return this.close();
     try {
-      await deleteOverlay(this.hass, this.frame.entry_id, this.draft.overlay_id);
+      await deleteOverlay(this.hass, this.frame.entry_id, this.draft.overlay_id, this.photo?.photo_id);
       this.close();
     } catch (err) {
       this.error = errorMessage(err);
@@ -659,7 +670,7 @@ export class OverlayEditor extends LitElement {
               <span class="h">${l("preview")}</span>
               ${this.rendering ? html`<span class="muted small">${l("rendering")}</span>` : nothing}
             </div>
-            ${this.photos.length
+            ${this.photos.length && !this.photo
               ? html`<select
                   aria-label=${l("sample_photo")}
                   @change=${(e: Event) => {

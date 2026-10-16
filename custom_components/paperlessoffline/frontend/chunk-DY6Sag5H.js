@@ -1,10 +1,10 @@
-var Pe = "M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z", Ne = "M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z", Oe = "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z", Te = "M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z", Ue = "M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z", ze = "M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z", Be = "M7,19V17H9V19H7M11,19V17H13V19H11M15,19V17H17V19H15M7,15V13H9V15H7M11,15V13H13V15H11M15,15V13H17V15H15M7,11V9H9V11H7M11,11V9H13V11H11M15,11V9H17V11H15M7,7V5H9V7H7M11,7V5H13V7H11M15,7V5H17V7H15Z", De = "M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z", Ie = "M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z", Fe = "M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z", Ze = "M8.5,13.5L11,16.5L14.5,12L19,18H5M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19Z", je = "M12.5 21C12.18 20.23 12 19.39 12 18.5C12 18.33 12 18.17 12.03 18H5L8.5 13.5L11 16.5L14.5 12L15.19 12.92C16.16 12.34 17.29 12 18.5 12C19.39 12 20.23 12.18 21 12.5V5C21 4.47 20.79 3.96 20.41 3.59C20.04 3.21 19.53 3 19 3H5C3.9 3 3 3.9 3 5V19C3 19.53 3.21 20.04 3.59 20.41C3.96 20.79 4.47 21 5 21H12.5M17.75 22L15 19L16.16 17.84L17.75 19.43L21.34 15.84L22.5 17.25L17.75 22Z", We = "M22.7 14.3L21.7 15.3L19.7 13.3L20.7 12.3C20.8 12.2 20.9 12.1 21.1 12.1C21.2 12.1 21.4 12.2 21.5 12.3L22.8 13.6C22.9 13.8 22.9 14.1 22.7 14.3M13 19.9V22H15.1L21.2 15.9L19.2 13.9L13 19.9M21 5C21 3.9 20.1 3 19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H11V19.1L12.1 18H5L8.5 13.5L11 16.5L14.5 12L16.1 14.1L21 9.1V5Z", Ge = "M10,14.29L6.5,19H17.46L14.75,15.46L12.78,17.8L10,14.29M5,21V7H18.96V21H5M12,2.4L14.61,5.03H9.37L12,2.4M5,5.03C4.5,5.03 4,5.22 3.61,5.61C3.2,6 3,6.46 3,7V21C3,21.5 3.2,22 3.61,22.39C4,22.8 4.5,23 5,23H18.96C19.5,23 19.96,22.8 20.37,22.39C20.77,22 21,21.5 21,21V7C21,6.46 20.77,6 20.37,5.61C19.96,5.22 19.5,5.03 18.96,5.03H16L12,1L7.96,5.03H5Z", qe = "M22,16V4A2,2 0 0,0 20,2H8A2,2 0 0,0 6,4V16A2,2 0 0,0 8,18H20A2,2 0 0,0 22,16M11,12L13.03,14.71L16,11L20,16H8M2,6V20A2,2 0 0,0 4,22H18V20H4V6", Ke = "M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z", Je = "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z", Qe = "M13,4.07V1L8.45,5.55L13,10V6.09C15.84,6.57 18,9.03 18,12C18,14.97 15.84,17.43 13,17.91V19.93C16.95,19.44 20,16.08 20,12C20,7.92 16.95,4.56 13,4.07M7.1,18.32C8.26,19.22 9.61,19.76 11,19.93V17.9C10.13,17.75 9.29,17.41 8.54,16.87L7.1,18.32M6.09,13H4.07C4.24,14.39 4.79,15.73 5.69,16.89L7.1,15.47C6.58,14.72 6.23,13.88 6.09,13M7.11,8.53L5.7,7.11C4.8,8.27 4.24,9.61 4.07,11H6.09C6.23,10.13 6.58,9.28 7.11,8.53Z", Ye = "M16.89,15.5L18.31,16.89C19.21,15.73 19.76,14.39 19.93,13H17.91C17.77,13.87 17.43,14.72 16.89,15.5M13,17.9V19.92C14.39,19.75 15.74,19.21 16.9,18.31L15.46,16.87C14.71,17.41 13.87,17.76 13,17.9M19.93,11C19.76,9.61 19.21,8.27 18.31,7.11L16.89,8.53C17.43,9.28 17.77,10.13 17.91,11M15.55,5.55L11,1V4.07C7.06,4.56 4,7.92 4,12C4,16.08 7.05,19.44 11,19.93V17.91C8.16,17.43 6,14.97 6,12C6,9.03 8.16,6.57 11,6.09V10L15.55,5.55Z", Xe = "M16,18H18V6H16M6,18L14.5,12L6,6V18Z", et = "M5,3C3.89,3 3,3.89 3,5V19C3,20.11 3.89,21 5,21H19C20.11,21 21,20.11 21,19V5C21,3.89 20.11,3 19,3H5M5,5H19V19H5V5M7,7V9H17V7H7M7,11V13H17V11H7M7,15V17H14V15H7Z", tt = "M3,17V19H9V17H3M3,5V7H13V5H3M13,21V19H21V17H13V15H11V21H13M7,9V11H3V13H7V15H9V9H7M21,13V11H11V13H21M15,9H17V7H21V5H17V3H15V9Z", rt = "M9,16V10H5L12,3L19,10H15V16H9M5,20V18H19V20H5Z";
+var Pe = "M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z", Ne = "M12 2C6.5 2 2 6.5 2 12S6.5 22 12 22 22 17.5 22 12 17.5 2 12 2M10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z", Oe = "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z", Te = "M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z", Ue = "M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z", ze = "M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z", Be = "M7,19V17H9V19H7M11,19V17H13V19H11M15,19V17H17V19H15M7,15V13H9V15H7M11,15V13H13V15H11M15,15V13H17V15H15M7,11V9H9V11H7M11,11V9H13V11H11M15,11V9H17V11H15M7,7V5H9V7H7M11,7V5H13V7H11M15,7V5H17V7H15Z", De = "M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z", Fe = "M11.83,9L15,12.16C15,12.11 15,12.05 15,12A3,3 0 0,0 12,9C11.94,9 11.89,9 11.83,9M7.53,9.8L9.08,11.35C9.03,11.56 9,11.77 9,12A3,3 0 0,0 12,15C12.22,15 12.44,14.97 12.65,14.92L14.2,16.47C13.53,16.8 12.79,17 12,17A5,5 0 0,1 7,12C7,11.21 7.2,10.47 7.53,9.8M2,4.27L4.28,6.55L4.73,7C3.08,8.3 1.78,10 1,12C2.73,16.39 7,19.5 12,19.5C13.55,19.5 15.03,19.2 16.38,18.66L16.81,19.08L19.73,22L21,20.73L3.27,3M12,7A5,5 0 0,1 17,12C17,12.64 16.87,13.26 16.64,13.82L19.57,16.75C21.07,15.5 22.27,13.86 23,12C21.27,7.61 17,4.5 12,4.5C10.6,4.5 9.26,4.75 8,5.2L10.17,7.35C10.74,7.13 11.35,7 12,7Z", Ie = "M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z", Ze = "M8.5,13.5L11,16.5L14.5,12L19,18H5M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19Z", je = "M12.5 21C12.18 20.23 12 19.39 12 18.5C12 18.33 12 18.17 12.03 18H5L8.5 13.5L11 16.5L14.5 12L15.19 12.92C16.16 12.34 17.29 12 18.5 12C19.39 12 20.23 12.18 21 12.5V5C21 4.47 20.79 3.96 20.41 3.59C20.04 3.21 19.53 3 19 3H5C3.9 3 3 3.9 3 5V19C3 19.53 3.21 20.04 3.59 20.41C3.96 20.79 4.47 21 5 21H12.5M17.75 22L15 19L16.16 17.84L17.75 19.43L21.34 15.84L22.5 17.25L17.75 22Z", We = "M22.7 14.3L21.7 15.3L19.7 13.3L20.7 12.3C20.8 12.2 20.9 12.1 21.1 12.1C21.2 12.1 21.4 12.2 21.5 12.3L22.8 13.6C22.9 13.8 22.9 14.1 22.7 14.3M13 19.9V22H15.1L21.2 15.9L19.2 13.9L13 19.9M21 5C21 3.9 20.1 3 19 3H5C3.9 3 3 3.9 3 5V19C3 20.1 3.9 21 5 21H11V19.1L12.1 18H5L8.5 13.5L11 16.5L14.5 12L16.1 14.1L21 9.1V5Z", Ge = "M10,14.29L6.5,19H17.46L14.75,15.46L12.78,17.8L10,14.29M5,21V7H18.96V21H5M12,2.4L14.61,5.03H9.37L12,2.4M5,5.03C4.5,5.03 4,5.22 3.61,5.61C3.2,6 3,6.46 3,7V21C3,21.5 3.2,22 3.61,22.39C4,22.8 4.5,23 5,23H18.96C19.5,23 19.96,22.8 20.37,22.39C20.77,22 21,21.5 21,21V7C21,6.46 20.77,6 20.37,5.61C19.96,5.22 19.5,5.03 18.96,5.03H16L12,1L7.96,5.03H5Z", qe = "M22,16V4A2,2 0 0,0 20,2H8A2,2 0 0,0 6,4V16A2,2 0 0,0 8,18H20A2,2 0 0,0 22,16M11,12L13.03,14.71L16,11L20,16H8M2,6V20A2,2 0 0,0 4,22H18V20H4V6", Ke = "M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z", Je = "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z", Qe = "M13,4.07V1L8.45,5.55L13,10V6.09C15.84,6.57 18,9.03 18,12C18,14.97 15.84,17.43 13,17.91V19.93C16.95,19.44 20,16.08 20,12C20,7.92 16.95,4.56 13,4.07M7.1,18.32C8.26,19.22 9.61,19.76 11,19.93V17.9C10.13,17.75 9.29,17.41 8.54,16.87L7.1,18.32M6.09,13H4.07C4.24,14.39 4.79,15.73 5.69,16.89L7.1,15.47C6.58,14.72 6.23,13.88 6.09,13M7.11,8.53L5.7,7.11C4.8,8.27 4.24,9.61 4.07,11H6.09C6.23,10.13 6.58,9.28 7.11,8.53Z", Ye = "M16.89,15.5L18.31,16.89C19.21,15.73 19.76,14.39 19.93,13H17.91C17.77,13.87 17.43,14.72 16.89,15.5M13,17.9V19.92C14.39,19.75 15.74,19.21 16.9,18.31L15.46,16.87C14.71,17.41 13.87,17.76 13,17.9M19.93,11C19.76,9.61 19.21,8.27 18.31,7.11L16.89,8.53C17.43,9.28 17.77,10.13 17.91,11M15.55,5.55L11,1V4.07C7.06,4.56 4,7.92 4,12C4,16.08 7.05,19.44 11,19.93V17.91C8.16,17.43 6,14.97 6,12C6,9.03 8.16,6.57 11,6.09V10L15.55,5.55Z", Xe = "M16,18H18V6H16M6,18L14.5,12L6,6V18Z", et = "M5,3C3.89,3 3,3.89 3,5V19C3,20.11 3.89,21 5,21H19C20.11,21 21,20.11 21,19V5C21,3.89 20.11,3 19,3H5M5,5H19V19H5V5M7,7V9H17V7H7M7,11V13H17V11H7M7,15V17H14V15H7Z", tt = "M3,17V19H9V17H3M3,5V7H13V5H3M13,21V19H21V17H13V15H11V21H13M7,9V11H3V13H7V15H9V9H7M21,13V11H11V13H21M15,9H17V7H21V5H17V3H15V9Z", rt = "M9,16V10H5L12,3L19,10H15V16H9M5,20V18H19V20H5Z";
 /**
  * @license
  * Copyright 2019 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const S = globalThis, O = S.ShadowRoot && (S.ShadyCSS === void 0 || S.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, T = Symbol(), I = /* @__PURE__ */ new WeakMap();
+const S = globalThis, O = S.ShadowRoot && (S.ShadyCSS === void 0 || S.ShadyCSS.nativeShadow) && "adoptedStyleSheets" in Document.prototype && "replace" in CSSStyleSheet.prototype, T = Symbol(), F = /* @__PURE__ */ new WeakMap();
 let ee = class {
   constructor(e, t, r) {
     if (this._$cssResult$ = !0, r !== T) throw Error("CSSResult is not constructable. Use `unsafeCSS` or `css` instead.");
@@ -15,7 +15,7 @@ let ee = class {
     const t = this.t;
     if (O && e === void 0) {
       const r = t !== void 0 && t.length === 1;
-      r && (e = I.get(t)), e === void 0 && ((this.o = e = new CSSStyleSheet()).replaceSync(this.cssText), r && I.set(t, e));
+      r && (e = F.get(t)), e === void 0 && ((this.o = e = new CSSStyleSheet()).replaceSync(this.cssText), r && F.set(t, e));
     }
     return e;
   }
@@ -23,12 +23,12 @@ let ee = class {
     return this.cssText;
   }
 };
-const oe = (i) => new ee(typeof i == "string" ? i : i + "", void 0, T), ae = (i, ...e) => {
-  const t = i.length === 1 ? i[0] : e.reduce((r, n, s) => r + ((o) => {
-    if (o._$cssResult$ === !0) return o.cssText;
-    if (typeof o == "number") return o;
-    throw Error("Value passed to 'css' function must be a 'css' function result: " + o + ". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.");
-  })(n) + i[s + 1], i[0]);
+const se = (i) => new ee(typeof i == "string" ? i : i + "", void 0, T), ae = (i, ...e) => {
+  const t = i.length === 1 ? i[0] : e.reduce((r, n, o) => r + ((s) => {
+    if (s._$cssResult$ === !0) return s.cssText;
+    if (typeof s == "number") return s;
+    throw Error("Value passed to 'css' function must be a 'css' function result: " + s + ". Use 'unsafeCSS' to pass non-literal values, but take care to ensure page security.");
+  })(n) + i[o + 1], i[0]);
   return new ee(t, i, T);
 }, le = (i, e) => {
   if (O) i.adoptedStyleSheets = e.map((t) => t instanceof CSSStyleSheet ? t : t.styleSheet);
@@ -36,17 +36,17 @@ const oe = (i) => new ee(typeof i == "string" ? i : i + "", void 0, T), ae = (i,
     const r = document.createElement("style"), n = S.litNonce;
     n !== void 0 && r.setAttribute("nonce", n), r.textContent = t.cssText, i.appendChild(r);
   }
-}, F = O ? (i) => i : (i) => i instanceof CSSStyleSheet ? ((e) => {
+}, I = O ? (i) => i : (i) => i instanceof CSSStyleSheet ? ((e) => {
   let t = "";
   for (const r of e.cssRules) t += r.cssText;
-  return oe(t);
+  return se(t);
 })(i) : i;
 /**
  * @license
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const { is: he, defineProperty: de, getOwnPropertyDescriptor: ce, getOwnPropertyNames: pe, getOwnPropertySymbols: ue, getPrototypeOf: _e } = Object, R = globalThis, Z = R.trustedTypes, ge = Z ? Z.emptyScript : "", me = R.reactiveElementPolyfillSupport, C = (i, e) => i, k = { toAttribute(i, e) {
+const { is: he, defineProperty: de, getOwnPropertyDescriptor: ce, getOwnPropertyNames: pe, getOwnPropertySymbols: ue, getPrototypeOf: _e } = Object, R = globalThis, Z = R.trustedTypes, ge = Z ? Z.emptyScript : "", me = R.reactiveElementPolyfillSupport, w = (i, e) => i, k = { toAttribute(i, e) {
   switch (e) {
     case Boolean:
       i = i ? ge : null;
@@ -90,27 +90,27 @@ let b = class extends HTMLElement {
     }
   }
   static getPropertyDescriptor(e, t, r) {
-    const { get: n, set: s } = ce(this.prototype, e) ?? { get() {
+    const { get: n, set: o } = ce(this.prototype, e) ?? { get() {
       return this[t];
-    }, set(o) {
-      this[t] = o;
+    }, set(s) {
+      this[t] = s;
     } };
-    return { get: n, set(o) {
+    return { get: n, set(s) {
       const l = n?.call(this);
-      s?.call(this, o), this.requestUpdate(e, l, r);
+      o?.call(this, s), this.requestUpdate(e, l, r);
     }, configurable: !0, enumerable: !0 };
   }
   static getPropertyOptions(e) {
     return this.elementProperties.get(e) ?? j;
   }
   static _$Ei() {
-    if (this.hasOwnProperty(C("elementProperties"))) return;
+    if (this.hasOwnProperty(w("elementProperties"))) return;
     const e = _e(this);
     e.finalize(), e.l !== void 0 && (this.l = [...e.l]), this.elementProperties = new Map(e.elementProperties);
   }
   static finalize() {
-    if (this.hasOwnProperty(C("finalized"))) return;
-    if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(C("properties"))) {
+    if (this.hasOwnProperty(w("finalized"))) return;
+    if (this.finalized = !0, this._$Ei(), this.hasOwnProperty(w("properties"))) {
       const t = this.properties, r = [...pe(t), ...ue(t)];
       for (const n of r) this.createProperty(n, t[n]);
     }
@@ -130,8 +130,8 @@ let b = class extends HTMLElement {
     const t = [];
     if (Array.isArray(e)) {
       const r = new Set(e.flat(1 / 0).reverse());
-      for (const n of r) t.unshift(F(n));
-    } else e !== void 0 && t.push(F(e));
+      for (const n of r) t.unshift(I(n));
+    } else e !== void 0 && t.push(I(e));
     return t;
   }
   static _$Eu(e, t) {
@@ -173,29 +173,29 @@ let b = class extends HTMLElement {
   _$ET(e, t) {
     const r = this.constructor.elementProperties.get(e), n = this.constructor._$Eu(e, r);
     if (n !== void 0 && r.reflect === !0) {
-      const s = (r.converter?.toAttribute !== void 0 ? r.converter : k).toAttribute(t, r.type);
-      this._$Em = e, s == null ? this.removeAttribute(n) : this.setAttribute(n, s), this._$Em = null;
+      const o = (r.converter?.toAttribute !== void 0 ? r.converter : k).toAttribute(t, r.type);
+      this._$Em = e, o == null ? this.removeAttribute(n) : this.setAttribute(n, o), this._$Em = null;
     }
   }
   _$AK(e, t) {
     const r = this.constructor, n = r._$Eh.get(e);
     if (n !== void 0 && this._$Em !== n) {
-      const s = r.getPropertyOptions(n), o = typeof s.converter == "function" ? { fromAttribute: s.converter } : s.converter?.fromAttribute !== void 0 ? s.converter : k;
+      const o = r.getPropertyOptions(n), s = typeof o.converter == "function" ? { fromAttribute: o.converter } : o.converter?.fromAttribute !== void 0 ? o.converter : k;
       this._$Em = n;
-      const l = o.fromAttribute(t, s.type);
+      const l = s.fromAttribute(t, o.type);
       this[n] = l ?? this._$Ej?.get(n) ?? l, this._$Em = null;
     }
   }
-  requestUpdate(e, t, r, n = !1, s) {
+  requestUpdate(e, t, r, n = !1, o) {
     if (e !== void 0) {
-      const o = this.constructor;
-      if (n === !1 && (s = this[e]), r ??= o.getPropertyOptions(e), !((r.hasChanged ?? U)(s, t) || r.useDefault && r.reflect && s === this._$Ej?.get(e) && !this.hasAttribute(o._$Eu(e, r)))) return;
+      const s = this.constructor;
+      if (n === !1 && (o = this[e]), r ??= s.getPropertyOptions(e), !((r.hasChanged ?? U)(o, t) || r.useDefault && r.reflect && o === this._$Ej?.get(e) && !this.hasAttribute(s._$Eu(e, r)))) return;
       this.C(e, t, r);
     }
     this.isUpdatePending === !1 && (this._$ES = this._$EP());
   }
-  C(e, t, { useDefault: r, reflect: n, wrapped: s }, o) {
-    r && !(this._$Ej ??= /* @__PURE__ */ new Map()).has(e) && (this._$Ej.set(e, o ?? t ?? this[e]), s !== !0 || o !== void 0) || (this._$AL.has(e) || (this.hasUpdated || r || (t = void 0), this._$AL.set(e, t)), n === !0 && this._$Em !== e && (this._$Eq ??= /* @__PURE__ */ new Set()).add(e));
+  C(e, t, { useDefault: r, reflect: n, wrapped: o }, s) {
+    r && !(this._$Ej ??= /* @__PURE__ */ new Map()).has(e) && (this._$Ej.set(e, s ?? t ?? this[e]), o !== !0 || s !== void 0) || (this._$AL.has(e) || (this.hasUpdated || r || (t = void 0), this._$AL.set(e, t)), n === !0 && this._$Em !== e && (this._$Eq ??= /* @__PURE__ */ new Set()).add(e));
   }
   async _$EP() {
     this.isUpdatePending = !0;
@@ -214,13 +214,13 @@ let b = class extends HTMLElement {
     if (!this.isUpdatePending) return;
     if (!this.hasUpdated) {
       if (this.renderRoot ??= this.createRenderRoot(), this._$Ep) {
-        for (const [n, s] of this._$Ep) this[n] = s;
+        for (const [n, o] of this._$Ep) this[n] = o;
         this._$Ep = void 0;
       }
       const r = this.constructor.elementProperties;
-      if (r.size > 0) for (const [n, s] of r) {
-        const { wrapped: o } = s, l = this[n];
-        o !== !0 || this._$AL.has(n) || l === void 0 || this.C(n, void 0, s, l);
+      if (r.size > 0) for (const [n, o] of r) {
+        const { wrapped: s } = o, l = this[n];
+        s !== !0 || this._$AL.has(n) || l === void 0 || this.C(n, void 0, o, l);
       }
     }
     let e = !1;
@@ -257,36 +257,36 @@ let b = class extends HTMLElement {
   firstUpdated(e) {
   }
 };
-b.elementStyles = [], b.shadowRootOptions = { mode: "open" }, b[C("elementProperties")] = /* @__PURE__ */ new Map(), b[C("finalized")] = /* @__PURE__ */ new Map(), me?.({ ReactiveElement: b }), (R.reactiveElementVersions ??= []).push("2.1.2");
+b.elementStyles = [], b.shadowRootOptions = { mode: "open" }, b[w("elementProperties")] = /* @__PURE__ */ new Map(), b[w("finalized")] = /* @__PURE__ */ new Map(), me?.({ ReactiveElement: b }), (R.reactiveElementVersions ??= []).push("2.1.2");
 /**
  * @license
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const z = globalThis, W = (i) => i, E = z.trustedTypes, G = E ? E.createPolicy("lit-html", { createHTML: (i) => i }) : void 0, te = "$lit$", g = `lit$${Math.random().toFixed(9).slice(2)}$`, re = "?" + g, fe = `<${re}>`, v = document, w = () => v.createComment(""), H = (i) => i === null || typeof i != "object" && typeof i != "function", B = Array.isArray, ve = (i) => B(i) || typeof i?.[Symbol.iterator] == "function", N = `[ 	
+const z = globalThis, W = (i) => i, E = z.trustedTypes, G = E ? E.createPolicy("lit-html", { createHTML: (i) => i }) : void 0, te = "$lit$", g = `lit$${Math.random().toFixed(9).slice(2)}$`, re = "?" + g, fe = `<${re}>`, v = document, C = () => v.createComment(""), H = (i) => i === null || typeof i != "object" && typeof i != "function", B = Array.isArray, ve = (i) => B(i) || typeof i?.[Symbol.iterator] == "function", N = `[ 	
 \f\r]`, A = /<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g, q = /-->/g, K = />/g, m = RegExp(`>|${N}(?:([^\\s"'>=/]+)(${N}*=${N}*(?:[^ 	
 \f\r"'\`<>=]|("|')|))|$)`, "g"), J = /'/g, Q = /"/g, ne = /^(?:script|style|textarea|title)$/i, ie = (i) => (e, ...t) => ({ _$litType$: i, strings: e, values: t }), be = ie(1), ye = ie(2), y = Symbol.for("lit-noChange"), c = Symbol.for("lit-nothing"), Y = /* @__PURE__ */ new WeakMap(), f = v.createTreeWalker(v, 129);
-function se(i, e) {
+function oe(i, e) {
   if (!B(i) || !i.hasOwnProperty("raw")) throw Error("invalid template strings array");
   return G !== void 0 ? G.createHTML(e) : e;
 }
 const $e = (i, e) => {
   const t = i.length - 1, r = [];
-  let n, s = e === 2 ? "<svg>" : e === 3 ? "<math>" : "", o = A;
+  let n, o = e === 2 ? "<svg>" : e === 3 ? "<math>" : "", s = A;
   for (let l = 0; l < t; l++) {
     const a = i[l];
     let d, p, h = -1, u = 0;
-    for (; u < a.length && (o.lastIndex = u, p = o.exec(a), p !== null); ) u = o.lastIndex, o === A ? p[1] === "!--" ? o = q : p[1] !== void 0 ? o = K : p[2] !== void 0 ? (ne.test(p[2]) && (n = RegExp("</" + p[2], "g")), o = m) : p[3] !== void 0 && (o = m) : o === m ? p[0] === ">" ? (o = n ?? A, h = -1) : p[1] === void 0 ? h = -2 : (h = o.lastIndex - p[2].length, d = p[1], o = p[3] === void 0 ? m : p[3] === '"' ? Q : J) : o === Q || o === J ? o = m : o === q || o === K ? o = A : (o = m, n = void 0);
-    const _ = o === m && i[l + 1].startsWith("/>") ? " " : "";
-    s += o === A ? a + fe : h >= 0 ? (r.push(d), a.slice(0, h) + te + a.slice(h) + g + _) : a + g + (h === -2 ? l : _);
+    for (; u < a.length && (s.lastIndex = u, p = s.exec(a), p !== null); ) u = s.lastIndex, s === A ? p[1] === "!--" ? s = q : p[1] !== void 0 ? s = K : p[2] !== void 0 ? (ne.test(p[2]) && (n = RegExp("</" + p[2], "g")), s = m) : p[3] !== void 0 && (s = m) : s === m ? p[0] === ">" ? (s = n ?? A, h = -1) : p[1] === void 0 ? h = -2 : (h = s.lastIndex - p[2].length, d = p[1], s = p[3] === void 0 ? m : p[3] === '"' ? Q : J) : s === Q || s === J ? s = m : s === q || s === K ? s = A : (s = m, n = void 0);
+    const _ = s === m && i[l + 1].startsWith("/>") ? " " : "";
+    o += s === A ? a + fe : h >= 0 ? (r.push(d), a.slice(0, h) + te + a.slice(h) + g + _) : a + g + (h === -2 ? l : _);
   }
-  return [se(i, s + (i[t] || "<?>") + (e === 2 ? "</svg>" : e === 3 ? "</math>" : "")), r];
+  return [oe(i, o + (i[t] || "<?>") + (e === 2 ? "</svg>" : e === 3 ? "</math>" : "")), r];
 };
 class x {
   constructor({ strings: e, _$litType$: t }, r) {
     let n;
     this.parts = [];
-    let s = 0, o = 0;
+    let o = 0, s = 0;
     const l = e.length - 1, a = this.parts, [d, p] = $e(e, t);
     if (this.el = x.createElement(d, r), f.currentNode = this.el.content, t === 2 || t === 3) {
       const h = this.el.content.firstChild;
@@ -295,23 +295,23 @@ class x {
     for (; (n = f.nextNode()) !== null && a.length < l; ) {
       if (n.nodeType === 1) {
         if (n.hasAttributes()) for (const h of n.getAttributeNames()) if (h.endsWith(te)) {
-          const u = p[o++], _ = n.getAttribute(h).split(g), M = /([.?@])?(.*)/.exec(u);
-          a.push({ type: 1, index: s, name: M[2], strings: _, ctor: M[1] === "." ? Ce : M[1] === "?" ? we : M[1] === "@" ? He : P }), n.removeAttribute(h);
-        } else h.startsWith(g) && (a.push({ type: 6, index: s }), n.removeAttribute(h));
+          const u = p[s++], _ = n.getAttribute(h).split(g), M = /([.?@])?(.*)/.exec(u);
+          a.push({ type: 1, index: o, name: M[2], strings: _, ctor: M[1] === "." ? we : M[1] === "?" ? Ce : M[1] === "@" ? He : P }), n.removeAttribute(h);
+        } else h.startsWith(g) && (a.push({ type: 6, index: o }), n.removeAttribute(h));
         if (ne.test(n.tagName)) {
           const h = n.textContent.split(g), u = h.length - 1;
           if (u > 0) {
             n.textContent = E ? E.emptyScript : "";
-            for (let _ = 0; _ < u; _++) n.append(h[_], w()), f.nextNode(), a.push({ type: 2, index: ++s });
-            n.append(h[u], w());
+            for (let _ = 0; _ < u; _++) n.append(h[_], C()), f.nextNode(), a.push({ type: 2, index: ++o });
+            n.append(h[u], C());
           }
         }
-      } else if (n.nodeType === 8) if (n.data === re) a.push({ type: 2, index: s });
+      } else if (n.nodeType === 8) if (n.data === re) a.push({ type: 2, index: o });
       else {
         let h = -1;
-        for (; (h = n.data.indexOf(g, h + 1)) !== -1; ) a.push({ type: 7, index: s }), h += g.length - 1;
+        for (; (h = n.data.indexOf(g, h + 1)) !== -1; ) a.push({ type: 7, index: o }), h += g.length - 1;
       }
-      s++;
+      o++;
     }
   }
   static createElement(e, t) {
@@ -322,8 +322,8 @@ class x {
 function $(i, e, t = i, r) {
   if (e === y) return e;
   let n = r !== void 0 ? t._$Co?.[r] : t._$Cl;
-  const s = H(e) ? void 0 : e._$litDirective$;
-  return n?.constructor !== s && (n?._$AO?.(!1), s === void 0 ? n = void 0 : (n = new s(i), n._$AT(i, t, r)), r !== void 0 ? (t._$Co ??= [])[r] = n : t._$Cl = n), n !== void 0 && (e = $(i, n._$AS(i, e.values), n, r)), e;
+  const o = H(e) ? void 0 : e._$litDirective$;
+  return n?.constructor !== o && (n?._$AO?.(!1), o === void 0 ? n = void 0 : (n = new o(i), n._$AT(i, t, r)), r !== void 0 ? (t._$Co ??= [])[r] = n : t._$Cl = n), n !== void 0 && (e = $(i, n._$AS(i, e.values), n, r)), e;
 }
 class Ae {
   constructor(e, t) {
@@ -338,13 +338,13 @@ class Ae {
   u(e) {
     const { el: { content: t }, parts: r } = this._$AD, n = (e?.creationScope ?? v).importNode(t, !0);
     f.currentNode = n;
-    let s = f.nextNode(), o = 0, l = 0, a = r[0];
+    let o = f.nextNode(), s = 0, l = 0, a = r[0];
     for (; a !== void 0; ) {
-      if (o === a.index) {
+      if (s === a.index) {
         let d;
-        a.type === 2 ? d = new L(s, s.nextSibling, this, e) : a.type === 1 ? d = new a.ctor(s, a.name, a.strings, this, e) : a.type === 6 && (d = new xe(s, this, e)), this._$AV.push(d), a = r[++l];
+        a.type === 2 ? d = new L(o, o.nextSibling, this, e) : a.type === 1 ? d = new a.ctor(o, a.name, a.strings, this, e) : a.type === 6 && (d = new xe(o, this, e)), this._$AV.push(d), a = r[++l];
       }
-      o !== a?.index && (s = f.nextNode(), o++);
+      s !== a?.index && (o = f.nextNode(), s++);
     }
     return f.currentNode = v, n;
   }
@@ -384,11 +384,11 @@ class L {
     this._$AH !== c && H(this._$AH) ? this._$AA.nextSibling.data = e : this.T(v.createTextNode(e)), this._$AH = e;
   }
   $(e) {
-    const { values: t, _$litType$: r } = e, n = typeof r == "number" ? this._$AC(e) : (r.el === void 0 && (r.el = x.createElement(se(r.h, r.h[0]), this.options)), r);
+    const { values: t, _$litType$: r } = e, n = typeof r == "number" ? this._$AC(e) : (r.el === void 0 && (r.el = x.createElement(oe(r.h, r.h[0]), this.options)), r);
     if (this._$AH?._$AD === n) this._$AH.p(t);
     else {
-      const s = new Ae(n, this), o = s.u(this.options);
-      s.p(t), this.T(o), this._$AH = s;
+      const o = new Ae(n, this), s = o.u(this.options);
+      o.p(t), this.T(s), this._$AH = o;
     }
   }
   _$AC(e) {
@@ -399,7 +399,7 @@ class L {
     B(this._$AH) || (this._$AH = [], this._$AR());
     const t = this._$AH;
     let r, n = 0;
-    for (const s of e) n === t.length ? t.push(r = new L(this.O(w()), this.O(w()), this, this.options)) : r = t[n], r._$AI(s), n++;
+    for (const o of e) n === t.length ? t.push(r = new L(this.O(C()), this.O(C()), this, this.options)) : r = t[n], r._$AI(o), n++;
     n < t.length && (this._$AR(r && r._$AB.nextSibling, n), t.length = n);
   }
   _$AR(e = this._$AA.nextSibling, t) {
@@ -419,25 +419,25 @@ class P {
   get _$AU() {
     return this._$AM._$AU;
   }
-  constructor(e, t, r, n, s) {
-    this.type = 1, this._$AH = c, this._$AN = void 0, this.element = e, this.name = t, this._$AM = n, this.options = s, r.length > 2 || r[0] !== "" || r[1] !== "" ? (this._$AH = Array(r.length - 1).fill(new String()), this.strings = r) : this._$AH = c;
+  constructor(e, t, r, n, o) {
+    this.type = 1, this._$AH = c, this._$AN = void 0, this.element = e, this.name = t, this._$AM = n, this.options = o, r.length > 2 || r[0] !== "" || r[1] !== "" ? (this._$AH = Array(r.length - 1).fill(new String()), this.strings = r) : this._$AH = c;
   }
   _$AI(e, t = this, r, n) {
-    const s = this.strings;
-    let o = !1;
-    if (s === void 0) e = $(this, e, t, 0), o = !H(e) || e !== this._$AH && e !== y, o && (this._$AH = e);
+    const o = this.strings;
+    let s = !1;
+    if (o === void 0) e = $(this, e, t, 0), s = !H(e) || e !== this._$AH && e !== y, s && (this._$AH = e);
     else {
       const l = e;
       let a, d;
-      for (e = s[0], a = 0; a < s.length - 1; a++) d = $(this, l[r + a], t, a), d === y && (d = this._$AH[a]), o ||= !H(d) || d !== this._$AH[a], d === c ? e = c : e !== c && (e += (d ?? "") + s[a + 1]), this._$AH[a] = d;
+      for (e = o[0], a = 0; a < o.length - 1; a++) d = $(this, l[r + a], t, a), d === y && (d = this._$AH[a]), s ||= !H(d) || d !== this._$AH[a], d === c ? e = c : e !== c && (e += (d ?? "") + o[a + 1]), this._$AH[a] = d;
     }
-    o && !n && this.j(e);
+    s && !n && this.j(e);
   }
   j(e) {
     e === c ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, e ?? "");
   }
 }
-class Ce extends P {
+class we extends P {
   constructor() {
     super(...arguments), this.type = 3;
   }
@@ -445,7 +445,7 @@ class Ce extends P {
     this.element[this.name] = e === c ? void 0 : e;
   }
 }
-class we extends P {
+class Ce extends P {
   constructor() {
     super(...arguments), this.type = 4;
   }
@@ -454,13 +454,13 @@ class we extends P {
   }
 }
 class He extends P {
-  constructor(e, t, r, n, s) {
-    super(e, t, r, n, s), this.type = 5;
+  constructor(e, t, r, n, o) {
+    super(e, t, r, n, o), this.type = 5;
   }
   _$AI(e, t = this) {
     if ((e = $(this, e, t, 0) ?? c) === y) return;
-    const r = this._$AH, n = e === c && r !== c || e.capture !== r.capture || e.once !== r.once || e.passive !== r.passive, s = e !== c && (r === c || n);
-    n && this.element.removeEventListener(this.name, this, r), s && this.element.addEventListener(this.name, this, e), this._$AH = e;
+    const r = this._$AH, n = e === c && r !== c || e.capture !== r.capture || e.once !== r.once || e.passive !== r.passive, o = e !== c && (r === c || n);
+    n && this.element.removeEventListener(this.name, this, r), o && this.element.addEventListener(this.name, this, e), this._$AH = e;
   }
   handleEvent(e) {
     typeof this._$AH == "function" ? this._$AH.call(this.options?.host ?? this.element, e) : this._$AH.handleEvent(e);
@@ -483,8 +483,8 @@ const Me = (i, e, t) => {
   const r = t?.renderBefore ?? e;
   let n = r._$litPart$;
   if (n === void 0) {
-    const s = t?.renderBefore ?? null;
-    r._$litPart$ = n = new L(e.insertBefore(w(), s), s, void 0, t ?? {});
+    const o = t?.renderBefore ?? null;
+    r._$litPart$ = n = new L(e.insertBefore(C(), o), o, void 0, t ?? {});
   }
   return n._$AI(i), n;
 };
@@ -525,7 +525,7 @@ Se?.({ LitElement: V });
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const st = (i) => (e, t) => {
+const ot = (i) => (e, t) => {
   t !== void 0 ? t.addInitializer(() => {
     customElements.define(i, e);
   }) : customElements.define(i, e);
@@ -537,29 +537,29 @@ const st = (i) => (e, t) => {
  */
 const Ve = { attribute: !0, type: String, converter: k, reflect: !1, hasChanged: U }, ke = (i = Ve, e, t) => {
   const { kind: r, metadata: n } = t;
-  let s = globalThis.litPropertyMetadata.get(n);
-  if (s === void 0 && globalThis.litPropertyMetadata.set(n, s = /* @__PURE__ */ new Map()), r === "setter" && ((i = Object.create(i)).wrapped = !0), s.set(t.name, i), r === "accessor") {
-    const { name: o } = t;
+  let o = globalThis.litPropertyMetadata.get(n);
+  if (o === void 0 && globalThis.litPropertyMetadata.set(n, o = /* @__PURE__ */ new Map()), r === "setter" && ((i = Object.create(i)).wrapped = !0), o.set(t.name, i), r === "accessor") {
+    const { name: s } = t;
     return { set(l) {
       const a = e.get.call(this);
-      e.set.call(this, l), this.requestUpdate(o, a, i, !0, l);
+      e.set.call(this, l), this.requestUpdate(s, a, i, !0, l);
     }, init(l) {
-      return l !== void 0 && this.C(o, void 0, i, l), l;
+      return l !== void 0 && this.C(s, void 0, i, l), l;
     } };
   }
   if (r === "setter") {
-    const { name: o } = t;
+    const { name: s } = t;
     return function(l) {
-      const a = this[o];
-      e.call(this, l), this.requestUpdate(o, a, i, !0, l);
+      const a = this[s];
+      e.call(this, l), this.requestUpdate(s, a, i, !0, l);
     };
   }
   throw Error("Unsupported decorator location: " + r);
 };
 function Ee(i) {
-  return (e, t) => typeof t == "object" ? ke(i, e, t) : ((r, n, s) => {
-    const o = n.hasOwnProperty(s);
-    return n.constructor.createProperty(s, r), o ? Object.getOwnPropertyDescriptor(n, s) : void 0;
+  return (e, t) => typeof t == "object" ? ke(i, e, t) : ((r, n, o) => {
+    const s = n.hasOwnProperty(o);
+    return n.constructor.createProperty(o, r), s ? Object.getOwnPropertyDescriptor(n, o) : void 0;
   })(i, e, t);
 }
 /**
@@ -567,7 +567,7 @@ function Ee(i) {
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-function ot(i) {
+function st(i) {
   return Ee({ ...i, state: !0, attribute: !1 });
 }
 const X = {
@@ -680,8 +680,11 @@ const X = {
   read_ago: "read {when}",
   overdue: "Hasn't checked in",
   needs_urls: "Needs new URLs, see Repairs",
-  overlays: "Overlays",
-  overlays_hint: "Text and values drawn over every photo of this frame.",
+  global_overlays: "Global photo overlays",
+  global_overlays_hint: "Text and values drawn over every photo of this frame.",
+  photo_overlays: "Photo overlays",
+  photo_overlays_hint: "Text and values drawn over this photo only, below the global photo overlays.",
+  no_photo_overlays: "No overlays on this photo yet.",
   add_overlay: "Add overlay",
   preset_sensor: "Sensor value",
   preset_weather: "Weather",
@@ -691,7 +694,7 @@ const X = {
   edit_overlay: "Edit overlay",
   overlay_name: "Name",
   overlay_text: "Text (markdown and templates)",
-  overlay_help: "**bold**, *italic*, # heading, - list, {red}colour{/red}, :mdi:thermometer: icons. Templates: {{ states('sensor.x') }}, weather_icon(state), date_local(now(), 'long').",
+  overlay_help: "**bold**, *italic*, # heading, - list, {red}colour{/red}, :mdi:thermometer: icons. Templates: {{ states('sensor.x') }}, weather_icon(state), date_local(now(), 'long'), photo.name.",
   insert_entity: "Insert entity",
   search_entities: "Search entities…",
   position: "Position",
@@ -728,7 +731,7 @@ const X = {
   shows_now: "Shows now: {text}",
   copy_overlays_to: "Copy all to…",
   copied_overlays: "Copied {n} overlays to {frame}",
-  hide_frame_overlays: "Hide frame overlays on this photo",
+  hide_frame_overlays: "Hide global photo overlays on this photo",
   pending_overlays: "overlays",
   pending_placeholder: "renamed frame"
 }, Re = {
@@ -841,8 +844,11 @@ const X = {
   read_ago: "gelesen {when}",
   overdue: "Hat sich nicht gemeldet",
   needs_urls: "Braucht neue URLs, siehe Reparaturen",
-  overlays: "Overlays",
-  overlays_hint: "Texte und Werte, die über jedes Foto dieses Rahmens gezeichnet werden.",
+  global_overlays: "Globale Foto-Overlays",
+  global_overlays_hint: "Texte und Werte, die über jedes Foto dieses Rahmens gezeichnet werden.",
+  photo_overlays: "Foto-Overlays",
+  photo_overlays_hint: "Texte und Werte, die nur über dieses Foto gezeichnet werden, unter den globalen Foto-Overlays.",
+  no_photo_overlays: "Noch keine Overlays auf diesem Foto.",
   add_overlay: "Overlay hinzufügen",
   preset_sensor: "Sensorwert",
   preset_weather: "Wetter",
@@ -852,7 +858,7 @@ const X = {
   edit_overlay: "Overlay bearbeiten",
   overlay_name: "Name",
   overlay_text: "Text (Markdown und Templates)",
-  overlay_help: "**fett**, *kursiv*, # Überschrift, - Liste, {red}Farbe{/red}, :mdi:thermometer: Icons. Templates: {{ states('sensor.x') }}, weather_icon(state), date_local(now(), 'long').",
+  overlay_help: "**fett**, *kursiv*, # Überschrift, - Liste, {red}Farbe{/red}, :mdi:thermometer: Icons. Templates: {{ states('sensor.x') }}, weather_icon(state), date_local(now(), 'long'), photo.name.",
   insert_entity: "Entität einfügen",
   search_entities: "Entitäten suchen…",
   position: "Position",
@@ -889,7 +895,7 @@ const X = {
   shows_now: "Zeigt jetzt: {text}",
   copy_overlays_to: "Alle kopieren nach…",
   copied_overlays: "{n} Overlays nach {frame} kopiert",
-  hide_frame_overlays: "Rahmen-Overlays auf diesem Foto ausblenden",
+  hide_frame_overlays: "Globale Foto-Overlays auf diesem Foto ausblenden",
   pending_overlays: "Overlays",
   pending_placeholder: "umbenannter Rahmen"
 };
@@ -897,26 +903,26 @@ function at(i) {
   const e = i?.language?.startsWith("de") ? Re : X;
   return (t, r) => {
     let n = e[t] ?? X[t] ?? t;
-    for (const [s, o] of Object.entries(r ?? {}))
-      n = n.replace(`{${s}}`, String(o));
+    for (const [o, s] of Object.entries(r ?? {}))
+      n = n.replace(`{${o}}`, String(s));
     return n;
   };
 }
 function lt(i, e, t) {
   if (!i) return t;
-  const r = Math.round((new Date(i).getTime() - Date.now()) / 1e3), n = new Intl.RelativeTimeFormat(e.language || "en", { numeric: "auto" }), s = [
+  const r = Math.round((new Date(i).getTime() - Date.now()) / 1e3), n = new Intl.RelativeTimeFormat(e.language || "en", { numeric: "auto" }), o = [
     [60, "second"],
     [60, "minute"],
     [24, "hour"],
     [7, "day"],
     [Number.POSITIVE_INFINITY, "week"]
   ];
-  let o = r;
-  for (const [l, a] of s) {
-    if (Math.abs(o) < l) return n.format(o, a);
-    o = Math.round(o / l);
+  let s = r;
+  for (const [l, a] of o) {
+    if (Math.abs(s) < l) return n.format(s, a);
+    s = Math.round(s / l);
   }
-  return n.format(o, "week");
+  return n.format(s, "week");
 }
 const ht = ae`
   :host {
@@ -1065,7 +1071,7 @@ export {
   Oe as g,
   Ze as h,
   ae as i,
-  Fe as j,
+  Ie as j,
   Ne as k,
   at as l,
   We as m,
@@ -1073,11 +1079,11 @@ export {
   rt as o,
   qe as p,
   tt as q,
-  ot as r,
+  st as r,
   ht as s,
-  st as t,
+  ot as t,
   De as u,
-  Ie as v,
+  Fe as v,
   Ue as w,
   Je as x,
   Be as y,

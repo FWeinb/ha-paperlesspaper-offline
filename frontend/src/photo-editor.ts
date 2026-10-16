@@ -3,6 +3,7 @@ import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { copyPhoto, deletePhoto, errorMessage, renderPreview, showPhoto, updatePhoto } from "./api";
 import "./crop-area";
+import "./overlays";
 import type { Crop } from "./crop-area";
 import { localizer } from "./localize";
 import { PreviewQueue } from "./preview-queue";
@@ -279,6 +280,7 @@ export class PhotoEditor extends LitElement {
               />
               ${l("hide_frame_overlays")}
             </label>
+            <pp-overlays .hass=${this.hass} .frame=${this.frame} .photos=${[this.photo]} .photo=${this.photo}></pp-overlays>
             <div class="section-title"><span>${l("rendering_settings")}</span></div>
             <pp-render-settings
               .hass=${this.hass}

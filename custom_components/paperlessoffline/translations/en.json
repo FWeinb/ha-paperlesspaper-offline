@@ -772,11 +772,15 @@
     },
     "add_overlay": {
       "name": "Add overlay",
-      "description": "Adds a text box drawn over every photo of a frame.",
+      "description": "Adds a global photo overlay (a text box drawn over every photo of a frame), or with a photo ID, a photo overlay for that one photo.",
       "fields": {
         "config_entry_id": {
           "name": "Frame",
           "description": "The frame to act on."
+        },
+        "photo_id": {
+          "name": "Photo ID",
+          "description": "Acts on this photo's own overlays. Leave empty for the frame's global photo overlays. ID of the photo (see the list photos action)."
         },
         "name": {
           "name": "Name",
@@ -839,6 +843,10 @@
         "config_entry_id": {
           "name": "Frame",
           "description": "The frame to act on."
+        },
+        "photo_id": {
+          "name": "Photo ID",
+          "description": "Acts on this photo's own overlays. Leave empty for the frame's global photo overlays. ID of the photo (see the list photos action)."
         },
         "overlay_id": {
           "name": "Overlay ID",
@@ -906,6 +914,10 @@
           "name": "Frame",
           "description": "The frame to act on."
         },
+        "photo_id": {
+          "name": "Photo ID",
+          "description": "Acts on this photo's own overlays. Leave empty for the frame's global photo overlays. ID of the photo (see the list photos action)."
+        },
         "overlay_id": {
           "name": "Overlay ID",
           "description": "ID of the overlay (see the list overlays action)."
@@ -920,6 +932,10 @@
           "name": "Frame",
           "description": "The frame to act on."
         },
+        "photo_id": {
+          "name": "Photo ID",
+          "description": "Acts on this photo's own overlays. Leave empty for the frame's global photo overlays. ID of the photo (see the list photos action)."
+        },
         "overlay_id": {
           "name": "Overlay ID",
           "description": "ID of the overlay (see the list overlays action)."
@@ -932,7 +948,7 @@
     },
     "copy_overlays": {
       "name": "Copy overlays to frame",
-      "description": "Copies all overlays of a frame to another frame.",
+      "description": "Copies all global photo overlays of a frame to another frame.",
       "fields": {
         "config_entry_id": {
           "name": "Frame",
@@ -950,11 +966,15 @@
     },
     "list_overlays": {
       "name": "List overlays",
-      "description": "Returns a frame's overlays with their last text and error.",
+      "description": "Returns a frame's global photo overlays, or one photo's overlays, with their last text and error.",
       "fields": {
         "config_entry_id": {
           "name": "Frame",
           "description": "The frame to act on."
+        },
+        "photo_id": {
+          "name": "Photo ID",
+          "description": "Acts on this photo's own overlays. Leave empty for the frame's global photo overlays. ID of the photo (see the list photos action)."
         }
       }
     }

@@ -58,6 +58,7 @@ def photo_info(hass: HomeAssistant, manager: FrameManager, photo: Photo) -> dict
         "added": photo.added,
         "overrides": _jsonable(photo.overrides),
         "hide_frame_overlays": photo.hide_frame_overlays,
+        "overlay_count": len(photo.overlays),
         "thumb_url": async_sign_path(hass, base, SIGN_EXPIRY),
         # The editor needs larger images; one per rotation so crops map 1:1.
         "display_urls": {
@@ -181,6 +182,7 @@ def ws_subscribe(
 
 
 _ENTRY: dict[Any, Any] = {vol.Required("entry_id"): cv.string}
+_OPT_PHOTO: dict[Any, Any] = {vol.Optional("photo_id"): str}
 _PHOTO: dict[Any, Any] = {**_ENTRY, vol.Required("photo_id"): cv.string}
 
 
@@ -412,21 +414,27 @@ async def ws_defaults_set(
 
 
 @websocket_api.require_admin
-@websocket_api.websocket_command({vol.Required("type"): f"{DOMAIN}/overlays", **_ENTRY})
+@websocket_api.websocket_command(
+    {vol.Required("type"): f"{DOMAIN}/overlays", **_ENTRY, **_OPT_PHOTO}
+)
 @callback
 def ws_overlays(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """List a frame's overlays with their last evaluated text and error."""
+    """List a frame's (or a photo's) overlays with their last evaluated text and error."""
     manager = get_manager(hass, msg["entry_id"])
-    connection.send_result(
-        msg["id"], {"overlays": [overlay_dict(manager, o) for o in manager.overlays]}
-    )
+    overlays = manager.overlays_of(msg.get("photo_id"))
+    connection.send_result(msg["id"], {"overlays": [overlay_dict(manager, o) for o in overlays]})
 
 
 @websocket_api.require_admin
 @websocket_api.websocket_command(
-    {vol.Required("type"): f"{DOMAIN}/overlay/save", **_ENTRY, vol.Required("overlay"): dict}
+    {
+        vol.Required("type"): f"{DOMAIN}/overlay/save",
+        **_ENTRY,
+        **_OPT_PHOTO,
+        vol.Required("overlay"): dict,
+    }
 )
 @callback
 def ws_overlay_save(
@@ -435,34 +443,45 @@ def ws_overlay_save(
     """Create (no id) or update (with id) an overlay."""
     manager = get_manager(hass, msg["entry_id"])
     data = OVERLAY_SCHEMA(msg["overlay"])
-    existing = manager.get_overlay(data["id"]) if data.get("id") else None
-    overlay = manager.async_save_overlay(build_overlay(data, existing))
+    photo_id = msg.get("photo_id")
+    existing = manager.get_overlay(data["id"], photo_id) if data.get("id") else None
+    overlay = manager.async_save_overlay(build_overlay(data, existing), photo_id)
     connection.send_result(msg["id"], overlay_dict(manager, overlay))
 
 
 @websocket_api.require_admin
 @websocket_api.websocket_command(
-    {vol.Required("type"): f"{DOMAIN}/overlay/delete", **_ENTRY, vol.Required("overlay_id"): str}
+    {
+        vol.Required("type"): f"{DOMAIN}/overlay/delete",
+        **_ENTRY,
+        **_OPT_PHOTO,
+        vol.Required("overlay_id"): str,
+    }
 )
 @callback
 def ws_overlay_delete(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Delete an overlay."""
-    get_manager(hass, msg["entry_id"]).async_delete_overlay(msg["overlay_id"])
+    get_manager(hass, msg["entry_id"]).async_delete_overlay(msg["overlay_id"], msg.get("photo_id"))
     connection.send_result(msg["id"])
 
 
 @websocket_api.require_admin
 @websocket_api.websocket_command(
-    {vol.Required("type"): f"{DOMAIN}/overlay/reorder", **_ENTRY, vol.Required("order"): [str]}
+    {
+        vol.Required("type"): f"{DOMAIN}/overlay/reorder",
+        **_ENTRY,
+        **_OPT_PHOTO,
+        vol.Required("order"): [str],
+    }
 )
 @callback
 def ws_overlay_reorder(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Reorder overlays (drawing order)."""
-    get_manager(hass, msg["entry_id"]).async_reorder_overlays(msg["order"])
+    get_manager(hass, msg["entry_id"]).async_reorder_overlays(msg["order"], msg.get("photo_id"))
     connection.send_result(msg["id"])
 
 
@@ -494,6 +513,8 @@ def ws_overlays_copy(
         **_ENTRY,
         vol.Optional("photo_id"): vol.Any(None, str),
         vol.Optional("overlays"): [dict],
+        # True: the drafts are the photo's own overlays (else the global ones).
+        vol.Optional("for_photo", default=False): bool,
     }
 )
 @websocket_api.async_response
@@ -503,13 +524,16 @@ async def ws_overlay_preview(
     """Render a photo with (draft) overlays evaluated now, plus each one's text or error."""
     manager = get_manager(hass, msg["entry_id"])
     drafts = None
+    scope_photo = msg.get("photo_id") if msg["for_photo"] else None
     if "overlays" in msg:
         drafts = []
         for raw in msg["overlays"]:
             data = OVERLAY_SCHEMA(raw)
-            existing = manager.get_overlay(data["id"]) if data.get("id") else None
+            existing = manager.get_overlay(data["id"], scope_photo) if data.get("id") else None
             drafts.append(build_overlay(data, existing))
-    png, results = await manager.async_overlay_preview(msg.get("photo_id"), drafts)
+    png, results = await manager.async_overlay_preview(
+        msg.get("photo_id"), drafts, msg["for_photo"]
+    )
     connection.send_result(
         msg["id"],
         {

@@ -25,6 +25,14 @@ class Photo:
     enabled: bool = True
     overrides: dict[str, Any] = field(default_factory=dict)
     hide_frame_overlays: bool = False
+    overlays: list[OverlayDef] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Photo:
+        """Deserialise, ignoring unknown keys."""
+        known = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
+        known["overlays"] = [OverlayDef.from_dict(o) for o in known.get("overlays") or []]
+        return cls(**known)
 
     def as_dict(self) -> dict[str, Any]:
         """Serialise."""
@@ -147,10 +155,7 @@ class FrameStore:
     async def async_load(self) -> None:
         """Load from disk."""
         data = await self._store.async_load() or {}
-        self.photos = [
-            Photo(**{k: v for k, v in p.items() if k in Photo.__dataclass_fields__})
-            for p in data.get("photos", [])
-        ]
+        self.photos = [Photo.from_dict(p) for p in data.get("photos", [])]
         self.overlays = [OverlayDef.from_dict(o) for o in data.get("overlays", [])]
         self.state = FrameState.from_dict(data.get("state", {}))
 

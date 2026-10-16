@@ -163,6 +163,25 @@ check(maxInFlight === 1, `one preview in flight at a time (max ${maxInFlight})`)
 check(slow.length <= 4, `stale changes coalesced (${slow.length} requests for 6 changes)`);
 check(slow.at(-1)?.overrides?.dither === "sierra2", "last request has the latest draft");
 
+// 6. Photo editor: the Overlays section adds a photo overlay and previews it on that photo.
+await page.goto(`${BASE}?frame=kitchen&edit=0`);
+await new Promise((r) => setTimeout(r, 1500));
+const photoOverlays = () =>
+  page.evaluateHandle(() =>
+    document.querySelector("paperlessoffline-panel").shadowRoot.querySelector("pp-photo-editor")
+      .shadowRoot.querySelector("pp-overlays").shadowRoot);
+check(await (await photoOverlays()).evaluate((r) => r.querySelector("h3").textContent.trim() === "Photo overlays"), "photo editor lists Photo overlays");
+await (await photoOverlays()).evaluate((r) => r.querySelector(".menu-wrap button").click());
+await (await photoOverlays()).evaluate((r) => r.querySelector(".menu button").click());
+await new Promise((r) => setTimeout(r, 1200));
+const photoPreview = (await ws()).filter((m) => m.type === "paperlessoffline/overlay/preview").pop();
+check(photoPreview?.for_photo === true && !!photoPreview.photo_id, "photo overlay preview is for that photo");
+await (await photoOverlays()).evaluate((r) => r.querySelector("pp-overlay-editor").shadowRoot.querySelector("button.primary").click());
+await new Promise((r) => setTimeout(r, 600));
+const photoSave = (await ws()).filter((m) => m.type === "paperlessoffline/overlay/save").pop();
+check(!!photoSave?.photo_id && !photoSave.overlay.id, "photo overlay saved with its photo_id");
+check(await (await photoOverlays()).evaluate((r) => r.querySelectorAll("li").length === 1), "photo editor shows the new photo overlay");
+
 await browser.close();
 console.log(failures.length ? `${failures.length} failure(s)` : "all interactions ok");
 process.exit(failures.length ? 1 : 0);

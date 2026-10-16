@@ -772,11 +772,15 @@
     },
     "add_overlay": {
       "name": "Overlay hinzufügen",
-      "description": "Fügt eine Textbox hinzu, die über jedes Foto eines Rahmens gezeichnet wird.",
+      "description": "Fügt ein globales Foto-Overlay hinzu (eine Textbox über jedem Foto eines Rahmens) oder, mit Foto-ID, ein Foto-Overlay nur für dieses Foto.",
       "fields": {
         "config_entry_id": {
           "name": "Rahmen",
           "description": "Der betroffene Rahmen."
+        },
+        "photo_id": {
+          "name": "Foto-ID",
+          "description": "Nur für Overlays dieses Fotos; ohne Angabe gilt die Liste des Rahmens (globale Foto-Overlays). ID des Fotos (siehe Aktion Fotos auflisten)."
         },
         "name": {
           "name": "Name",
@@ -839,6 +843,10 @@
         "config_entry_id": {
           "name": "Rahmen",
           "description": "Der betroffene Rahmen."
+        },
+        "photo_id": {
+          "name": "Foto-ID",
+          "description": "Nur für Overlays dieses Fotos; ohne Angabe gilt die Liste des Rahmens (globale Foto-Overlays). ID des Fotos (siehe Aktion Fotos auflisten)."
         },
         "overlay_id": {
           "name": "Overlay-ID",
@@ -906,6 +914,10 @@
           "name": "Rahmen",
           "description": "Der betroffene Rahmen."
         },
+        "photo_id": {
+          "name": "Foto-ID",
+          "description": "Nur für Overlays dieses Fotos; ohne Angabe gilt die Liste des Rahmens (globale Foto-Overlays). ID des Fotos (siehe Aktion Fotos auflisten)."
+        },
         "overlay_id": {
           "name": "Overlay-ID",
           "description": "ID des Overlays (siehe Aktion „Overlays auflisten“)."
@@ -920,6 +932,10 @@
           "name": "Rahmen",
           "description": "Der betroffene Rahmen."
         },
+        "photo_id": {
+          "name": "Foto-ID",
+          "description": "Nur für Overlays dieses Fotos; ohne Angabe gilt die Liste des Rahmens (globale Foto-Overlays). ID des Fotos (siehe Aktion Fotos auflisten)."
+        },
         "overlay_id": {
           "name": "Overlay-ID",
           "description": "ID des Overlays (siehe Aktion „Overlays auflisten“)."
@@ -932,7 +948,7 @@
     },
     "copy_overlays": {
       "name": "Overlays in Rahmen kopieren",
-      "description": "Kopiert alle Overlays eines Rahmens in einen anderen Rahmen.",
+      "description": "Kopiert alle globalen Foto-Overlays eines Rahmens in einen anderen Rahmen.",
       "fields": {
         "config_entry_id": {
           "name": "Rahmen",
@@ -950,11 +966,15 @@
     },
     "list_overlays": {
       "name": "Overlays auflisten",
-      "description": "Gibt die Overlays eines Rahmens mit letztem Text und Fehler zurück.",
+      "description": "Gibt die globalen Foto-Overlays eines Rahmens oder die Overlays eines Fotos mit letztem Text und Fehler zurück.",
       "fields": {
         "config_entry_id": {
           "name": "Rahmen",
           "description": "Der betroffene Rahmen."
+        },
+        "photo_id": {
+          "name": "Foto-ID",
+          "description": "Nur für Overlays dieses Fotos; ohne Angabe gilt die Liste des Rahmens (globale Foto-Overlays). ID des Fotos (siehe Aktion Fotos auflisten)."
         }
       }
     }

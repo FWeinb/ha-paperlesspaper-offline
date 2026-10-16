@@ -438,7 +438,10 @@ class FrameManager:
             if fresh:
                 # A freshly rendered base: draw this wake's overlays on top.
                 st.served_base_key = key
-                draw = self._overlay_draw_list(self.overlays, st.overlay_texts)
+                shown = self.get_photo(st.current_id) if st.current_kind == "photo" else None
+                draw = self._overlay_draw_list(
+                    self._applicable_overlays(st.current_kind, shown), st.overlay_texts
+                )
                 if draw:
                     key = await self._async_render_composite(key, draw)
             bmp = await self.hass.async_add_executor_job(self.cache.read_bmp, key)
@@ -651,7 +654,9 @@ class FrameManager:
         """What the frame hasn't picked up yet."""
         pending = []
         eval_base = self.state.overlay_eval_base or ""
-        if self.overlays and not eval_base.endswith("|" + self.overlay_defs_hash()):
+        shown = self._current_photo()
+        has_overlays = bool(self.overlays or (shown and shown.overlays))
+        if has_overlays and not eval_base.endswith("|" + self.overlay_defs_hash(shown)):
             pending.append("overlays")
         if self.state.fetched_device_hash != self.device_settings_hash():
             pending.append("settings")
@@ -753,7 +758,8 @@ class FrameManager:
         kind, photo_id = self.up_next()
         photo = self.get_photo(photo_id) if kind == "photo" else None
         applicable = self._applicable_overlays(kind, photo)
-        texts = {o.id: self.evaluate_overlay(o)[0] for o in applicable}
+        variables = self.template_variables(photo)
+        texts = {o.id: self.evaluate_overlay(o, variables)[0] for o in applicable}
         return kind, photo, self._overlay_draw_list(applicable, texts)
 
     async def _async_render_up_next(self) -> tuple[str, str]:
@@ -847,13 +853,21 @@ class FrameManager:
         """Frame overlays, in drawing order."""
         return self.store.overlays
 
-    def get_overlay(self, overlay_id: str) -> OverlayDef | None:
-        """Look up an overlay by id."""
-        return next((o for o in self.overlays if o.id == overlay_id), None)
+    def overlays_of(self, photo_id: str | None = None) -> list[OverlayDef]:
+        """The overlay list of a photo, or the frame's (global) list without a photo."""
+        return self.require_photo(photo_id).overlays if photo_id else self.overlays
 
-    def require_overlay(self, overlay_id: str) -> OverlayDef:
+    def _current_photo(self) -> Photo | None:
+        st = self.state
+        return self.get_photo(st.current_id) if st.current_kind == "photo" else None
+
+    def get_overlay(self, overlay_id: str, photo_id: str | None = None) -> OverlayDef | None:
+        """Look up an overlay by id in a photo's list or the frame's."""
+        return next((o for o in self.overlays_of(photo_id) if o.id == overlay_id), None)
+
+    def require_overlay(self, overlay_id: str, photo_id: str | None = None) -> OverlayDef:
         """Look up an overlay or raise a validation error."""
-        if (overlay := self.get_overlay(overlay_id)) is None:
+        if (overlay := self.get_overlay(overlay_id, photo_id)) is None:
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="overlay_not_found",
@@ -861,20 +875,35 @@ class FrameManager:
             )
         return overlay
 
-    def overlay_defs_hash(self) -> str:
-        """Hash of all overlay definitions (edits invalidate evaluated texts)."""
-        return _hash([o.as_dict() for o in self.overlays])
+    def overlay_defs_hash(self, photo: Photo | None = None) -> str:
+        """Hash of the overlay definitions a display uses (edits invalidate evaluated texts)."""
+        return _hash(
+            {
+                "photo": [o.as_dict() for o in photo.overlays] if photo else [],
+                "global": [o.as_dict() for o in self.overlays],
+            }
+        )
 
     def _applicable_overlays(self, kind: str | None, photo: Photo | None) -> list[OverlayDef]:
+        """Enabled overlays drawn for a display, in drawing order.
+
+        A photo's own overlays come first, global ones on top; the hide switch only
+        removes the global ones. One-off images get global overlays only.
+        """
         if kind not in ("photo", "override"):
             return []  # the placeholder stays as it is
-        if photo is not None and photo.hide_frame_overlays:
-            return []
-        return [o for o in self.overlays if o.enabled]
+        applicable: list[OverlayDef] = []
+        if kind == "photo" and photo is not None:
+            applicable += [o for o in photo.overlays if o.enabled]
+        if photo is None or not photo.hide_frame_overlays:
+            applicable += [o for o in self.overlays if o.enabled]
+        return applicable
 
-    def template_variables(self) -> dict[str, Any]:
-        """Variables for overlay templates on this frame."""
-        return template_variables(self.hass, self.display_name)
+    def template_variables(self, photo: Photo | None = None) -> dict[str, Any]:
+        """Variables for overlay templates on this frame (``photo`` is None off the library)."""
+        return template_variables(
+            self.hass, self.display_name, photo.name if photo is not None else None
+        )
 
     def evaluate_overlay(
         self, overlay: OverlayDef, variables: dict[str, Any] | None = None
@@ -895,14 +924,14 @@ class FrameManager:
     def _evaluate_overlays_for_wake(self) -> None:
         """Evaluate overlay texts once per wake, honouring each redraw policy."""
         st = self.state
-        photo = self.get_photo(st.current_id) if st.current_kind == "photo" else None
+        photo = self._current_photo()
         applicable = self._applicable_overlays(st.current_kind, photo)
         shown = (
             st.override.sha256 if st.current_kind == "override" and st.override else st.current_id
         )
-        ident = f"{st.current_kind}:{shown}|{self.overlay_defs_hash()}"
+        ident = f"{st.current_kind}:{shown}|{self.overlay_defs_hash(photo)}"
         same_display = ident == st.overlay_eval_base
-        variables = self.template_variables()
+        variables = self.template_variables(photo)
         texts: dict[str, str | None] = {}
         errors: dict[str, str] = {}
         for overlay in applicable:
@@ -966,62 +995,77 @@ class FrameManager:
         return await self._async_render_cached(key, produce)
 
     async def async_overlay_preview(
-        self, photo_id: str | None, overlays: list[OverlayDef] | None = None
+        self,
+        photo_id: str | None,
+        overlays: list[OverlayDef] | None = None,
+        for_photo: bool = False,
     ) -> tuple[bytes | None, dict[str, dict[str, str | None]]]:
         """Preview a photo with (draft) overlays evaluated now.
 
-        Returns the PNG and, per overlay id, its evaluated text and error.
+        ``overlays`` are drafts of the photo's own list (``for_photo``) or of the
+        global list; the other list is drawn as stored (the global one not on a photo
+        that hides it, unless it is the one being edited). Returns the PNG and, per
+        overlay id, its evaluated text and error.
         """
-        overlays = self.overlays if overlays is None else overlays
         photo = self.get_photo(photo_id) if photo_id else None
+        if for_photo and photo is None:
+            self.require_photo(photo_id or "")
         if photo is None and self.photos:
             photo = self.photos[0]
+        own = (overlays if for_photo and overlays is not None else photo.overlays) if photo else []
+        glob = self.overlays if for_photo or overlays is None else overlays
+        hidden = for_photo and photo is not None and photo.hide_frame_overlays
         base = (
             await self.async_render_photo(photo)
             if photo
             else await self._async_render_placeholder()
         )
-        variables = self.template_variables()
+        variables = self.template_variables(photo)
         results: dict[str, dict[str, str | None]] = {}
         texts: dict[str, str | None] = {}
-        for overlay in overlays:
+        for overlay in [*own, *glob]:
             text, error = (
                 self.evaluate_overlay(overlay, variables) if overlay.enabled else (None, None)
             )
             results[overlay.id] = {"text": text, "error": error}
             texts[overlay.id] = text
+        drawn = [o for o in own if o.enabled]
+        if not hidden:
+            drawn += [o for o in glob if o.enabled]
         key = base
-        if draw := self._overlay_draw_list([o for o in overlays if o.enabled], texts):
+        if draw := self._overlay_draw_list(drawn, texts):
             key = await self._async_render_composite(base, draw)
         png = await self.hass.async_add_executor_job(self.cache.read_png, key)
         return png, results
 
     @callback
-    def async_save_overlay(self, overlay: OverlayDef) -> OverlayDef:
-        """Create or replace an overlay (matched by id)."""
-        for index, existing in enumerate(self.overlays):
+    def async_save_overlay(self, overlay: OverlayDef, photo_id: str | None = None) -> OverlayDef:
+        """Create or replace an overlay (matched by id) in a photo's list or the frame's."""
+        target = self.overlays_of(photo_id)
+        for index, existing in enumerate(target):
             if existing.id == overlay.id:
-                self.store.overlays[index] = overlay
+                target[index] = overlay
                 break
         else:
-            self.store.overlays.append(overlay)
+            target.append(overlay)
         self._changed()
         return overlay
 
     @callback
-    def async_delete_overlay(self, overlay_id: str) -> None:
+    def async_delete_overlay(self, overlay_id: str, photo_id: str | None = None) -> None:
         """Remove an overlay."""
-        overlay = self.require_overlay(overlay_id)
-        self.store.overlays.remove(overlay)
+        overlay = self.require_overlay(overlay_id, photo_id)
+        self.overlays_of(photo_id).remove(overlay)
         self._changed()
 
     @callback
-    def async_reorder_overlays(self, order: list[str]) -> None:
+    def async_reorder_overlays(self, order: list[str], photo_id: str | None = None) -> None:
         """Reorder overlays; ids not listed keep their relative order at the end."""
-        by_id = {o.id: o for o in self.overlays}
+        target = self.overlays_of(photo_id)
+        by_id = {o.id: o for o in target}
         ordered = [by_id[i] for i in dict.fromkeys(order) if i in by_id]
-        rest = [o for o in self.overlays if o.id not in set(order)]
-        self.store.overlays[:] = ordered + rest
+        rest = [o for o in target if o.id not in set(order)]
+        target[:] = ordered + rest
         self._changed()
 
     @callback
@@ -1160,7 +1204,14 @@ class FrameManager:
         """Copy a photo (original + overrides) into another frame's library."""
         photo = self.require_photo(photo_id)
         data = await self.hass.async_add_executor_job((self.originals / photo.filename).read_bytes)
-        return await target.async_add_photo(data, photo.name, dict(photo.overrides), photo.enabled)
+        copy = await target.async_add_photo(data, photo.name, dict(photo.overrides), photo.enabled)
+        if photo.overlays:
+            copy.overlays[:] = [
+                OverlayDef.from_dict({**o.as_dict(), "id": secrets.token_hex(6)})
+                for o in photo.overlays
+            ]
+            target._changed()
+        return copy
 
     async def async_thumbnail(self, photo_id: str, size: int = 320, rotation: int = 0) -> bytes:
         """JPEG of a photo's original at a fixed size, optionally rotated (cached)."""

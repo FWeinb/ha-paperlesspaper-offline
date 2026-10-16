@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 import io
-from pathlib import Path
 
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
@@ -172,14 +171,6 @@ async def test_entity_icon(hass: HomeAssistant) -> None:
 
 
 # ---------------------------------------------------------- frame behaviour
-
-
-@pytest.fixture
-def photo_path(hass: HomeAssistant, tmp_path: Path) -> Path:
-    hass.config.allowlist_external_dirs = {str(tmp_path)}
-    path = tmp_path / "a.jpg"
-    path.write_bytes(make_jpeg((60, 120, 200)))
-    return path
 
 
 async def _call(hass, service, **data):

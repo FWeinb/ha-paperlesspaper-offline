@@ -102,6 +102,8 @@ const frames: Frame[] = [
 ];
 const photos: Record<string, Photo[]> = { kitchen: names.map((_, i) => photoOf(i, "kitchen")), hall: [] };
 
+/** Overlay lists: the frame's global ones under the entry id, a photo's own under `photo:<id>`. */
+const scopeKey = (msg: any): string => (msg.photo_id ? `photo:${msg.photo_id}` : msg.entry_id);
 const overlays: Record<string, any[]> = {
   kitchen: [
     { overlay_id: "o1", name: "Temperature", template: ":mdi:thermometer: **{{ states('sensor.outdoor_temperature') }} °C**", enabled: true, show_if: null, anchor: "top_right", margin: 0.03, width: null, align: "left", size: "l", text_color: "black", backing: "box", backing_color: "white", redraw: "change", last_text: ":mdi:thermometer: **7.5 °C**", last_error: null },
@@ -191,21 +193,23 @@ const hass: any = {
         const scale = 0.5;
         return previewDelay({ image: quantize(sources[idx], frame.canvas.width * scale, frame.canvas.height * scale, msg.overrides?.crop), width: frame.canvas.width, height: frame.canvas.height });
       }
-      case "overlays": return delay({ overlays: overlays[msg.entry_id] ?? [] });
+      case "overlays": return delay({ overlays: overlays[scopeKey(msg)] ?? [] });
       case "overlay/save": {
-        const list = overlays[msg.entry_id];
+        const list = (overlays[scopeKey(msg)] ??= []);
         const { id, ...rest } = msg.overlay;
         const r = evalTemplate(rest.template ?? "");
         if (id) { const i = list.findIndex((o) => o.overlay_id === id); list[i] = { ...list[i], ...rest, overlay_id: id }; return delay(list[i]); }
         const created = { ...rest, overlay_id: `o${nextOverlay++}`, last_text: r.text, last_error: r.error };
         list.push(created); return delay(created);
       }
-      case "overlay/delete": overlays[msg.entry_id] = overlays[msg.entry_id].filter((o) => o.overlay_id !== msg.overlay_id); return delay(null);
-      case "overlay/reorder": { const by = new Map(overlays[msg.entry_id].map((o) => [o.overlay_id, o])); overlays[msg.entry_id] = msg.order.map((i: string) => by.get(i)); return delay(null); }
+      case "overlay/delete": overlays[scopeKey(msg)] = overlays[scopeKey(msg)].filter((o) => o.overlay_id !== msg.overlay_id); return delay(null);
+      case "overlay/reorder": { const by = new Map(overlays[scopeKey(msg)].map((o) => [o.overlay_id, o])); overlays[scopeKey(msg)] = msg.order.map((i: string) => by.get(i)); return delay(null); }
       case "overlays/copy": overlays[msg.target_entry_id].push(...overlays[msg.entry_id].map((o) => ({ ...o, overlay_id: `o${nextOverlay++}` }))); return delay({ copied: overlays[msg.entry_id].length });
       case "overlay/preview": {
         const frame = frames.find((f) => f.entry_id === msg.entry_id)!;
-        const list = msg.overlays.map((o: any) => ({ ...o, overlay_id: o.id ?? o.overlay_id }));
+        const drafts = msg.overlays.map((o: any) => ({ ...o, overlay_id: o.id ?? o.overlay_id }));
+        // Photo drafts are drawn first, then the stored global ones on top.
+        const list = msg.for_photo ? [...drafts, ...(overlays[msg.entry_id] ?? [])] : drafts;
         const idx = Math.max(0, photos[msg.entry_id].findIndex((p) => p.photo_id === msg.photo_id));
         const base = quantize(sources[idx], frame.canvas.width / 2, frame.canvas.height / 2);
         const image = await drawOverlayMock(base, list, frame.canvas.width / 2, frame.canvas.height / 2);

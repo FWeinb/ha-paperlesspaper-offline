@@ -61,6 +61,18 @@ class FrameVars:
         return self.name
 
 
+class PhotoVars:
+    """``photo`` as seen by templates (``None`` where no photo is shown)."""
+
+    def __init__(self, name: str) -> None:
+        """Initialise."""
+        self.name = name
+
+    def __str__(self) -> str:
+        """Render as the photo's name."""
+        return self.name
+
+
 def _language(hass: HomeAssistant) -> str:
     return "de" if (hass.config.language or "").startswith("de") else "en"
 
@@ -131,10 +143,16 @@ def make_date_local(hass: HomeAssistant) -> Callable[..., str]:
     return date_local
 
 
-def template_variables(hass: HomeAssistant, frame_name: str) -> dict[str, Any]:
-    """Variables and helper functions available to overlay templates."""
+def template_variables(
+    hass: HomeAssistant, frame_name: str, photo_name: str | None = None
+) -> dict[str, Any]:
+    """Variables and helper functions available to overlay templates.
+
+    ``photo_name`` is None where no photo is shown (one-off images, the placeholder).
+    """
     return {
         "frame": FrameVars(frame_name),
+        "photo": PhotoVars(photo_name) if photo_name is not None else None,
         "weather_icon": weather_icon,
         "entity_icon": make_entity_icon(hass),
         "date_local": make_date_local(hass),

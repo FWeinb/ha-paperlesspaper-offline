@@ -118,17 +118,21 @@ const toPayload = (overlay: Overlay) => {
   return overlay_id ? { id: overlay_id, ...rest } : rest;
 };
 
-export const fetchOverlays = (hass: HomeAssistant, entryId: string) =>
-  hass.callWS<{ overlays: Overlay[] }>({ type: `${D}/overlays`, entry_id: entryId }).then((r) => r.overlays);
+/** Overlay commands act on a photo's own list when given its id, else on the frame's global one. */
+const scope = (entryId: string, photoId?: string | null) =>
+  photoId ? { entry_id: entryId, photo_id: photoId } : { entry_id: entryId };
 
-export const saveOverlay = (hass: HomeAssistant, entryId: string, overlay: Overlay) =>
-  hass.callWS<Overlay>({ type: `${D}/overlay/save`, entry_id: entryId, overlay: toPayload(overlay) });
+export const fetchOverlays = (hass: HomeAssistant, entryId: string, photoId?: string | null) =>
+  hass.callWS<{ overlays: Overlay[] }>({ type: `${D}/overlays`, ...scope(entryId, photoId) }).then((r) => r.overlays);
 
-export const deleteOverlay = (hass: HomeAssistant, entryId: string, overlayId: string) =>
-  hass.callWS({ type: `${D}/overlay/delete`, entry_id: entryId, overlay_id: overlayId });
+export const saveOverlay = (hass: HomeAssistant, entryId: string, overlay: Overlay, photoId?: string | null) =>
+  hass.callWS<Overlay>({ type: `${D}/overlay/save`, ...scope(entryId, photoId), overlay: toPayload(overlay) });
 
-export const reorderOverlays = (hass: HomeAssistant, entryId: string, order: string[]) =>
-  hass.callWS({ type: `${D}/overlay/reorder`, entry_id: entryId, order });
+export const deleteOverlay = (hass: HomeAssistant, entryId: string, overlayId: string, photoId?: string | null) =>
+  hass.callWS({ type: `${D}/overlay/delete`, ...scope(entryId, photoId), overlay_id: overlayId });
+
+export const reorderOverlays = (hass: HomeAssistant, entryId: string, order: string[], photoId?: string | null) =>
+  hass.callWS({ type: `${D}/overlay/reorder`, ...scope(entryId, photoId), order });
 
 export const copyOverlays = (hass: HomeAssistant, entryId: string, target: string) =>
   hass.callWS<{ copied: number }>({ type: `${D}/overlays/copy`, entry_id: entryId, target_entry_id: target });
@@ -138,10 +142,13 @@ export const previewOverlays = (
   entryId: string,
   overlays: Overlay[],
   photoId?: string | null,
+  /** The overlays are the photo's own (else the frame's global ones). */
+  forPhoto = false,
 ) =>
   hass.callWS<OverlayPreview>({
     type: `${D}/overlay/preview`,
     entry_id: entryId,
     photo_id: photoId ?? null,
+    for_photo: forPhoto,
     overlays: overlays.map(toPayload),
   });

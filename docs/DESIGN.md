@@ -536,9 +536,9 @@ snapshot of that moment, not live.
 
 ### Concepts
 
-- **Frame overlays**: text boxes defined per frame and drawn on every photo,
-  e.g. sensor values in a corner. Each photo has a "hide frame overlays"
-  switch.
+- **Global photo overlays** (code and actions still say "frame overlays"):
+  text boxes defined per frame and drawn on every photo, e.g. sensor values
+  in a corner. Each photo has a "hide global photo overlays" switch.
 - **Photo overlays**: text that belongs to one photo, e.g. a caption.
   `copy_photo` copies them along.
 - **Text cards**: a new kind of library item that is mostly text.
@@ -635,6 +635,8 @@ snapshot of that moment, not live.
 - **Step B**: photo overlays with photo variables, text cards with
   backgrounds and presets, `show_text`, and the overlay switch on one-off
   images.
+  - Shipped ahead of the rest: photo overlays with `photo.name` only (see
+    section 20).
 
 Each step is tested on a real frame before the next.
 
@@ -813,3 +815,36 @@ Each step is tested on a real frame before the next.
   unused, and drafts from the overlay editor stay until the next run.
 - **Diagnostics** show file count and bytes for `cache/`, `thumbs/` and
   `originals/`.
+
+## 20. Implementation notes (photo overlays)
+
+A slice of Step B shipped on its own: a photo can carry its own overlays.
+
+- **Storage**: `Photo.overlays` is an ordered list of the same `OverlayDef`
+  as the frame's (`FrameStore.overlays`). It is (de)serialised in
+  `Photo.from_dict`; older stores without the key load as empty.
+- **Applicable overlays** (`FrameManager._applicable_overlays`): enabled photo
+  overlays first, then the global ones on top. The hide switch
+  (`hide_frame_overlays`) removes only the global ones. One-off images never
+  get photo overlays, and the placeholder gets none.
+- **Variables**: `photo.name` only (no EXIF yet). `photo` is `None` on
+  one-off images and the placeholder, so `{% if photo %}` works.
+- **Wake evaluation**: the ident stored in `overlay_eval_base` is
+  `kind:shown|hash`, where the hash covers the current photo's overlay
+  definitions and the global ones (`overlay_defs_hash(photo)`).
+  `pending_changes()` compares against the same hash, so editing the shown
+  photo's overlay is pending until the next wake.
+- **Actions and websocket**: `add_overlay`, `update_overlay`, `remove_overlay`,
+  `move_overlay`, `list_overlays` and the websocket commands `overlays`,
+  `overlay/save`, `overlay/delete`, `overlay/reorder` take an optional
+  `photo_id`; without it they act on the global list. `copy_overlays` stays
+  frame-only. `copy_photo` copies a photo's overlays with new ids.
+- **Preview**: `overlay/preview` takes `for_photo`. With it the drafts are the
+  photo's own overlays and the stored global ones are drawn on top (unless
+  the photo hides them). Without it the drafts are global ones drawn over the
+  photo's stored overlays.
+- **Panel**: the photo editor has a *Photo overlays* section (the same list and
+  editor component as the Settings tab, with `photo` set). The editor modal's
+  `closed` event is stopped at the list so it does not close the photo editor.
+- **Not yet**: copying overlays between photos, `photo.date`,
+  `photo.location`.

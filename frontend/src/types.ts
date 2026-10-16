@@ -86,6 +86,7 @@ export interface Photo {
   added: string;
   overrides: PhotoSettings;
   hide_frame_overlays: boolean;
+  overlay_count?: number;
   thumb_url: string;
   display_urls: Record<string, string>;
 }
@@ -118,7 +119,7 @@ export type Anchor =
   | "bottom_right";
 export type PaletteColor = "black" | "white" | "red" | "green" | "blue" | "yellow";
 
-/** A text box drawn over every photo of a frame. */
+/** A text box drawn over photos: a global photo overlay (every photo of a frame) or a photo overlay (one photo). */
 export interface Overlay {
   overlay_id?: string;
   name: string;
