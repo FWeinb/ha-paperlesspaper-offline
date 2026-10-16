@@ -71,7 +71,7 @@ export interface Frame {
   pending: string[];
   current: { kind: string | null; photo_id: string | null; name: string | null };
   up_next: { kind: string; photo_id: string | null; name: string | null };
-  override: { name: string; wakes_remaining: number | null } | null;
+  override: { kind: "image" | "text"; name: string; wakes_remaining: number | null } | null;
   photo_count: number;
   enabled_count: number;
   ble: { voltage?: number; usb?: boolean; charging?: boolean; rssi?: number; read_at: string | null };

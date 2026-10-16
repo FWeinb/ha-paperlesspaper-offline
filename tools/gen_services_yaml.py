@@ -123,6 +123,21 @@ SERVICES = {
         "overlays": {"default": True, "selector": {"boolean": {}}},
         **PHOTO_RENDER,
     },
+    "show_text": {
+        "config_entry_id": FRAME,
+        "text": {
+            "required": True,
+            "example": "# Dinner is ready\n{{ states('sensor.oven_temperature') }} °C",
+            "selector": {"text": {"multiline": True}},
+        },
+        "name": NAME,
+        "background": {"default": "white", **select(COLORS, "overlay_color")},
+        "size": {"default": "xxl", **select(["s", "m", "l", "xl", "xxl"], "overlay_size")},
+        "anchor": {"default": "center", **select(ANCHORS, "overlay_anchor")},
+        "align": {"default": "center", **select(["left", "center", "right"], "overlay_align")},
+        "wakes": {"selector": {"number": {"min": 1, "max": 1000, "mode": "box"}}},
+        "overlays": {"default": True, "selector": {"boolean": {}}},
+    },
     "clear_image": {"config_entry_id": FRAME},
     "list_photos": {"config_entry_id": FRAME},
     "add_overlay": {

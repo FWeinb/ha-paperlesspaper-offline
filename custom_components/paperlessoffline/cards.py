@@ -33,6 +33,11 @@ _TEXTS = {
 }
 
 
+def text_color_on(background: str) -> str:
+    """Readable text colour on a plain background."""
+    return "white" if background in _DARK else "black"
+
+
 def _texts(language: str | None) -> dict[str, str]:
     return _TEXTS["de"] if (language or "").startswith("de") else _TEXTS["en"]
 
@@ -73,7 +78,7 @@ def preset_overlays(preset: str, background: str, language: str | None) -> list[
                 anchor="center",
                 align="center",
                 size="xxl",
-                text_color="white" if background in _DARK else "black",
+                text_color=text_color_on(background),
                 backing="none",
             )
         ]

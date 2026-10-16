@@ -19,6 +19,7 @@ from .cards import CARD_BACKGROUNDS, PRESETS
 from .const import DOMAIN, RENDER_KEYS_FRAME_ONLY, RENDER_KEYS_PHOTO_ONLY, RENDER_KEYS_SHARED
 from .data import DATA_KEY, get_manager
 from .overlay_schema import OVERLAY_FIELDS, build_overlay
+from .render.overlay import ALIGNS, ANCHORS, COLORS, SIZES
 from .render.pipeline import BACKGROUNDS
 from .settings import FRAME_FIELDS, PHOTO_FIELDS
 from .sources import ATTR_ENTITY, ATTR_FILE_PATH, ATTR_MEDIA, ATTR_URL, async_fetch_source
@@ -36,6 +37,10 @@ ATTR_RESET = "reset"
 ATTR_PRESET = "preset"
 ATTR_BACKGROUND = "background"
 ATTR_BACKGROUND_PHOTO = "background_photo_id"
+ATTR_TEXT = "text"
+ATTR_SIZE = "size"
+ATTR_ANCHOR = "anchor"
+ATTR_ALIGN = "align"
 
 SERVICE_ADD_PHOTO = "add_photo"
 SERVICE_ADD_CARD = "add_card"
@@ -46,6 +51,7 @@ SERVICE_COPY_PHOTO = "copy_photo"
 SERVICE_SHOW_PHOTO = "show_photo"
 SERVICE_NEXT_PHOTO = "next_photo"
 SERVICE_SHOW_IMAGE = "show_image"
+SERVICE_SHOW_TEXT = "show_text"
 SERVICE_CLEAR_IMAGE = "clear_image"
 SERVICE_LIST_PHOTOS = "list_photos"
 SERVICE_SET_DEFAULTS = "set_defaults"
@@ -146,6 +152,19 @@ SCHEMAS: dict[str, vol.Schema] = {
             vol.Optional(ATTR_WAKES): vol.All(vol.Coerce(int), vol.Range(min=1)),
             vol.Optional(ATTR_OVERLAYS, default=True): cv.boolean,
             **_PHOTO_OVERRIDES,
+        }
+    ),
+    SERVICE_SHOW_TEXT: vol.Schema(
+        {
+            **_ENTRY,
+            vol.Required(ATTR_TEXT): cv.string,
+            vol.Optional(ATTR_NAME): cv.string,
+            vol.Optional(ATTR_BACKGROUND, default="white"): vol.In(tuple(COLORS)),
+            vol.Optional(ATTR_SIZE, default="xxl"): vol.In(tuple(SIZES)),
+            vol.Optional(ATTR_ANCHOR, default="center"): vol.In(ANCHORS),
+            vol.Optional(ATTR_ALIGN, default="center"): vol.In(ALIGNS),
+            vol.Optional(ATTR_WAKES): vol.All(vol.Coerce(int), vol.Range(min=1)),
+            vol.Optional(ATTR_OVERLAYS, default=True): cv.boolean,
         }
     ),
     SERVICE_CLEAR_IMAGE: vol.Schema(_ENTRY),
@@ -275,6 +294,22 @@ async def _show_image(call: ServiceCall) -> None:
     )
 
 
+async def _show_text(call: ServiceCall) -> None:
+    manager = get_manager(call.hass, call.data[ATTR_ENTRY])
+    await manager.async_set_text_override(
+        {
+            "template": call.data[ATTR_TEXT],
+            "background": call.data[ATTR_BACKGROUND],
+            "size": call.data[ATTR_SIZE],
+            "anchor": call.data[ATTR_ANCHOR],
+            "align": call.data[ATTR_ALIGN],
+        },
+        call.data.get(ATTR_NAME),
+        call.data.get(ATTR_WAKES),
+        call.data[ATTR_OVERLAYS],
+    )
+
+
 async def _clear_image(call: ServiceCall) -> None:
     get_manager(call.hass, call.data[ATTR_ENTRY]).async_clear_override()
 
@@ -388,6 +423,7 @@ HANDLERS: dict[str, tuple[Any, SupportsResponse]] = {
     SERVICE_SHOW_PHOTO: (_show_photo, SupportsResponse.NONE),
     SERVICE_NEXT_PHOTO: (_next_photo, SupportsResponse.NONE),
     SERVICE_SHOW_IMAGE: (_show_image, SupportsResponse.NONE),
+    SERVICE_SHOW_TEXT: (_show_text, SupportsResponse.NONE),
     SERVICE_CLEAR_IMAGE: (_clear_image, SupportsResponse.NONE),
     SERVICE_LIST_PHOTOS: (_list_photos, SupportsResponse.ONLY),
     SERVICE_SET_DEFAULTS: (_set_defaults, SupportsResponse.OPTIONAL),

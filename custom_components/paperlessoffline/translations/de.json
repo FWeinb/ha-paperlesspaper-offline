@@ -749,7 +749,7 @@
     },
     "clear_image": {
       "name": "Angezeigtes Bild entfernen",
-      "description": "Kehrt beim nächsten Aufwachen zur Diashow zurück.",
+      "description": "Entfernt das einmalige Bild oder den einmaligen Text; die Diashow kehrt beim nächsten Aufwachen zurück.",
       "fields": {
         "config_entry_id": {
           "name": "Rahmen",
@@ -1048,6 +1048,48 @@
         "background_photo_id": {
           "name": "Hintergrundfoto-ID",
           "description": "Das Foto, auf das eine Karte mit Foto-Hintergrund gezeichnet wird, mit dessen Einstellungen."
+        }
+      }
+    },
+    "show_text": {
+      "name": "Text anzeigen",
+      "description": "Zeigt einen einmaligen Text statt der Diashow, wie eine Karte, die nicht in der Bibliothek ist. Er wird bei jedem Aufwachen neu ausgewertet und ersetzt ein einmaliges Bild.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rahmen",
+          "description": "Der betroffene Rahmen."
+        },
+        "text": {
+          "name": "Text",
+          "description": "Markdown mit Home-Assistant-Templates; die Variable photo ist leer."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Wird in Home Assistant angezeigt, solange der Text auf dem Rahmen ist. Standard: seine erste Zeile."
+        },
+        "background": {
+          "name": "Hintergrund",
+          "description": "Weiß, Schwarz oder eine Panelfarbe. Auf dunklen Farben ist der Text weiß."
+        },
+        "size": {
+          "name": "Textgröße",
+          "description": "Passt sich dem Panel an, damit es auf jedem Rahmen gleich aussieht."
+        },
+        "anchor": {
+          "name": "Position",
+          "description": "Wo der Text auf dem Rahmen sitzt."
+        },
+        "align": {
+          "name": "Ausrichtung",
+          "description": "Ausrichtung der Textzeilen."
+        },
+        "wakes": {
+          "name": "Aufwachvorgänge",
+          "description": "So viele Aufwachvorgänge anzeigen, dann zurück zur Diashow. Leer = bis zum Entfernen."
+        },
+        "overlays": {
+          "name": "Overlays",
+          "description": "Die Overlays des Rahmens über den Text zeichnen. Aus zeigt nur den Text."
         }
       }
     }

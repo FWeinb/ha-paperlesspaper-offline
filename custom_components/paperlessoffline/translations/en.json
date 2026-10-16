@@ -749,7 +749,7 @@
     },
     "clear_image": {
       "name": "Clear shown image",
-      "description": "Returns to the slideshow on the next wake.",
+      "description": "Clears the one-off image or text; the slideshow returns on the next wake.",
       "fields": {
         "config_entry_id": {
           "name": "Frame",
@@ -1048,6 +1048,48 @@
         "background_photo_id": {
           "name": "Background photo ID",
           "description": "The photo a card with a photo background is drawn on, with that photo's settings."
+        }
+      }
+    },
+    "show_text": {
+      "name": "Show text",
+      "description": "Shows a one-off text instead of the slideshow, like a card that is not in the library. It is evaluated again on every wake and replaces a one-off image.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Frame",
+          "description": "The frame to act on."
+        },
+        "text": {
+          "name": "Text",
+          "description": "Markdown with Home Assistant templates; the variable photo is empty."
+        },
+        "name": {
+          "name": "Name",
+          "description": "Shown in Home Assistant while the text is on the frame. Default: its first line."
+        },
+        "background": {
+          "name": "Background",
+          "description": "White, black or a panel colour. The text is white on dark colours."
+        },
+        "size": {
+          "name": "Text size",
+          "description": "Scaled to the panel, so it looks the same on every frame."
+        },
+        "anchor": {
+          "name": "Position",
+          "description": "Where the text sits on the frame."
+        },
+        "align": {
+          "name": "Alignment",
+          "description": "Alignment of the text lines."
+        },
+        "wakes": {
+          "name": "Wakes",
+          "description": "Show for this many wakes, then return to the slideshow. Empty = until cleared."
+        },
+        "overlays": {
+          "name": "Overlays",
+          "description": "Draw the frame's overlays over the text. Off shows the text only."
         }
       }
     }

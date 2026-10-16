@@ -106,7 +106,11 @@ def frame_info(hass: HomeAssistant, manager: FrameManager) -> dict[str, Any]:
         },
         "up_next": {"kind": kind, "photo_id": next_id, "name": nxt.name if nxt else None},
         "override": (
-            {"name": st.override.name, "wakes_remaining": st.override.wakes_remaining}
+            {
+                "kind": "text" if st.override.text is not None else "image",
+                "name": st.override.name,
+                "wakes_remaining": st.override.wakes_remaining,
+            }
             if st.override
             else None
         ),

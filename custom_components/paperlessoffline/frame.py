@@ -26,7 +26,14 @@ from yarl import URL
 from . import housekeeping, slideshow
 from .ble import FrameBleError, FrameSession
 from .cache import RenderCache, cache_key
-from .cards import BACKGROUND_PHOTO, CARD_BACKGROUNDS, copy_overlays, preset_name, preset_overlays
+from .cards import (
+    BACKGROUND_PHOTO,
+    CARD_BACKGROUNDS,
+    copy_overlays,
+    preset_name,
+    preset_overlays,
+    text_color_on,
+)
 from .const import (
     ALLOWED_FORMATS,
     BLE_COOLDOWN_SECONDS,
@@ -751,11 +758,23 @@ class FrameManager:
         """Render a library item without overlays; return its cache key."""
         return await self._async_render_cached(*self._base_render(photo))
 
-    async def _async_render_override(self, ov: Override) -> str:
+    def _override_base(self, ov: Override) -> tuple[str, Callable[[], RenderResult]]:
+        """Cache key and producer of a one-off without overlays.
+
+        A one-off text is a solid fill (the same cache entry a card with that
+        background uses); its text is an overlay, see ``_text_overlay``.
+        """
+        canvas = self.canvas
+        if ov.text is not None:
+            color = ov.text["background"]
+            key = cache_key("fill:" + color, {}, asdict(canvas))
+            return key, lambda: render_fill(color, canvas)
         key, opts = self._key("override:" + ov.sha256, ov.overrides)
         path = self.directory / ov.filename
-        canvas = self.canvas
-        return await self._async_render_cached(key, lambda: render(path.read_bytes(), opts, canvas))
+        return key, lambda: render(path.read_bytes(), opts, canvas)
+
+    async def _async_render_override(self, ov: Override) -> str:
+        return await self._async_render_cached(*self._override_base(ov))
 
     def placeholder_text(self) -> PlaceholderText:
         """What the "no photos yet" screen says, in HA's language."""
@@ -822,8 +841,7 @@ class FrameManager:
         """Cache keys _async_render_up_next would use, without rendering."""
         kind, photo, draw = self._up_next_parts()
         if kind == "override" and self.state.override:
-            ov = self.state.override
-            base = self._key("override:" + ov.sha256, ov.overrides)[0]
+            base = self._override_base(self.state.override)[0]
         elif photo is not None:
             base = self.photo_key(photo)
         else:
@@ -871,7 +889,7 @@ class FrameManager:
         st = self.state
         needed = {st.served_key, st.served_base_key, base, final}
         photos = {p.id: p.filename for p in self.photos if not p.is_card}
-        override = {st.override.filename} if st.override else set()
+        override = {st.override.filename} if st.override and st.override.filename else set()
         await self.hass.async_add_executor_job(self._evict_files, needed, photos, override)
 
     def _evict_files(
@@ -934,13 +952,17 @@ class FrameManager:
         """Enabled overlays drawn for a display, in drawing order.
 
         A photo's own overlays come first, global ones on top; the hide switch only
-        removes the global ones. One-off images get global overlays only.
+        removes the global ones. One-off images get global overlays only, a
+        one-off text its text below them.
         """
         if kind not in ("photo", "override"):
             return []  # the placeholder stays as it is
-        if kind == "override" and self.state.override and not self.state.override.overlays:
-            return []
         applicable: list[OverlayDef] = []
+        if kind == "override" and (ov := self.state.override) is not None:
+            if ov.text is not None:
+                applicable.append(_text_overlay(ov))
+            if not ov.overlays:
+                return applicable
         if kind == "photo" and photo is not None:
             applicable += [o for o in photo.overlays if o.enabled]
         if photo is None or not photo.hide_frame_overlays:
@@ -1490,9 +1512,31 @@ class FrameManager:
         self._changed()
 
     def _replace_override_file(self, filename: str, data: bytes) -> None:
+        self._remove_override_files()
+        (self.directory / filename).write_bytes(data)
+
+    def _remove_override_files(self) -> None:
         for old in self.directory.glob("override.*"):
             old.unlink(missing_ok=True)
-        (self.directory / filename).write_bytes(data)
+
+    async def async_set_text_override(
+        self,
+        text: dict[str, Any],
+        name: str | None,
+        wakes: int | None,
+        overlays: bool = True,
+    ) -> None:
+        """Show a one-off text (template, background, size, anchor, align)."""
+        await self.hass.async_add_executor_job(self._remove_override_files)
+        self.state.override = Override(
+            filename="",
+            name=name or _text_name(text["template"]),
+            sha256=_hash(text),
+            wakes_remaining=wakes,
+            overlays=overlays,
+            text=dict(text),
+        )
+        self._changed()
 
     @callback
     def async_clear_override(self) -> None:
@@ -1504,6 +1548,33 @@ class FrameManager:
 def http_date(value: datetime) -> str:
     """Format an RFC 7231 HTTP date."""
     return value.astimezone(dt_util.UTC).strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+
+TEXT_OVERLAY_ID = "show_text"
+
+
+def _text_overlay(ov: Override) -> OverlayDef:
+    """The single overlay a one-off text is drawn with, evaluated every wake."""
+    assert ov.text is not None
+    return OverlayDef(
+        id=TEXT_OVERLAY_ID,
+        name=ov.name,
+        template=ov.text["template"],
+        anchor=ov.text["anchor"],
+        align=ov.text["align"],
+        size=ov.text["size"],
+        text_color=text_color_on(ov.text["background"]),
+        backing="none",
+        redraw="change",
+    )
+
+
+def _text_name(template: str) -> str:
+    """A one-off text's name: its first line without markdown heading marks."""
+    for line in template.splitlines():
+        if line := line.strip().lstrip("#").strip():
+            return line[:40]
+    return "Text"
 
 
 def _extension(fmt: str) -> str:

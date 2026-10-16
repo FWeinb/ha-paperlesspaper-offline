@@ -451,6 +451,79 @@ show_image:
       example: '[0.1, 0.0, 0.8, 1.0]'
       selector:
         object: {}
+show_text:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: paperlessoffline
+    text:
+      required: true
+      example: "# Dinner is ready\n{{ states('sensor.oven_temperature') }} \xB0C"
+      selector:
+        text:
+          multiline: true
+    name:
+      selector:
+        text: {}
+    background:
+      default: white
+      selector:
+        select:
+          options:
+          - black
+          - white
+          - red
+          - green
+          - blue
+          - yellow
+          translation_key: overlay_color
+    size:
+      default: xxl
+      selector:
+        select:
+          options:
+          - s
+          - m
+          - l
+          - xl
+          - xxl
+          translation_key: overlay_size
+    anchor:
+      default: center
+      selector:
+        select:
+          options:
+          - top_left
+          - top_center
+          - top_right
+          - center_left
+          - center
+          - center_right
+          - bottom_left
+          - bottom_center
+          - bottom_right
+          translation_key: overlay_anchor
+    align:
+      default: center
+      selector:
+        select:
+          options:
+          - left
+          - center
+          - right
+          translation_key: overlay_align
+    wakes:
+      selector:
+        number:
+          min: 1
+          max: 1000
+          mode: box
+    overlays:
+      default: true
+      selector:
+        boolean: {}
 clear_image:
   fields:
     config_entry_id:

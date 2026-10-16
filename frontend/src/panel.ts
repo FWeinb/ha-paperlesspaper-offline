@@ -211,7 +211,8 @@ export class PaperlessPanel extends LitElement {
             : nothing}
           ${frame.override
             ? html`<span class="chip">
-                ${l("override")}: ${frame.override.name} ·
+                ${l(frame.override.kind === "text" ? "override_text" : "override")}:
+                ${frame.override.name} ·
                 ${frame.override.wakes_remaining === null
                   ? l("until_cleared")
                   : l("wakes_left", { n: frame.override.wakes_remaining })}

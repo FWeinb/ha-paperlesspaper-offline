@@ -208,8 +208,8 @@ SERVICE_DESC = {
         "Zeigt ein einmaliges Bild statt der Diashow, ohne es der Bibliothek hinzuzufügen.",
     ),
     "clear_image": t(
-        "Returns to the slideshow on the next wake.",
-        "Kehrt beim nächsten Aufwachen zur Diashow zurück.",
+        "Clears the one-off image or text; the slideshow returns on the next wake.",
+        "Entfernt das einmalige Bild oder den einmaligen Text; die Diashow kehrt beim nächsten Aufwachen zurück.",
     ),
     "list_photos": t(
         "Returns the frame's photos and what is up next.",
@@ -1305,6 +1305,75 @@ def _cards(lang: str) -> dict:
     }
 
 
+def _show_text(lang: str) -> dict:
+    """Strings for show_text (Step B5)."""
+    L = lambda pair: pair[lang]  # noqa: E731
+
+    def field(name: tuple, desc: tuple) -> dict:
+        return {"name": L(name), "description": L(desc)}
+
+    return {
+        "services": {
+            "show_text": {
+                "name": L(t("Show text", "Text anzeigen")),
+                "description": L(
+                    t(
+                        "Shows a one-off text instead of the slideshow, like a card that is not in the library. It is evaluated again on every wake and replaces a one-off image.",
+                        "Zeigt einen einmaligen Text statt der Diashow, wie eine Karte, die nicht in der Bibliothek ist. Er wird bei jedem Aufwachen neu ausgewertet und ersetzt ein einmaliges Bild.",
+                    )
+                ),
+                "fields": {
+                    "config_entry_id": field(*FIELDS["config_entry_id"]),
+                    "text": field(
+                        t("Text", "Text"),
+                        t(
+                            "Markdown with Home Assistant templates; the variable photo is empty.",
+                            "Markdown mit Home-Assistant-Templates; die Variable photo ist leer.",
+                        ),
+                    ),
+                    "name": field(
+                        t("Name", "Name"),
+                        t(
+                            "Shown in Home Assistant while the text is on the frame. Default: its first line.",
+                            "Wird in Home Assistant angezeigt, solange der Text auf dem Rahmen ist. Standard: seine erste Zeile.",
+                        ),
+                    ),
+                    "background": field(
+                        t("Background", "Hintergrund"),
+                        t(
+                            "White, black or a panel colour. The text is white on dark colours.",
+                            "Weiß, Schwarz oder eine Panelfarbe. Auf dunklen Farben ist der Text weiß.",
+                        ),
+                    ),
+                    "size": field(
+                        t("Text size", "Textgröße"),
+                        t(
+                            "Scaled to the panel, so it looks the same on every frame.",
+                            "Passt sich dem Panel an, damit es auf jedem Rahmen gleich aussieht.",
+                        ),
+                    ),
+                    "anchor": field(
+                        t("Position", "Position"),
+                        t("Where the text sits on the frame.", "Wo der Text auf dem Rahmen sitzt."),
+                    ),
+                    "align": field(
+                        t("Alignment", "Ausrichtung"),
+                        t("Alignment of the text lines.", "Ausrichtung der Textzeilen."),
+                    ),
+                    "wakes": field(*FIELDS["wakes"]),
+                    "overlays": field(
+                        t("Overlays", "Overlays"),
+                        t(
+                            "Draw the frame's overlays over the text. Off shows the text only.",
+                            "Die Overlays des Rahmens über den Text zeichnen. Aus zeigt nur den Text.",
+                        ),
+                    ),
+                },
+            },
+        },
+    }
+
+
 def _merge(base: dict, extra: dict) -> dict:
     for key, value in extra.items():
         if isinstance(value, dict) and isinstance(base.get(key), dict):
@@ -1316,7 +1385,8 @@ def _merge(base: dict, extra: dict) -> dict:
 
 def build(lang: str) -> dict:
     merged = _merge(_merge(_build_base(lang), _phase3(lang)), _url_host(lang))
-    return _merge(_merge(merged, _overlays(lang)), _cards(lang))
+    merged = _merge(_merge(merged, _overlays(lang)), _cards(lang))
+    return _merge(merged, _show_text(lang))
 
 
 def main() -> None:

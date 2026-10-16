@@ -87,7 +87,11 @@ class OverlayDef:
 
 @dataclass
 class Override:
-    """A one-off image shown instead of the rotation."""
+    """A one-off image or text shown instead of the rotation.
+
+    A one-off image has a file; a one-off text (``show_text``) has none, its
+    ``text`` holds the template and how to draw it, and ``sha256`` hashes that.
+    """
 
     filename: str
     name: str
@@ -96,6 +100,8 @@ class Override:
     wakes_remaining: int | None = None
     shown: int = 0
     overlays: bool = True  # draw the frame's overlays on it
+    # show_text: template, background, size, anchor, align.
+    text: dict[str, Any] | None = None
 
 
 @dataclass
