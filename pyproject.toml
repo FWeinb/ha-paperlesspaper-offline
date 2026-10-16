@@ -3,6 +3,7 @@ name = "ha-paperlessoffline"
 version = "0.4.0"
 description = "Home Assistant integration for paperlesspaper frames running the offline firmware"
 requires-python = ">=3.13"
+license = "Apache-2.0"
 readme = "README.md"
 
 [tool.pytest.ini_options]

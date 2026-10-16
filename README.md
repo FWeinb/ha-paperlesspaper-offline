@@ -346,6 +346,11 @@ Bug reports and pull requests are welcome on
 [GitHub](https://github.com/FWeinb/ha-paperlesspaper-offline/issues). See
 [DEVELOPMENT.md](DEVELOPMENT.md) for building, testing and releasing.
 
+## License
+
+[Apache License 2.0](LICENSE). The bundled fonts keep their own licences, see
+*Credits*.
+
 ## Credits
 
 Text on the frame is set in
