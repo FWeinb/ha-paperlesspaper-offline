@@ -51,6 +51,7 @@ ANCHORS = [
     "bottom_left", "bottom_center", "bottom_right",
 ]  # fmt: skip
 COLORS = ["black", "white", "red", "green", "blue", "yellow"]
+PHOTO_ID_OPTIONAL = {"example": "a1b2c3d4e5f6", "selector": {"text": {}}}
 OVERLAY_ID = {"required": True, "example": "a1b2c3d4e5f6", "selector": {"text": {}}}
 OVERLAY_FIELDS = {
     "template": {
@@ -114,6 +115,7 @@ SERVICES = {
     "list_photos": {"config_entry_id": FRAME},
     "add_overlay": {
         "config_entry_id": FRAME,
+        "photo_id": PHOTO_ID_OPTIONAL,
         "name": {"required": True, "selector": {"text": {}}},
         **{
             k: ({**v, "required": True} if k == "template" else v)
@@ -122,13 +124,19 @@ SERVICES = {
     },
     "update_overlay": {
         "config_entry_id": FRAME,
+        "photo_id": PHOTO_ID_OPTIONAL,
         "overlay_id": OVERLAY_ID,
         "name": NAME,
         **OVERLAY_FIELDS,
     },
-    "remove_overlay": {"config_entry_id": FRAME, "overlay_id": OVERLAY_ID},
+    "remove_overlay": {
+        "config_entry_id": FRAME,
+        "photo_id": PHOTO_ID_OPTIONAL,
+        "overlay_id": OVERLAY_ID,
+    },
     "move_overlay": {
         "config_entry_id": FRAME,
+        "photo_id": PHOTO_ID_OPTIONAL,
         "overlay_id": OVERLAY_ID,
         "position": {
             "required": True,
@@ -140,7 +148,7 @@ SERVICES = {
         "target_config_entry_id": FRAME,
         "replace": {"default": False, "selector": {"boolean": {}}},
     },
-    "list_overlays": {"config_entry_id": FRAME},
+    "list_overlays": {"config_entry_id": FRAME, "photo_id": PHOTO_ID_OPTIONAL},
     "set_defaults": {
         "palette": select(["perceived", "pure"], "palette"),
         **SHARED,

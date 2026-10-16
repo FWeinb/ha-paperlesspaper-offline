@@ -895,6 +895,13 @@ def _overlays(lang: str) -> dict:
             t("Target frame", "Zielrahmen"),
             t("Frame to copy the overlays to.", "Rahmen, in den die Overlays kopiert werden."),
         ),
+        "photo_id": (
+            t("Photo ID", "Foto-ID"),
+            t(
+                "Acts on this photo's own overlays. Leave empty for the frame's global photo overlays. ID of the photo (see the list photos action).",
+                "Nur für Overlays dieses Fotos; ohne Angabe gilt die Liste des Rahmens (globale Foto-Overlays). ID des Fotos (siehe Aktion Fotos auflisten).",
+            ),
+        ),
         "overlay_id": (
             t("Overlay ID", "Overlay-ID"),
             t(
@@ -994,11 +1001,12 @@ def _overlays(lang: str) -> dict:
         "add_overlay": (
             t("Add overlay", "Overlay hinzufügen"),
             t(
-                "Adds a text box drawn over every photo of a frame.",
-                "Fügt eine Textbox hinzu, die über jedes Foto eines Rahmens gezeichnet wird.",
+                "Adds a global photo overlay (a text box drawn over every photo of a frame), or with a photo ID, a photo overlay for that one photo.",
+                "Fügt ein globales Foto-Overlay hinzu (eine Textbox über jedem Foto eines Rahmens) oder, mit Foto-ID, ein Foto-Overlay nur für dieses Foto.",
             ),
             [
                 "config_entry_id",
+                "photo_id",
                 "name",
                 "template",
                 "show_if",
@@ -1019,6 +1027,7 @@ def _overlays(lang: str) -> dict:
             t("Changes an overlay.", "Ändert ein Overlay."),
             [
                 "config_entry_id",
+                "photo_id",
                 "overlay_id",
                 "name",
                 "template",
@@ -1038,7 +1047,7 @@ def _overlays(lang: str) -> dict:
         "remove_overlay": (
             t("Remove overlay", "Overlay entfernen"),
             t("Deletes an overlay.", "Löscht ein Overlay."),
-            ["config_entry_id", "overlay_id"],
+            ["config_entry_id", "photo_id", "overlay_id"],
         ),
         "move_overlay": (
             t("Move overlay", "Overlay verschieben"),
@@ -1046,23 +1055,23 @@ def _overlays(lang: str) -> dict:
                 "Changes an overlay's place in the drawing order.",
                 "Ändert die Position eines Overlays in der Zeichenreihenfolge.",
             ),
-            ["config_entry_id", "overlay_id", "position"],
+            ["config_entry_id", "photo_id", "overlay_id", "position"],
         ),
         "copy_overlays": (
             t("Copy overlays to frame", "Overlays in Rahmen kopieren"),
             t(
-                "Copies all overlays of a frame to another frame.",
-                "Kopiert alle Overlays eines Rahmens in einen anderen Rahmen.",
+                "Copies all global photo overlays of a frame to another frame.",
+                "Kopiert alle globalen Foto-Overlays eines Rahmens in einen anderen Rahmen.",
             ),
             ["config_entry_id", "target_config_entry_id", "replace"],
         ),
         "list_overlays": (
             t("List overlays", "Overlays auflisten"),
             t(
-                "Returns a frame's overlays with their last text and error.",
-                "Gibt die Overlays eines Rahmens mit letztem Text und Fehler zurück.",
+                "Returns a frame's global photo overlays, or one photo's overlays, with their last text and error.",
+                "Gibt die globalen Foto-Overlays eines Rahmens oder die Overlays eines Fotos mit letztem Text und Fehler zurück.",
             ),
-            ["config_entry_id"],
+            ["config_entry_id", "photo_id"],
         ),
     }
     return {
