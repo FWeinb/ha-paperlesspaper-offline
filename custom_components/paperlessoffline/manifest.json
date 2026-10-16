@@ -23,10 +23,10 @@
     "media_source",
     "websocket_api"
   ],
-  "documentation": "https://github.com/fweinb/ha-paperlessoffline",
+  "documentation": "https://github.com/FWeinb/ha-paperlesspaper-offline",
   "integration_type": "device",
   "iot_class": "local_push",
-  "issue_tracker": "https://github.com/fweinb/ha-paperlessoffline/issues",
+  "issue_tracker": "https://github.com/FWeinb/ha-paperlesspaper-offline/issues",
   "loggers": [
     "paperlessoffline"
   ],
