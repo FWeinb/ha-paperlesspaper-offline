@@ -1,7 +1,15 @@
 import { mdiCog, mdiImageFrame, mdiMenu, mdiSkipNext } from "@mdi/js";
 import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { errorMessage, fetchDefaults, fetchFrames, fetchPhotos, skipPhoto, subscribeChanges } from "./api";
+import {
+  errorMessage,
+  fetchDefaults,
+  fetchFrames,
+  fetchPhotos,
+  imageUrl,
+  skipPhoto,
+  subscribeChanges,
+} from "./api";
 import "./library";
 import "./overlays";
 import { clockTime, localizer, relativeTime } from "./localize";
@@ -116,7 +124,7 @@ export class PaperlessPanel extends LitElement {
     const entity = Object.values(this.hass.entities ?? {}).find(
       (e) => e.device_id === frame.device_id && e.platform === "paperlessoffline" && e.translation_key === key,
     );
-    return (entity && this.hass.states[entity.entity_id]?.attributes.entity_picture) || null;
+    return entity ? imageUrl(this.hass.states[entity.entity_id]) : null;
   }
 
   private toggleMenu() {

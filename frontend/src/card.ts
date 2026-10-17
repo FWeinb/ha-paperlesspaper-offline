@@ -1,6 +1,7 @@
 import { mdiImageEdit, mdiSkipNext } from "@mdi/js";
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { imageUrl } from "./api";
 import { localizer, relativeTime } from "./localize";
 import { icon, sharedStyles } from "./styles";
 import type { HomeAssistant } from "./types";
@@ -85,6 +86,8 @@ export class FrameCard extends LitElement {
     };
     const showing = state("image", "preview_showing");
     const upNext = state("image", "preview_up_next");
+    const showingUrl = imageUrl(showing);
+    const upNextUrl = imageUrl(upNext);
     const lastSeen = state("sensor", "last_seen");
     const current = state("sensor", "current_photo");
     const inSync = state("binary_sensor", "in_sync");
@@ -107,19 +110,15 @@ export class FrameCard extends LitElement {
       </div>
       <div class="frames ${this.config.show_up_next ? "two" : ""}">
         <figure>
-          <div class="pic ${showing.attributes.entity_picture ? "" : "empty"}">
-            ${showing.attributes.entity_picture
-              ? html`<img src=${showing.attributes.entity_picture} alt=${l("showing")} />`
-              : nothing}
+          <div class="pic ${showingUrl ? "" : "empty"}">
+            ${showingUrl ? html`<img src=${showingUrl} alt=${l("showing")} />` : nothing}
           </div>
           <figcaption><span class="muted">${l("showing")}</span> ${current?.state ?? ""}</figcaption>
         </figure>
         ${this.config.show_up_next && upNext
           ? html`<figure class="next">
-              <div class="pic ${upNext.attributes.entity_picture ? "" : "empty"}">
-                ${upNext.attributes.entity_picture
-                  ? html`<img src=${upNext.attributes.entity_picture} alt=${l("up_next")} />`
-                  : nothing}
+              <div class="pic ${upNextUrl ? "" : "empty"}">
+                ${upNextUrl ? html`<img src=${upNextUrl} alt=${l("up_next")} />` : nothing}
               </div>
               <figcaption>
                 <span class="muted">${l("up_next")}</span> ${nextSelect?.state ?? ""}

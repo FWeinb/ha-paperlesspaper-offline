@@ -16,6 +16,14 @@ import type {
 
 const D = "paperlessoffline";
 
+/** An image entity's picture URL, changing whenever the image does. The token-only URL HA hands
+ * out stays the same across updates, so the browser would keep showing its cached copy. */
+export const imageUrl = (stateObj: HomeAssistant["states"][string] | undefined): string | null => {
+  const picture: string | undefined = stateObj?.attributes.entity_picture;
+  if (!picture || picture.startsWith("data:")) return picture ?? null;
+  return `${picture}${picture.includes("?") ? "&" : "?"}state=${encodeURIComponent(stateObj!.state)}`;
+};
+
 export const fetchFrames = (hass: HomeAssistant) =>
   hass.callWS<{ frames: Frame[] }>({ type: `${D}/frames` }).then((r) => r.frames);
 
