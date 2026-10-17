@@ -103,6 +103,53 @@ export class OverlayList extends LitElement {
     if (changed.has("frame") || changed.has("photo")) this.load();
   }
 
+  protected override updated() {
+    const open = this.placePopups();
+    if (open !== this.tracking) {
+      this.tracking = open;
+      const method = open ? "addEventListener" : "removeEventListener";
+      window[method]("scroll", this.placePopups, true);
+      window[method]("resize", this.placePopups);
+    }
+  }
+
+  override disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener("scroll", this.placePopups, true);
+    window.removeEventListener("resize", this.placePopups);
+    this.tracking = false;
+  }
+
+  /** Whether scroll and resize currently move the open popups. */
+  private tracking = false;
+
+  /**
+   * The add menu and the photo list open in the top layer, so the photo editor's
+   * scrolling column cannot clip them, and follow their anchor. Returns whether any is open.
+   */
+  private placePopups = (): boolean => {
+    let open = false;
+    for (const [popupSel, anchorSel, alignRight] of [
+      [".menu", ".menu-wrap > .btn", true],
+      [".options", ".combo-field", false],
+    ] as const) {
+      const popup = this.renderRoot.querySelector<HTMLElement>(popupSel);
+      const anchor = this.renderRoot.querySelector<HTMLElement>(anchorSel);
+      if (!popup || !anchor) continue;
+      open = true;
+      if (!popup.matches(":popover-open")) popup.showPopover();
+      const a = anchor.getBoundingClientRect();
+      if (!alignRight) popup.style.width = `${a.width}px`;
+      const { offsetWidth: w, offsetHeight: h } = popup;
+      const below = a.bottom + 4;
+      const top = below + h > innerHeight && a.top - 4 - h > 0 ? a.top - 4 - h : below;
+      const left = Math.min(Math.max(8, alignRight ? a.right - w : a.left), innerWidth - w - 8);
+      popup.style.top = `${top}px`;
+      popup.style.left = `${left}px`;
+    }
+    return open;
+  };
+
   private async load() {
     try {
       this.overlays = await fetchOverlays(this.hass, this.frame.entry_id, this.photo?.photo_id);
@@ -238,7 +285,7 @@ export class OverlayList extends LitElement {
           />
         </div>
         ${this.copyListOpen
-          ? html`<ul class="options" id="copy-options" role="listbox" aria-multiselectable="true">
+          ? html`<ul class="options" id="copy-options" role="listbox" aria-multiselectable="true" popover="manual">
               ${matches.length
                 ? matches.map((p) => {
                     const on = this.copyTargets.has(p.photo_id);
@@ -310,7 +357,7 @@ export class OverlayList extends LitElement {
               ${icon(mdiPlus)} ${l("add_overlay")}
             </button>
             ${this.menuOpen
-              ? html`<div class="menu card">
+              ? html`<div class="menu card" popover="manual">
                   ${(["sensor", "weather", "date", "blank"] as const).map(
                     (key) => html`<button @click=${() => this.add(p[key])}>${l(`preset_${key}`)}</button>`,
                   )}
@@ -444,11 +491,7 @@ export class OverlayList extends LitElement {
         --mdc-icon-size: 14px;
       }
       .options {
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: calc(100% + 4px);
-        z-index: 3;
+        box-sizing: border-box;
         max-height: 220px;
         overflow-y: auto;
         margin: 0;
@@ -486,11 +529,14 @@ export class OverlayList extends LitElement {
       .menu-wrap {
         position: relative;
       }
+      /* Top-layer popups, placed by placePopups(). */
+      [popover] {
+        position: fixed;
+        inset: auto;
+        margin: 0;
+        color: var(--pp-text);
+      }
       .menu {
-        position: absolute;
-        right: 0;
-        top: calc(100% + 4px);
-        z-index: 3;
         display: grid;
         min-width: 180px;
         padding: 4px;

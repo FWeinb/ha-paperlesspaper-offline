@@ -501,6 +501,8 @@ export class PhotoEditor extends LitElement {
       .photo-mode .settings {
         position: sticky;
         top: 0;
+        /* Sticky makes a stacking context; keep the overlay editor opened from here above the footer. */
+        z-index: 1;
         align-self: start;
         max-height: calc(var(--pp-body-height, 100vh) - 32px);
         overflow-y: auto;
