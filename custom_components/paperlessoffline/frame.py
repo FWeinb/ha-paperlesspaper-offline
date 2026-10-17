@@ -16,10 +16,11 @@ import secrets
 import time
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, TemplateError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.event import async_track_point_in_utc_time
 from homeassistant.util import dt as dt_util
 from yarl import URL
 
@@ -93,7 +94,7 @@ from .render import (
     render_preview,
     validate_image,
 )
-from .schedule import parse_time, quiet_sleep
+from .schedule import parse_time, quiet_change, quiet_sleep
 from .settings import resolve
 from .store import KIND_CARD, FrameState, FrameStore, GlobalStore, LibraryItem, OverlayDef, Override
 from .templates import is_truthy, photo_vars, render_text, template_variables
@@ -158,6 +159,7 @@ class FrameManager:
         self._render_lock = asyncio.Lock()
         self._prerender_task: asyncio.Task[None] | None = None
         self._ble_task: asyncio.Task[bool] | None = None
+        self._unsub_quiet: CALLBACK_TYPE | None = None
         self._ble_last_attempt = 0.0
         # HA's URL as the frame should use it; refreshed periodically.
         self.base_url: str | None = None
@@ -194,6 +196,7 @@ class FrameManager:
             self._prerender_task.cancel()
         if self._ble_task:
             self._ble_task.cancel()
+        self._cancel_quiet_timer()
         await self.store.async_save()
 
     # ------------------------------------------------------------ properties
@@ -300,7 +303,30 @@ class FrameManager:
     @callback
     def async_options_updated(self) -> None:
         """Handle changed entry options/global defaults."""
+        self._schedule_quiet_timer()
         self._changed()
+
+    @callback
+    def _schedule_quiet_timer(self) -> None:
+        """Update entities when quiet hours start or stop suppressing motion."""
+        self._cancel_quiet_timer()
+        _, change = self.motion_quiet_hours(dt_util.utcnow())
+        if change is not None:
+            self._unsub_quiet = async_track_point_in_utc_time(
+                self.hass, self._quiet_hours_changed, change
+            )
+
+    @callback
+    def _quiet_hours_changed(self, _now: datetime) -> None:
+        self._unsub_quiet = None
+        self._schedule_quiet_timer()
+        self._changed(prerender=False)
+
+    @callback
+    def _cancel_quiet_timer(self) -> None:
+        if self._unsub_quiet is not None:
+            self._unsub_quiet()
+            self._unsub_quiet = None
 
     # ------------------------------------------------------------ slideshow
 
@@ -543,6 +569,28 @@ class FrameManager:
                     data["motionWakeup"] = False
         return data
 
+    def motion_quiet_hours(self, now: datetime) -> tuple[datetime | None, datetime | None]:
+        """When quiet hours stop turning motion wake-up off, and when to check again.
+
+        The first is None unless quiet hours suppress motion right now; the
+        second is None when quiet hours never do.
+        """
+        opts = self.options
+        if not (opts.get(CONF_QUIET_ENABLED) and opts.get(CONF_QUIET_SUPPRESS_MOTION, True)):
+            return None, None
+        inside, change = quiet_change(
+            dt_util.as_local(now),
+            parse_time(opts.get(CONF_QUIET_START, DEFAULT_QUIET_START)),
+            parse_time(opts.get(CONF_QUIET_END, DEFAULT_QUIET_END)),
+        )
+        return (change if inside else None), change
+
+    def motion_suppressed_until(self, now: datetime) -> datetime | None:
+        """End of quiet hours if they turn the enabled motion wake-up off right now."""
+        if not self.options.get(CONF_MOTION_WAKEUP, False):
+            return None
+        return self.motion_quiet_hours(now)[0]
+
     async def async_handle_settings_request(
         self,
         query: dict[str, str],
@@ -561,6 +609,7 @@ class FrameManager:
                 st.settings_hash = digest
                 st.settings_lm = max(int(time.time()), st.settings_lm + 1)
             st.fetched_device_hash = self.device_settings_hash()
+            st.served_motion_wakeup = bool(payload["motionWakeup"])
             st.last_settings_fetch = time.time()
             st.last_timeout = int(payload["timeout"])
             self._changed()
@@ -642,7 +691,7 @@ class FrameManager:
         """
         st = self.state
         reprovision = (force_provision or self.needs_reprovision()) and self.base_url is not None
-        pending = st.fetched_device_hash != self.device_settings_hash()
+        pending = self.settings_pending()
         written = False
         try:
             async with FrameSession(self.hass, address) as session:
@@ -655,6 +704,7 @@ class FrameManager:
                         settings = self.effective_settings(None, dt_util.utcnow())
                     await session.write_settings(settings)
                     await session.save()
+                    st.served_motion_wakeup = bool(settings["motionWakeup"])
                     written = True
                 if exit_setup:
                     await session.exit_setup()
@@ -674,6 +724,20 @@ class FrameManager:
 
     # ---------------------------------------------------------------- status
 
+    def settings_pending(self) -> bool:
+        """Whether the frame's settings differ from what it should have now.
+
+        Besides the user's settings this covers quiet hours turning motion
+        wake-up off or on again, which the frame only learns when it fetches.
+        """
+        st = self.state
+        if st.fetched_device_hash != self.device_settings_hash():
+            return True
+        if st.served_motion_wakeup is None:
+            return False
+        now = self.effective_settings(None, dt_util.utcnow())["motionWakeup"]
+        return st.served_motion_wakeup != now
+
     def pending_changes(self) -> list[str]:
         """What the frame hasn't picked up yet."""
         pending = []
@@ -682,7 +746,7 @@ class FrameManager:
         has_overlays = bool(self.overlays or (shown and shown.overlays))
         if has_overlays and not eval_base.endswith("|" + self.overlay_defs_hash(shown)):
             pending.append("overlays")
-        if self.state.fetched_device_hash != self.device_settings_hash():
+        if self.settings_pending():
             pending.append("settings")
         if self.state.queued_id and self.get_photo(self.state.queued_id):
             pending.append("photo")

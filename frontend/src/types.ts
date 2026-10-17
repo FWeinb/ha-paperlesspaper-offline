@@ -1,6 +1,7 @@
 /** Minimal slice of Home Assistant's frontend `hass` object that we use. */
 export interface HomeAssistant {
   language: string;
+  config?: { time_zone: string };
   states: Record<string, { state: string; attributes: Record<string, any>; last_changed: string }>;
   entities: Record<
     string,
@@ -69,6 +70,8 @@ export interface Frame {
   last_wake: string | null;
   wake_count: number;
   pending: string[];
+  /** Quiet hours have turned motion wake-up off until then. */
+  motion_suppressed_until: string | null;
   current: { kind: string | null; photo_id: string | null; name: string | null };
   up_next: { kind: string; photo_id: string | null; name: string | null };
   override: { kind: "image" | "text"; name: string; wakes_remaining: number | null } | null;

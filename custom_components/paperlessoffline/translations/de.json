@@ -377,7 +377,12 @@
     },
     "switch": {
       "motion_wakeup": {
-        "name": "Aufwecken durch Bewegung"
+        "name": "Aufwecken durch Bewegung",
+        "state_attributes": {
+          "suppressed_until": {
+            "name": "Wegen Ruhezeit aus bis"
+          }
+        }
       },
       "auto_rotation": {
         "name": "Automatische Drehung"

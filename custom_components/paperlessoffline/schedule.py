@@ -38,3 +38,10 @@ def quiet_sleep(now: datetime, start: time, end: time) -> int | None:
     if not in_window(now.timetz().replace(tzinfo=None), start, end):
         return None
     return seconds_until(now, end) + QUIET_END_MARGIN
+
+
+def quiet_change(now: datetime, start: time, end: time) -> tuple[bool, datetime]:
+    """Whether aware ``now`` is in quiet hours, and when that next changes."""
+    inside = in_window(now.timetz().replace(tzinfo=None), start, end)
+    seconds = seconds_until(now, end if inside else start)
+    return inside, datetime.fromtimestamp(now.timestamp() + seconds, now.tzinfo)

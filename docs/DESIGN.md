@@ -289,7 +289,12 @@ e-paper photo frames running the
   computes the sleep length each time the frame fetches its settings (DST-safe,
   in HA's time zone).
 - **Motion during quiet hours.** `motionWakeup: false` is sent for the length
-  of quiet hours. This is a per-frame option, on by default.
+  of quiet hours. This is a per-frame option, on by default. While it applies,
+  the Motion wake-up switch shows the end of quiet hours in its
+  `suppressed_until` attribute, and the frame's page in the panel shows it as
+  a chip, so the switch and settings JSON don't seem to disagree. HA records the `motionWakeup` it last sent. When quiet hours start
+  or end and that value is out of date, "settings" is pending until the frame
+  fetches again.
 - **One-off slot.** A frame has one override slot, shown instead of the
   rotation for N wakes or until `clear_image`:
   - a **one-off image** (`show_image`): from a URL, media-source ID,

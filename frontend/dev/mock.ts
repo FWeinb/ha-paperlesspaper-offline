@@ -87,7 +87,8 @@ const frames: Frame[] = [
     panel: { model: 'Paper 7 (7.3" Spectra 6)', width: 800, height: 480 }, canvas: { width: 480, height: 800 },
     mounting: "portrait", order: "sequential", interval: 3600, render_defaults: { dither: "floyd_steinberg" },
     last_seen: new Date(Date.now() - 7 * 60_000).toISOString(), last_wake: null, wake_count: 42,
-    pending: ["photo"], current: { kind: "photo", photo_id: "pkitchen0", name: names[0] },
+    pending: ["photo"], motion_suppressed_until: "2026-06-02T07:00:00+00:00",
+    current: { kind: "photo", photo_id: "pkitchen0", name: names[0] },
     up_next: { kind: "photo", photo_id: "pkitchen3", name: names[3] }, override: null, photo_count: 7, enabled_count: 6,
     ble: { voltage: 3912, usb: false, charging: false, rssi: -61, read_at: new Date(Date.now() - 2 * 3600_000).toISOString() }, overdue: false, needs_reprovision: false,
   },
@@ -96,7 +97,8 @@ const frames: Frame[] = [
     panel: { model: 'Paper L (13.3" Spectra 6)', width: 1200, height: 1600 }, canvas: { width: 1200, height: 1600 },
     mounting: "portrait", order: "shuffle", interval: 7200, render_defaults: {},
     last_seen: new Date(Date.now() - 3 * 3600_000).toISOString(), last_wake: null, wake_count: 3,
-    pending: [], current: { kind: "placeholder", photo_id: null, name: "placeholder" },
+    pending: [], motion_suppressed_until: null,
+    current: { kind: "placeholder", photo_id: null, name: "placeholder" },
     up_next: { kind: "placeholder", photo_id: null, name: null }, override: null, photo_count: 0, enabled_count: 0,
     ble: { read_at: null }, overdue: true, needs_reprovision: false,
   },
@@ -238,6 +240,7 @@ async function previewDelay<T>(v: T | Promise<T>): Promise<T> {
 
 const hass: any = {
   language: params.get("lang") ?? "en",
+  config: { time_zone: "Europe/Berlin" },
   user: { is_admin: true },
   devices: {
     dev_kitchen: { id: "dev_kitchen", name: "Kitchen", config_entries: ["kitchen"] },

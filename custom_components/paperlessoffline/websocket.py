@@ -80,6 +80,7 @@ def frame_info(hass: HomeAssistant, manager: FrameManager) -> dict[str, Any]:
     current = manager.get_photo(st.current_id) if st.current_kind == "photo" else None
     nxt = manager.get_photo(next_id)
     opts = manager.options
+    quiet_until = manager.motion_suppressed_until(dt_util.utcnow())
     return {
         "entry_id": manager.entry.entry_id,
         "title": manager.display_name,
@@ -99,6 +100,7 @@ def frame_info(hass: HomeAssistant, manager: FrameManager) -> dict[str, Any]:
         "last_wake": _ts(st.last_wake),
         "wake_count": st.wake_count,
         "pending": manager.pending_changes(),
+        "motion_suppressed_until": quiet_until.isoformat() if quiet_until else None,
         "current": {
             "kind": st.current_kind,
             "photo_id": current.id if current else None,

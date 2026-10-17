@@ -8,6 +8,7 @@ from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from . import PaperlessConfigEntry
 from .const import CONF_AUTO_ROTATION, CONF_CHARGER_MODE, CONF_MOTION_WAKEUP, CONF_TELEMETRY
@@ -27,7 +28,10 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up switches."""
-    async_add_entities(OptionSwitch(entry.runtime_data, key) for key in SWITCHES)
+    async_add_entities(
+        (MotionWakeupSwitch if key == CONF_MOTION_WAKEUP else OptionSwitch)(entry.runtime_data, key)
+        for key in SWITCHES
+    )
 
 
 class OptionSwitch(PaperlessEntity, SwitchEntity):
@@ -51,3 +55,18 @@ class OptionSwitch(PaperlessEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Disable."""
         await self._async_set_option(self._key, False)
+
+
+class MotionWakeupSwitch(OptionSwitch):
+    """Motion wake-up, which quiet hours can turn off for a while.
+
+    ``suppressed_until`` says when quiet hours stop sending ``motionWakeup:
+    false`` while the switch is on, so the switch and settings JSON agree. The
+    manager sends an update when quiet hours start or end.
+    """
+
+    @callback
+    def _update_from_manager(self) -> None:
+        super()._update_from_manager()
+        until = self.manager.motion_suppressed_until(dt_util.utcnow())
+        self._attr_extra_state_attributes = {"suppressed_until": until}

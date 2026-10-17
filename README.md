@@ -357,7 +357,9 @@ when Home Assistant reaches the frame over Bluetooth (one button press).
 *Settings → Devices & services → paperlesspaper → Configure* sets:
 
 - mounting orientation
-- **quiet hours**, when the frame doesn't wake
+- **quiet hours**, when the frame doesn't wake. By default motion wake-up is
+  off then too; the Motion wake-up switch shows until when in its
+  *Off for quiet hours until* attribute
 - the frame's default look
 - HTTP Basic authentication for the image
 - the address the frame uses

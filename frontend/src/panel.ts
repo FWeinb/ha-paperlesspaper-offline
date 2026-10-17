@@ -4,7 +4,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { errorMessage, fetchDefaults, fetchFrames, fetchPhotos, skipPhoto, subscribeChanges } from "./api";
 import "./library";
 import "./overlays";
-import { localizer, relativeTime } from "./localize";
+import { clockTime, localizer, relativeTime } from "./localize";
 import "./photo-editor";
 import { resolveSettings } from "./render-settings";
 import "./settings-views";
@@ -200,6 +200,11 @@ export class PaperlessPanel extends LitElement {
             : frame.overdue
               ? html`<span class="chip warn">${l("overdue")}</span>`
               : nothing}
+          ${frame.motion_suppressed_until
+            ? html`<span class="chip">
+                ${l("motion_quiet", { time: clockTime(frame.motion_suppressed_until, this.hass) })}
+              </span>`
+            : nothing}
           ${frame.ble?.voltage !== undefined
             ? html`<span class="chip" title=${l("read_ago", { when: relativeTime(frame.ble.read_at, this.hass, l("never")) })}>
                 ${l("battery", { volts: (frame.ble.voltage / 1000).toFixed(2) })}${frame.ble.charging

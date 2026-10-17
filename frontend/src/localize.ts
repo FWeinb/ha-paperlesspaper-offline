@@ -23,6 +23,7 @@ const en = {
   override_text: "One-off text",
   wakes_left: "{n} wakes left",
   until_cleared: "until cleared",
+  motion_quiet: "Motion wake-up off for quiet hours until {time}",
   upload: "Upload",
   import: "Import from media",
   drop_here: "Drop photos here to upload",
@@ -216,6 +217,7 @@ const de: Record<Key, string> = {
   override_text: "Einmaliger Text",
   wakes_left: "noch {n}× Aufwachen",
   until_cleared: "bis zum Entfernen",
+  motion_quiet: "Aufwecken durch Bewegung wegen Ruhezeit aus bis {time}",
   upload: "Hochladen",
   import: "Aus Medien importieren",
   drop_here: "Fotos hier ablegen zum Hochladen",
@@ -395,6 +397,15 @@ export function localizer(hass?: HomeAssistant): Localize {
     }
     return text;
   };
+}
+
+/** "07:00" in the user's language and Home Assistant's time zone. */
+export function clockTime(iso: string, hass: HomeAssistant): string {
+  return new Intl.DateTimeFormat(hass.language || "en", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: hass.config?.time_zone,
+  }).format(new Date(iso));
 }
 
 /** "5 minutes ago" in the user's language. */

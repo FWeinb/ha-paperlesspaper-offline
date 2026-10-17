@@ -122,6 +122,8 @@ class FrameState:
     settings_hash: str | None = None
     settings_lm: int = 0
     fetched_device_hash: str | None = None
+    # motionWakeup as last sent, quiet hours applied (None = not recorded yet).
+    served_motion_wakeup: bool | None = None
     last_settings_fetch: float | None = None
     last_timeout: int | None = None
     served_base_key: str | None = None

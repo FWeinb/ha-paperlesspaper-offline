@@ -639,7 +639,14 @@ def _build_base(lang: str) -> dict:
                 "orientation": {"name": L(t("Orientation", "Ausrichtung"))},
             },
             "switch": {
-                "motion_wakeup": {"name": L(t("Motion wake-up", "Aufwecken durch Bewegung"))},
+                "motion_wakeup": {
+                    "name": L(t("Motion wake-up", "Aufwecken durch Bewegung")),
+                    "state_attributes": {
+                        "suppressed_until": {
+                            "name": L(t("Off for quiet hours until", "Wegen Ruhezeit aus bis"))
+                        }
+                    },
+                },
                 "auto_rotation": {"name": L(t("Auto rotation", "Automatische Drehung"))},
                 "charger_mode": {"name": L(t("Charger mode", "Lademodus"))},
                 "telemetry": {"name": L(t("Telemetry", "Telemetrie"))},

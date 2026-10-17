@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import base64
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 import io
 from pathlib import Path
 from unittest.mock import patch
@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ServiceValidationError
 from PIL import Image
 import pytest
+from pytest_homeassistant_custom_component.common import async_fire_time_changed
 
 from custom_components.paperlessoffline.const import (
     CONF_AUTH_ENABLED,
@@ -25,6 +26,7 @@ from custom_components.paperlessoffline.const import (
     DOMAIN,
     EVENT_FRAME_WAKE,
 )
+from custom_components.paperlessoffline.websocket import frame_info
 
 from .conftest import TOKEN, make_jpeg
 
@@ -216,6 +218,91 @@ async def test_quiet_hours(hass: HomeAssistant, hass_client_no_auth, loaded_entr
     assert data["motionWakeup"] is False
     # The quiet-hour adjustment is not a pending user change.
     assert hass.states.get("binary_sensor.kitchen_in_sync").state == "on"
+
+
+async def test_quiet_hours_motion_is_pending(
+    hass: HomeAssistant, hass_client_no_auth, loaded_entry, freezer: FrozenDateTimeFactory
+) -> None:
+    await hass.config.async_set_time_zone("UTC")
+    freezer.move_to("2026-06-01 21:50:00+00:00")
+    hass.config_entries.async_update_entry(
+        loaded_entry,
+        options={
+            **loaded_entry.options,
+            CONF_QUIET_ENABLED: True,
+            CONF_QUIET_START: "22:00:00",
+            CONF_QUIET_END: "07:00:00",
+            CONF_MOTION_WAKEUP: True,
+        },
+    )
+    await hass.async_block_till_done()
+    client = await hass_client_no_auth()
+
+    def pending() -> list[str]:
+        return hass.states.get("binary_sensor.kitchen_in_sync").attributes["pending"]
+
+    assert (await (await client.get(SETTINGS_URL)).json())["motionWakeup"] is True
+    assert pending() == []
+
+    # The frame still has motion wake-up on until it fetches in quiet hours.
+    freezer.move_to("2026-06-01 22:00:00+00:00")
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert pending() == ["settings"]
+    assert (await (await client.get(SETTINGS_URL)).json())["motionWakeup"] is False
+    assert pending() == []
+
+    freezer.move_to("2026-06-02 07:00:00+00:00")
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert pending() == ["settings"]
+    assert (await (await client.get(SETTINGS_URL)).json())["motionWakeup"] is True
+    assert pending() == []
+
+
+async def test_motion_switch_shows_quiet_hours(
+    hass: HomeAssistant, loaded_entry, freezer: FrozenDateTimeFactory
+) -> None:
+    await hass.config.async_set_time_zone("UTC")
+    freezer.move_to("2026-06-01 21:00:00+00:00")
+    hass.config_entries.async_update_entry(
+        loaded_entry,
+        options={
+            **loaded_entry.options,
+            CONF_QUIET_ENABLED: True,
+            CONF_QUIET_START: "22:00:00",
+            CONF_QUIET_END: "07:00:00",
+            CONF_MOTION_WAKEUP: True,
+        },
+    )
+    await hass.async_block_till_done()
+
+    def until() -> datetime | None:
+        return hass.states.get("switch.kitchen_motion_wake_up").attributes["suppressed_until"]
+
+    assert until() is None
+    freezer.move_to("2026-06-01 22:00:00+00:00")
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert until() == datetime(2026, 6, 2, 7, tzinfo=UTC)
+    info = frame_info(hass, loaded_entry.runtime_data)
+    assert info["motion_suppressed_until"] == "2026-06-02T07:00:00+00:00"
+
+    # Off means nothing to suppress.
+    await hass.services.async_call(
+        "switch", "turn_off", {"entity_id": "switch.kitchen_motion_wake_up"}, blocking=True
+    )
+    assert until() is None
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": "switch.kitchen_motion_wake_up"}, blocking=True
+    )
+    assert until() is not None
+
+    freezer.move_to("2026-06-02 07:00:00+00:00")
+    async_fire_time_changed(hass)
+    await hass.async_block_till_done()
+    assert until() is None
+    assert frame_info(hass, loaded_entry.runtime_data)["motion_suppressed_until"] is None
 
 
 async def test_basic_auth(hass: HomeAssistant, hass_client_no_auth, loaded_entry) -> None:

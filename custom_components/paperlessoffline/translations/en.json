@@ -377,7 +377,12 @@
     },
     "switch": {
       "motion_wakeup": {
-        "name": "Motion wake-up"
+        "name": "Motion wake-up",
+        "state_attributes": {
+          "suppressed_until": {
+            "name": "Off for quiet hours until"
+          }
+        }
       },
       "auto_rotation": {
         "name": "Auto rotation"
