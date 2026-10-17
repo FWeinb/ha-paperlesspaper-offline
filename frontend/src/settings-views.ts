@@ -77,6 +77,7 @@ abstract class PreviewingView extends LitElement {
       }
       .form {
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
         gap: 16px;
         padding: 16px;
       }
@@ -89,6 +90,7 @@ abstract class PreviewingView extends LitElement {
         position: sticky;
         top: 16px;
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
         gap: 10px;
         padding: 16px;
       }
@@ -126,7 +128,7 @@ abstract class PreviewingView extends LitElement {
       }
       @media (max-width: 860px) {
         :host {
-          grid-template-columns: 1fr;
+          grid-template-columns: minmax(0, 1fr);
         }
         .preview-pane {
           position: static;

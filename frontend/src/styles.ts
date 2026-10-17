@@ -123,6 +123,7 @@ export const sharedStyles = css`
   }
   label.field {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 4px;
     font-size: 14px;
   }

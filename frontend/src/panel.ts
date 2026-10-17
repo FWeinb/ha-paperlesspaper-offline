@@ -424,6 +424,7 @@ export class PaperlessPanel extends LitElement {
         max-width: 1400px;
         padding: 16px 24px 48px;
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
         gap: 16px;
       }
       :host([narrow]) .layout {
@@ -483,7 +484,7 @@ export class PaperlessPanel extends LitElement {
       }
       @media (max-width: 760px) {
         .status {
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         }
         .pic {
           height: 170px;

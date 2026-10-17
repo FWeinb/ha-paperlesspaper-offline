@@ -380,6 +380,7 @@ export class OverlayList extends LitElement {
       .wrap {
         padding: 16px;
         display: grid;
+        grid-template-columns: minmax(0, 1fr);
         gap: 12px;
       }
       .head {
@@ -396,6 +397,7 @@ export class OverlayList extends LitElement {
       }
       .actions {
         display: flex;
+        flex-wrap: wrap;
         gap: 8px;
         align-items: center;
       }
