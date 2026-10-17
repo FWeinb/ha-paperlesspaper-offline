@@ -58,7 +58,24 @@ export class PhotoEditor extends LitElement {
     super.disconnectedCallback();
     window.removeEventListener("keydown", this.onKey);
     this.previewQueue.cancel();
+    this.bodyObserver.disconnect();
   }
+
+  /** Caps the sticky right column at the dialog body's visible height. */
+  private bodyObserver = new ResizeObserver(([entry]) =>
+    this.style.setProperty("--pp-body-height", `${(entry.target as HTMLElement).clientHeight}px`),
+  );
+
+  protected override updated() {
+    const body = this.renderRoot.querySelector(".body");
+    if (body && body !== this.observedBody) {
+      this.bodyObserver.disconnect();
+      this.bodyObserver.observe(body);
+      this.observedBody = body;
+    }
+  }
+
+  private observedBody: Element | null = null;
 
   private onKey = (ev: KeyboardEvent) => {
     if (ev.key === "Escape") this.close();
@@ -248,6 +265,10 @@ export class PhotoEditor extends LitElement {
   private renderCrop() {
     const l = localizer(this.hass);
     const coverFit = this.resolved.fit === "cover";
+    const shared: FrameSettings = {};
+    for (const key of SHARED_KEYS) {
+      if (this.draft[key] !== undefined) (shared as Record<string, unknown>)[key] = this.draft[key];
+    }
     return html`<section class="visual">
       <div class="section-title">
         <span>${l("crop")}</span>
@@ -292,6 +313,15 @@ export class PhotoEditor extends LitElement {
           ${l("reset_focal")}
         </button>
       </div>
+      <div class="render">
+        <div class="section-title"><span>${l("rendering_settings")}</span></div>
+        <pp-render-settings
+          .hass=${this.hass}
+          .value=${shared}
+          .inherited=${this.inherited}
+          @value-changed=${this.onSettings}
+        ></pp-render-settings>
+      </div>
     </section>`;
   }
 
@@ -299,10 +329,6 @@ export class PhotoEditor extends LitElement {
     if (!this.photo) return nothing;
     const l = localizer(this.hass);
     const otherFrames = this.frames.filter((f) => f.entry_id !== this.frame.entry_id);
-    const shared: FrameSettings = {};
-    for (const key of SHARED_KEYS) {
-      if (this.draft[key] !== undefined) (shared as Record<string, unknown>)[key] = this.draft[key];
-    }
     return html`<div class="scrim" @click=${(e: Event) => e.target === e.currentTarget && this.close()}>
       <div class="dialog card" role="dialog" aria-modal="true" aria-label=${l(this.isCard ? "edit_card" : "edit_photo")}>
         <header>
@@ -315,10 +341,12 @@ export class PhotoEditor extends LitElement {
           />
           <button class="icon-btn" title=${l("close")} @click=${this.close}>${icon(mdiClose)}</button>
         </header>
-        <div class="body">
+        <div class="body ${this.isCard ? "" : "photo-mode"}">
           ${this.isCard ? html`<section class="visual card-preview">${this.renderPreview()}</section>` : this.renderCrop()}
           <section class="settings">
-            ${this.isCard ? this.renderBackground() : this.renderPreview()}
+            ${this.isCard
+              ? this.renderBackground()
+              : html`<div class="preview-block">${this.renderPreview()}</div>`}
             <label class="check rotation">
               <input
                 type="checkbox"
@@ -336,15 +364,6 @@ export class PhotoEditor extends LitElement {
               ${l(this.isCard ? "hide_frame_overlays_card" : "hide_frame_overlays")}
             </label>
             <pp-overlays .hass=${this.hass} .frame=${this.frame} .photos=${this.photos.length ? this.photos : [this.photo]} .photo=${this.photo}></pp-overlays>
-            ${this.isCard
-              ? nothing
-              : html`<div class="section-title"><span>${l("rendering_settings")}</span></div>
-                  <pp-render-settings
-                    .hass=${this.hass}
-                    .value=${shared}
-                    .inherited=${this.inherited}
-                    @value-changed=${this.onSettings}
-                  ></pp-render-settings>`}
           </section>
         </div>
         ${this.error ? html`<div class="msg error">${l("error", { error: this.error })}</div>` : nothing}
@@ -462,7 +481,7 @@ export class PhotoEditor extends LitElement {
       }
       .preview {
         flex: none;
-        height: min(340px, 45vh);
+        height: min(440px, 55vh);
         max-width: 100%;
         margin: 0 auto;
         background: #d6d6d6;
@@ -471,6 +490,26 @@ export class PhotoEditor extends LitElement {
         display: grid;
         place-items: center;
         box-shadow: inset 0 0 0 1px var(--pp-border);
+      }
+      .preview-block {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      /* Photo mode: the right column stays in view while the crop and rendering settings
+         scroll, and scrolls on its own when it is taller than the dialog body. */
+      .photo-mode .settings {
+        position: sticky;
+        top: 0;
+        align-self: start;
+        max-height: calc(var(--pp-body-height, 100vh) - 32px);
+        overflow-y: auto;
+      }
+      .render {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-top: 8px;
       }
       .card-preview .preview {
         height: min(560px, 65vh);
@@ -495,6 +534,23 @@ export class PhotoEditor extends LitElement {
       @media (max-width: 760px) {
         .body {
           grid-template-columns: 1fr;
+        }
+        .body.photo-mode {
+          gap: 10px;
+        }
+        /* One column: crop, preview, rendering settings, then the rest. */
+        .photo-mode .visual,
+        .photo-mode .settings {
+          display: contents;
+        }
+        .photo-mode .preview-block {
+          order: 1;
+        }
+        .photo-mode .render {
+          order: 2;
+        }
+        .photo-mode .settings > :not(.preview-block) {
+          order: 3;
         }
         .scrim {
           padding: 0;
