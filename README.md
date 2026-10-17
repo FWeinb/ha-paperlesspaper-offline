@@ -10,7 +10,7 @@ This integration is for frames running the
 For telemetry on wake, use the fork
 [FWeinb/paperlesspaper-firmware-offline](https://github.com/FWeinb/paperlesspaper-firmware-offline).
 
-![The Photo frames panel in dark mode, showing three frames and the photo library of the living room frame](docs/images/panel-dark.webp)
+![The Photo frames panel in dark mode, showing three frames and the library of the living room frame with a text card among the photos](docs/images/panel-dark.webp)
 
 ## Screenshots
 

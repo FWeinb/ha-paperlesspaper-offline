@@ -1,9 +1,9 @@
 """Regenerate the README screenshots in docs/images/.
 
 Starts a throwaway Home Assistant with this integration, adds three frames
-with sample photos from picsum.photos, simulates a wake for each, and takes
-dark-mode screenshots of the panel, the photo editor and the global defaults
-with tools/screenshots.mjs.
+with sample photos from picsum.photos and a text card, simulates a wake for
+each, and takes dark-mode screenshots of the panel, the photo editor and the
+global defaults with tools/screenshots.mjs.
 
 Needs the dev venv (see DEVELOPMENT.md), `npm ci` in frontend/ and Google
 Chrome (set CHROME to use another Chromium binary).
@@ -81,6 +81,42 @@ FRAMES = [
     ("Hallway", "epd7-dc1ed5613e74", 3720, 47, [(28, "Green gorge"), (11, "Misty valley")]),
 ]
 EDIT_FRAME, EDIT_PHOTO = "Living room", "Sunset meadow"
+
+# A card in the middle of the living room library: (frame, name, background, overlays).
+CARD_POSITION = 4
+CARD = (
+    "Living room",
+    "Good morning",
+    "white",
+    [
+        {
+            "name": "Greeting",
+            "template": "# Good morning\n{{ date_local(now(), 'long') }}",
+            "anchor": "top_left",
+            "size": "l",
+            "backing": "none",
+        },
+        {
+            "name": "Today",
+            "template": (
+                "{blue}{{ weather_icon(states('weather.home')) }}{/blue} "
+                "**{{ state_attr('weather.home', 'temperature') }} °C** outside\n"
+                "{red}:mdi:home-thermometer:{/red} "
+                "{{ states('sensor.living_room_temperature') }} °C inside\n"
+                "{green}:mdi:recycle:{/green} Paper bin out tonight\n"
+                "{blue}:mdi:calendar:{/blue} Dinner with Sam at 19:00"
+            ),
+            "anchor": "bottom_left",
+            "size": "l",
+            "backing": "none",
+        },
+    ],
+)
+# Entity states the card's templates read; set again after every start.
+STATES = {
+    "weather.home": ("partlycloudy", {"temperature": 17, "friendly_name": "Home"}),
+    "sensor.living_room_temperature": ("21.5", {"unit_of_measurement": "°C"}),
+}
 
 CONFIG = """\
 homeassistant:
@@ -223,6 +259,49 @@ async def onboard(session: aiohttp.ClientSession, base: str) -> dict:
     return {**tokens, "hassUrl": base, "clientId": client_id, "expires": 0}
 
 
+async def set_states(session: aiohttp.ClientSession, base: str, token: str) -> None:
+    auth = {"Authorization": f"Bearer {token}"}
+    for entity_id, (state, attributes) in STATES.items():
+        async with session.post(
+            f"{base}/api/states/{entity_id}",
+            json={"state": state, "attributes": attributes},
+            headers=auth,
+        ) as r:
+            r.raise_for_status()
+
+
+async def call_service(
+    session: aiohttp.ClientSession, base: str, token: str, service: str, **data
+) -> dict:
+    """Call a paperlessoffline action; return its response (empty for actions without one)."""
+    respond = service in ("add_card", "add_overlay")
+    async with session.post(
+        f"{base}/api/services/paperlessoffline/{service}" + ("?return_response" if respond else ""),
+        json=data,
+        headers={"Authorization": f"Bearer {token}"},
+    ) as r:
+        r.raise_for_status()
+        return (await r.json()).get("service_response") or {} if respond else {}
+
+
+async def add_card(session: aiohttp.ClientSession, base: str, token: str, entry_id: str) -> None:
+    """Add CARD at CARD_POSITION in the frame's order; the wake still shows the first photo."""
+    _, name, background, overlays = CARD
+    card = await call_service(
+        session, base, token, "add_card", config_entry_id=entry_id, name=name,
+        background=background,
+    )  # fmt: skip
+    for overlay in overlays:
+        await call_service(
+            session, base, token, "add_overlay",
+            config_entry_id=entry_id, photo_id=card["photo_id"], **overlay,
+        )  # fmt: skip
+    await call_service(
+        session, base, token, "move_photo",
+        config_entry_id=entry_id, photo_id=card["photo_id"], position=CARD_POSITION,
+    )  # fmt: skip
+
+
 async def fetch_photos(session: aiohttp.ClientSession, cache: Path) -> None:
     cache.mkdir(parents=True, exist_ok=True)
     for _, _, _, _, photos in FRAMES:
@@ -271,6 +350,8 @@ async def add_frames(
             headers={**auth, "Content-Type": f"multipart/form-data; boundary={boundary}"},
         ) as r:
             r.raise_for_status()
+        if name == CARD[0]:
+            await add_card(session, base, token, entry_id)
 
         # A wake as the firmware does it: settings first, then the image with telemetry.
         async with session.get(urls["settings_url"]) as r:
@@ -286,7 +367,7 @@ async def add_frames(
             r.raise_for_status()
             await r.read()
         entries[name] = {"entry_id": entry_id}
-        print(f"  {name}: {len(photos)} photos")
+        print(f"  {name}: {len(photos)} photos" + (", 1 card" if name == CARD[0] else ""))
     return entries
 
 
@@ -388,6 +469,7 @@ async def main(keep: bool) -> None:
             print(f"Starting Home Assistant on {ha.base}")
             await ha.start(session)
             tokens = await onboard(session, ha.base)
+            await set_states(session, ha.base, tokens["access_token"])
             print("Adding frames")
             entries = await add_frames(session, ha.base, tokens["access_token"], work / "photos")
 
@@ -395,6 +477,7 @@ async def main(keep: bool) -> None:
             ha.stop()
             backdate(config, entries)
             await ha.start(session)
+            await set_states(session, ha.base, tokens["access_token"])
             await tidy_up(session, ha, tokens["access_token"])
 
             print("Taking screenshots")
