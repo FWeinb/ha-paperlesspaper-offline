@@ -529,7 +529,7 @@
     },
     "update_photo": {
       "name": "Update photo",
-      "description": "Changes a photo's name, rotation membership or render settings.",
+      "description": "Changes a photo's name, rotation membership or render settings, or a card's name, rotation membership or background.",
       "fields": {
         "config_entry_id": {
           "name": "Frame",
@@ -625,7 +625,7 @@
     },
     "copy_photo": {
       "name": "Copy photo to frame",
-      "description": "Copies a photo and its settings to another frame.",
+      "description": "Copies a photo or card with its settings and overlays to another frame. A card's background photo is copied along, or reused if that frame has it.",
       "fields": {
         "config_entry_id": {
           "name": "Frame",
@@ -759,7 +759,7 @@
     },
     "list_photos": {
       "name": "List photos",
-      "description": "Returns the frame's photos and what is up next.",
+      "description": "Returns the frame's photos and cards (each with its kind) and what is up next.",
       "fields": {
         "config_entry_id": {
           "name": "Frame",

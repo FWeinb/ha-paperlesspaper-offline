@@ -529,7 +529,7 @@
     },
     "update_photo": {
       "name": "Foto bearbeiten",
-      "description": "Ändert Name, Rotationsteilnahme oder Darstellungseinstellungen eines Fotos.",
+      "description": "Ändert Name, Rotationsteilnahme oder Darstellungseinstellungen eines Fotos, oder Name, Rotationsteilnahme oder Hintergrund einer Karte.",
       "fields": {
         "config_entry_id": {
           "name": "Rahmen",
@@ -625,7 +625,7 @@
     },
     "copy_photo": {
       "name": "Foto in Rahmen kopieren",
-      "description": "Kopiert ein Foto samt Einstellungen in einen anderen Rahmen.",
+      "description": "Kopiert ein Foto oder eine Karte samt Einstellungen und Overlays in einen anderen Rahmen. Das Hintergrundfoto einer Karte wird mitkopiert, oder wiederverwendet, wenn der Rahmen es schon hat.",
       "fields": {
         "config_entry_id": {
           "name": "Rahmen",
@@ -759,7 +759,7 @@
     },
     "list_photos": {
       "name": "Fotos auflisten",
-      "description": "Gibt die Fotos des Rahmens und das nächste Foto zurück.",
+      "description": "Gibt die Fotos und Karten des Rahmens (jeweils mit Art) und das als Nächstes Gezeigte zurück.",
       "fields": {
         "config_entry_id": {
           "name": "Rahmen",

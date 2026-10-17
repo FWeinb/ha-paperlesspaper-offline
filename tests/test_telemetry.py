@@ -12,7 +12,7 @@ from custom_components.paperlessoffline.const import BLE_CHAR_TELEMETRY, CONF_TE
 from custom_components.paperlessoffline.frame import parse_wake_status
 
 from .conftest import CLIENT_ID, TOKEN
-from .test_phase3 import ADDRESS, fake_session  # noqa: F401
+from .test_ble_sync import ADDRESS, fake_session  # noqa: F401
 
 IMAGE_URL = f"/api/paperlessoffline/{TOKEN}/image.bmp"
 SETTINGS_URL = f"/api/paperlessoffline/{TOKEN}/settings.json"

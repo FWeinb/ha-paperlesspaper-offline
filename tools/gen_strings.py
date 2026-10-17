@@ -186,15 +186,15 @@ SERVICE_DESC = {
         "Löscht ein Foto aus der Bibliothek eines Rahmens.",
     ),
     "update_photo": t(
-        "Changes a photo's name, rotation membership or render settings.",
-        "Ändert Name, Rotationsteilnahme oder Darstellungseinstellungen eines Fotos.",
+        "Changes a photo's name, rotation membership or render settings, or a card's name, rotation membership or background.",
+        "Ändert Name, Rotationsteilnahme oder Darstellungseinstellungen eines Fotos, oder Name, Rotationsteilnahme oder Hintergrund einer Karte.",
     ),
     "move_photo": t(
         "Moves a photo within the rotation order.", "Verschiebt ein Foto in der Reihenfolge."
     ),
     "copy_photo": t(
-        "Copies a photo and its settings to another frame.",
-        "Kopiert ein Foto samt Einstellungen in einen anderen Rahmen.",
+        "Copies a photo or card with its settings and overlays to another frame. A card's background photo is copied along, or reused if that frame has it.",
+        "Kopiert ein Foto oder eine Karte samt Einstellungen und Overlays in einen anderen Rahmen. Das Hintergrundfoto einer Karte wird mitkopiert, oder wiederverwendet, wenn der Rahmen es schon hat.",
     ),
     "show_photo": t(
         "Shows this photo on the frame's next wake.",
@@ -212,8 +212,8 @@ SERVICE_DESC = {
         "Entfernt das einmalige Bild oder den einmaligen Text; die Diashow kehrt beim nächsten Aufwachen zurück.",
     ),
     "list_photos": t(
-        "Returns the frame's photos and what is up next.",
-        "Gibt die Fotos des Rahmens und das nächste Foto zurück.",
+        "Returns the frame's photos and cards (each with its kind) and what is up next.",
+        "Gibt die Fotos und Karten des Rahmens (jeweils mit Art) und das als Nächstes Gezeigte zurück.",
     ),
     "set_defaults": t(
         "Sets render defaults shared by all frames.", "Setzt Darstellungsstandards für alle Rahmen."
@@ -719,8 +719,8 @@ def _build_base(lang: str) -> dict:
     }
 
 
-def _phase3(lang: str) -> dict:
-    """Strings added in Phase 3 (Bluetooth extras), merged over the base."""
+def _bluetooth(lang: str) -> dict:
+    """Strings for Bluetooth sync, status entities and repairs, merged over the base."""
     L = lambda pair: pair[lang]  # noqa: E731
     return {
         "config": {
@@ -863,7 +863,7 @@ def _url_host(lang: str) -> dict:
 
 
 def _overlays(lang: str) -> dict:
-    """Strings for text and entity overlays (Step A)."""
+    """Strings for text and entity overlays."""
     L = lambda pair: pair[lang]  # noqa: E731
 
     def opts(pairs: dict) -> dict:
@@ -1195,7 +1195,7 @@ def _overlays(lang: str) -> dict:
 
 
 def _cards(lang: str) -> dict:
-    """Strings for text cards (Step B4)."""
+    """Strings for text cards."""
     L = lambda pair: pair[lang]  # noqa: E731
     background = (
         t("Background", "Hintergrund"),
@@ -1306,7 +1306,7 @@ def _cards(lang: str) -> dict:
 
 
 def _show_text(lang: str) -> dict:
-    """Strings for show_text (Step B5)."""
+    """Strings for show_text."""
     L = lambda pair: pair[lang]  # noqa: E731
 
     def field(name: tuple, desc: tuple) -> dict:
@@ -1384,7 +1384,7 @@ def _merge(base: dict, extra: dict) -> dict:
 
 
 def build(lang: str) -> dict:
-    merged = _merge(_merge(_build_base(lang), _phase3(lang)), _url_host(lang))
+    merged = _merge(_merge(_build_base(lang), _bluetooth(lang)), _url_host(lang))
     merged = _merge(_merge(merged, _overlays(lang)), _cards(lang))
     return _merge(merged, _show_text(lang))
 

@@ -118,6 +118,7 @@ photo.
     and saturation** for this photo only;
   - check the **live preview**, which shows exactly what the frame will show;
   - *Show next*, *Copy to…* another frame, or *Delete*.
+- **Add a text card** with *Add card*; see [Text cards](#text-cards).
 
 **Settings tab:** mounting, refresh interval and the frame's default look,
 with a preview.
@@ -160,8 +161,9 @@ overlays* section copies that photo's overlays to the photos you pick (the
 copies get new IDs, and you can choose to replace the existing ones). The same
 works from automations with `copy_overlays`, `photo_id` and `to_photo_ids`.
 
-**One-off images.** Global photo overlays are drawn on images from
-`show_image` too. Set `overlays: false` to show an image bare.
+**One-off images and texts.** Global photo overlays are drawn on images from
+`show_image` and texts from `show_text` too. Set `overlays: false` to leave
+them off.
 
 **Writing the text.** The text is markdown with Home Assistant templates, with
 autocompletion for entity IDs and icons:
@@ -173,8 +175,8 @@ autocompletion for entity IDs and icons:
 - `entity_icon(entity_id)`: the icon set on an entity
 - `date_local(value, preset)`: a date in your language; presets `short`,
   `long`, `month_year`, `weekday`, `time`
-- `frame.name` and `photo.name` (`photo` is `None` on one-off images, so
-  `{% if photo %}` works)
+- `frame.name` and `photo.name` (on a card, `photo.name` is the card's name;
+  `photo` is `None` on one-off images and texts, so `{% if photo %}` works)
 - `photo.date`: when the photo was taken, from its EXIF data. Use it with
   `date_local`, for example `{{ date_local(photo.date, 'long') }}`. It shows
   the clock time of the camera, using the photo's UTC offset when it has one
@@ -185,7 +187,8 @@ autocompletion for entity IDs and icons:
   `{{ distance(photo.location, states.zone.home) | round }} km`.
 
 Photos without that EXIF data have `photo.date` and `photo.location` set to
-`None`, so guard them with `{% if photo and photo.date %}`. Both are read once
+`None` (so do cards, even on a photo background), so guard them with
+`{% if photo and photo.date %}`. Both are read once
 when a photo is added, and when you update from an older version. The
 location is included in the `list_photos` result and left out of diagnostics.
 
@@ -196,7 +199,7 @@ location is included in the `list_photos` result and left out of diagnostics.
 ```
 
 **Other options per overlay**
-- **Placement**: one of nine positions, size S to XL, width (fit to text or a
+- **Placement**: one of nine positions, size S to XXL, width (fit to text or a
   percentage) and alignment.
 - **Behind the text**: a coloured box, an outline around the letters, or
   nothing.
@@ -209,6 +212,52 @@ Values are read when the frame wakes, so they are as fresh as the last wake.
 If a template is broken, only that overlay is left out and the panel shows the
 error.
 
+## Text cards
+
+A text card is a library item made of text instead of a photo: a notice, a
+calendar, the day's values. It rotates like a photo: it has a place in the
+order, can be paused, shuffled, skipped or shown next, and appears in the
+media browser.
+
+- **Create one** with *Add card* in the library. Pick what it starts from:
+  - *Blank*: no text;
+  - *Info*: the frame's name as a title and a box for your values, starting
+    with today's date;
+  - *Notice*: one huge centred message.
+
+  The texts are written in Home Assistant's language. The card then opens in
+  the editor.
+- **The text** is the card's overlays (section *Card text*), so everything
+  from [Text overlays](#text-overlays) works: markdown, templates, icons,
+  *Show if*. Values are read at each wake, like on photos.
+- **The background** is white, black, one of the panel's colours, or a photo
+  from the library. Plain colours are drawn without dithering, so the text
+  stays crisp. A photo background uses that photo's own crop and settings,
+  without its overlays. When the photo is deleted, its cards turn white; the
+  photo editor warns you before that.
+- **Global photo overlays** are hidden on cards by default; untick *Hide
+  global photo overlays on this card* to show them.
+- Cards have a *Card* badge in the library, and their thumbnail is the
+  rendered card.
+- *Copy to…* another frame also copies a card's background photo (paused),
+  or uses the same photo if that frame already has it.
+
+**One-off text.** `show_text` shows a text for a number of wakes or until
+`clear_image`, like a card that is not in the library. It is evaluated again
+at every wake and takes the place of a one-off image (and the other way
+round).
+
+```yaml
+action: paperlessoffline.show_text
+data:
+  config_entry_id: 01J...   # the frame
+  text: |
+    :mdi:washing-machine: **Laundry is done**
+    {{ date_local(now(), 'time') }}
+  background: yellow
+  wakes: 3
+```
+
 ## Automations
 
 ### Actions
@@ -218,11 +267,13 @@ Every action takes `config_entry_id`, which selects the frame.
 | Action | What it does |
 |---|---|
 | `paperlessoffline.add_photo` | Add an image from **one** of `file_path`, `url`, `media_content_id` or `image_entity_id` (camera or image entity). Optional `name`, `enabled` and photo settings. Returns the `photo_id`. |
-| `paperlessoffline.update_photo` | Change `name`, `enabled` or photo settings; `reset` clears settings (`all` clears every one). |
-| `paperlessoffline.remove_photo` / `move_photo` / `copy_photo` | Manage the library; `copy_photo` copies to another frame. |
+| `paperlessoffline.add_card` | Add a text card with `name`, `preset` (`blank`, `info`, `notice`) and `background` (`white`, `black`, a panel colour, or `photo` with `background_photo_id`). Returns the card; its `photo_id` works with all photo and overlay actions. |
+| `paperlessoffline.update_photo` | Change `name`, `enabled`, `hide_frame_overlays` or photo settings; `reset` clears settings (`all` clears every one). On a card, `background` and `background_photo_id` change its background; cards have no photo settings. |
+| `paperlessoffline.remove_photo` / `move_photo` / `copy_photo` | Manage the library (photos and cards); `copy_photo` copies to another frame, with a card's background photo. |
 | `paperlessoffline.show_photo` / `next_photo` | Choose or skip the photo for the next wake. |
 | `paperlessoffline.show_image` / `clear_image` | Show a one-off image for `wakes` wakes, or until `clear_image`, without adding it to the library. Set `overlays: false` to leave the frame's overlays off it. |
-| `paperlessoffline.list_photos` | Return the library and what's up next. |
+| `paperlessoffline.show_text` | Show a one-off `text` (markdown with templates) on a `background` (`white`, `black` or a panel colour), with `size` (default `xxl`), `anchor` and `align` (default `center`), `wakes` and `overlays`. Replaces a one-off image; `clear_image` clears it. |
+| `paperlessoffline.list_photos` | Return the library (each item with its `kind`, `photo` or `card`) and what's up next. |
 | `paperlessoffline.set_defaults` | Set the global defaults. |
 | `paperlessoffline.add_overlay` / `update_overlay` / `remove_overlay` / `move_overlay` | Manage overlays. Pass `photo_id` for a photo's overlays, leave it out for the global ones. |
 | `paperlessoffline.copy_overlays` | Copy a photo's overlays to other photos (`photo_id` and `to_photo_ids`), or the global overlays to another frame. |
