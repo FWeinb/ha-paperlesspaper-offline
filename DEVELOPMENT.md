@@ -50,6 +50,25 @@ The mock harness (`dev/mock.ts`) fakes the integration's websocket API. Query
 parameters such as `?frame=kitchen&edit=0`, `?tab=settings`, `?view=card`,
 `?dark=1`, `?narrow=1` and `?lang=de` jump to a particular view.
 
+## Local Home Assistant
+
+`tools/ha_dev.py` runs a local Home Assistant with the integration, to try it
+end to end. It lives in `.ha-dev/` (gitignored) and links the integration to
+the checkout, so it runs the code you are editing.
+
+```sh
+.venv/bin/python tools/ha_dev.py           # start; returns once it is up
+.venv/bin/python tools/ha_dev.py restart   # after changing Python code
+.venv/bin/python tools/ha_dev.py stop
+```
+
+It runs in the background at <http://127.0.0.1:8124> (user `dev`, password
+`devpass1234`) and logs to `.ha-dev/hass.log`, with the integration at debug
+level. The first start creates the instance, skips onboarding and adds a frame
+with three sample photos; no real frame is needed. Build the frontend first
+(see above); after `npm run build`, reloading the page is enough. Delete
+`.ha-dev/` to start over.
+
 ## CI
 
 GitHub Actions run on every push and pull request:
