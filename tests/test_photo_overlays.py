@@ -355,3 +355,33 @@ async def test_copy_overlays_websocket(
         {"type": f"{DOMAIN}/overlays/copy", "entry_id": loaded_entry.entry_id, "photo_id": src}
     )
     assert not (await client.receive_json())["success"]
+
+
+async def test_editor_preview_draws_overlays(
+    hass: HomeAssistant, hass_ws_client, loaded_entry, photo_path
+) -> None:
+    photo_id = await _add_photo(hass, loaded_entry, photo_path)
+    ws = await hass_ws_client(hass)
+    ids = iter(range(1, 100))
+
+    async def preview(**extra) -> str:
+        await ws.send_json(
+            {
+                "id": next(ids),
+                "type": f"{DOMAIN}/preview",
+                "entry_id": loaded_entry.entry_id,
+                "photo_id": photo_id,
+                **extra,
+            }
+        )
+        msg = await ws.receive_json()
+        assert msg["success"], msg
+        return msg["result"]["image"]
+
+    plain = await preview()
+    await _add(hass, loaded_entry, "Global", "Hello")
+    with_global = await preview()
+    assert with_global != plain
+    assert await preview(hide_frame_overlays=True) == plain  # unsaved hide switch
+    await _add(hass, loaded_entry, "Mine", "Mine", photo_id)
+    assert await preview(hide_frame_overlays=True) not in (plain, with_global)

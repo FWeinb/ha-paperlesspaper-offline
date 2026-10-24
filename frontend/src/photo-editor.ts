@@ -90,8 +90,8 @@ export class PhotoEditor extends LitElement {
       this.background = this.savedBackground;
       this.lockAspect = true;
       this.schedulePreview(0);
-    } else if (changed.has("photos") && this.isCard) {
-      // A card's preview shows its overlays, which may just have been edited.
+    } else if (changed.has("photos")) {
+      // The preview shows the overlays, which may just have been edited.
       this.schedulePreview(0);
     }
   }
@@ -146,7 +146,10 @@ export class PhotoEditor extends LitElement {
         this.hass,
         this.frame.entry_id,
         this.photo.photo_id,
-        this.isCard ? { ...this.background } : { overrides: this.draft },
+        {
+          ...(this.isCard ? this.background : { overrides: this.draft }),
+          hide_frame_overlays: this.hideOverlays,
+        },
       );
       if (!stale()) this.preview = result.image;
     } catch (err) {
@@ -359,7 +362,10 @@ export class PhotoEditor extends LitElement {
               <input
                 type="checkbox"
                 .checked=${this.hideOverlays}
-                @change=${(e: Event) => (this.hideOverlays = (e.target as HTMLInputElement).checked)}
+                @change=${(e: Event) => {
+                  this.hideOverlays = (e.target as HTMLInputElement).checked;
+                  this.schedulePreview(0);
+                }}
               />
               ${l(this.isCard ? "hide_frame_overlays_card" : "hide_frame_overlays")}
             </label>

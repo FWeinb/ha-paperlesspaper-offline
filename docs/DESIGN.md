@@ -383,7 +383,9 @@ e-paper photo frames running the
   *Card* badge.
 - **Photo editor**: crop (locked to the frame's shape by default) and focal
   point, rotation, the photo's render settings, a live dithered preview
-  rendered by HA, *Show next*, *Copy to…*, *Delete* (warning when the photo
+  rendered by HA (with the overlays at their current values and the unsaved
+  hide switch; re-rendered when the library list changes, so overlay edits
+  show up), *Show next*, *Copy to…*, *Delete* (warning when the photo
   is the background of cards), and the *Photo overlays* section with *Copy to
   photos…* and the hide switch. **Card mode** replaces crop, rotation and
   render settings with the card preview and a background picker (section 12).
@@ -671,8 +673,7 @@ none`), `backing_color`, `redraw` (`change | photo`). Items have
 - **Panel**: "Add card" opens a dialog (preset, background, name); the card
   then opens in the photo editor in card mode, which shows the preview where
   the crop area is and the background picker (colour or library photo)
-  beside it, and re-renders the preview when the library list changes, so
-  overlay edits show up.
+  beside it.
 
 ### One-off text (`show_text`)
 

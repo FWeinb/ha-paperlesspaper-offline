@@ -1499,13 +1499,18 @@ class FrameManager:
         frame_defaults: dict[str, Any] | None = None,
         global_defaults: dict[str, Any] | None = None,
         background: tuple[str, str | None] | None = None,
+        *,
+        hide_frame_overlays: bool | None = None,
     ) -> bytes:
-        """Preview PNG of a photo with unsaved settings (not cached).
+        """Preview PNG of a library item with unsaved settings (not cached).
 
-        A card is previewed with its overlays, on an unsaved ``background``
-        (background, background photo id) if given.
+        It is drawn with its overlays at their current values, like "Up next";
+        ``hide_frame_overlays`` is an unsaved hide switch. A card is drawn on an
+        unsaved ``background`` (background, background photo id) if given.
         """
         photo = self.require_photo(photo_id)
+        if hide_frame_overlays is not None:
+            photo = replace(photo, hide_frame_overlays=hide_frame_overlays)
         if photo.is_card:
             if background is not None:
                 bg, bg_id = self._card_background(*background)
@@ -1520,10 +1525,15 @@ class FrameManager:
         )
         path = self.originals / photo.filename
         canvas = self.canvas
+        draw = self._draw_now("photo", photo)
+
+        def produce() -> bytes:
+            if not draw:
+                return render_preview(path.read_bytes(), opts, canvas)
+            return composite(render(path.read_bytes(), opts, canvas).bmp, draw, canvas).preview_png
+
         async with self._render_lock:
-            return await self.hass.async_add_executor_job(
-                lambda: render_preview(path.read_bytes(), opts, canvas)
-            )
+            return await self.hass.async_add_executor_job(produce)
 
     @callback
     def async_reorder(self, order: list[str]) -> None:

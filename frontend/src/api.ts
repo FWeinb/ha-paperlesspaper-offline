@@ -104,6 +104,8 @@ export const renderPreview = (
     /** Cards: an unsaved background. */
     background?: CardBackground;
     background_photo_id?: string | null;
+    /** An unsaved hide switch for the frame's overlays. */
+    hide_frame_overlays?: boolean;
   },
 ) =>
   hass.callWS<{ image: string; width: number; height: number }>({

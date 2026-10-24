@@ -399,6 +399,8 @@ async def ws_import(
         # Cards: an unsaved background.
         vol.Optional("background"): vol.In(CARD_BACKGROUNDS),
         vol.Optional("background_photo_id"): vol.Any(None, str),
+        # An unsaved hide switch for the frame's overlays.
+        vol.Optional("hide_frame_overlays"): bool,
     }
 )
 @websocket_api.async_response
@@ -413,6 +415,7 @@ async def ws_preview(
         msg.get("frame_defaults"),
         msg.get("global_defaults"),
         (msg["background"], msg.get("background_photo_id")) if "background" in msg else None,
+        hide_frame_overlays=msg.get("hide_frame_overlays"),
     )
     connection.send_result(
         msg["id"],
