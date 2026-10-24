@@ -95,6 +95,8 @@ export interface LibraryItem {
   overrides: PhotoSettings;
   hide_frame_overlays: boolean;
   overlay_count?: number;
+  /** How many of the item's own overlays are enabled. */
+  overlays_enabled?: number;
   /** Cards only. */
   background?: CardBackground;
   background_photo_id?: string | null;

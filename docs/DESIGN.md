@@ -380,7 +380,8 @@ e-paper photo frames running the
   URLs".
 - **Library tab**: drag-and-drop upload, import from a media source, drag to
   reorder, the eye toggle, in order or shuffle, *Add card*; cards carry a
-  *Card* badge.
+  *Card* badge, photos with their own overlays a layers badge (the number
+  enabled, or crossed out and dimmed when all are off).
 - **Photo editor**: crop (locked to the frame's shape by default) and focal
   point, rotation, the photo's render settings, a live dithered preview
   rendered by HA (with the overlays at their current values and the unsaved

@@ -1,4 +1,13 @@
-import { mdiCardTextOutline, mdiEye, mdiEyeOff, mdiImageMultiple, mdiTune, mdiUpload } from "@mdi/js";
+import {
+  mdiCardTextOutline,
+  mdiEye,
+  mdiEyeOff,
+  mdiImageMultiple,
+  mdiLayersOff,
+  mdiLayersOutline,
+  mdiTune,
+  mdiUpload,
+} from "@mdi/js";
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { errorMessage, reorderPhotos, updateFrame, updatePhoto, uploadPhotos } from "./api";
@@ -110,6 +119,20 @@ export class Library extends LitElement {
     }
   }
 
+  /** A photo's own overlays: how many, and whether any is enabled. Cards are made of them. */
+  private renderOverlayBadge(photo: LibraryItem) {
+    const count = photo.overlay_count ?? 0;
+    if (photo.kind === "card" || !count) return nothing;
+    const l = localizer(this.hass);
+    const on = photo.overlays_enabled ?? 0;
+    return html`<span
+      class="chip overlay-badge ${on ? "" : "off"}"
+      title=${on ? l("overlays_on", { on, count }) : l("overlays_off", { count })}
+    >
+      ${icon(on ? mdiLayersOutline : mdiLayersOff)} ${on ? on : count}
+    </span>`;
+  }
+
   private edit(photo: LibraryItem) {
     this.dispatchEvent(new CustomEvent("edit-photo", { detail: { photo }, bubbles: true, composed: true }));
   }
@@ -180,6 +203,7 @@ export class Library extends LitElement {
                     ${photo.photo_id === showing ? html`<span class="chip ok">${l("showing")}</span>` : nothing}
                     ${photo.photo_id === upNext ? html`<span class="chip">${l("up_next")}</span>` : nothing}
                     ${custom ? html`<span class="chip" title=${l("custom")}>${icon(mdiTune)}</span>` : nothing}
+                    ${this.renderOverlayBadge(photo)}
                     ${card ? html`<span class="chip card-badge">${l("card_badge")}</span>` : nothing}
                   </div>
                   <div class="caption">
@@ -326,6 +350,14 @@ export class Library extends LitElement {
       .badges .chip.ok {
         background: var(--pp-ok);
         color: #fff;
+      }
+      .badges .overlay-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+      }
+      .badges .overlay-badge.off {
+        opacity: 0.6;
       }
       .badges svg.icon {
         width: 14px;

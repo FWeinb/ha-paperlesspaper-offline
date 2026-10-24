@@ -63,6 +63,7 @@ def photo_info(hass: HomeAssistant, manager: FrameManager, photo: LibraryItem) -
         "overrides": _jsonable(photo.overrides),
         "hide_frame_overlays": photo.hide_frame_overlays,
         "overlay_count": len(photo.overlays),
+        "overlays_enabled": sum(o.enabled for o in photo.overlays),
         **card_fields(photo),
         "thumb_url": async_sign_path(hass, base, SIGN_EXPIRY),
         # The editor needs larger images; one per rotation so crops map 1:1.

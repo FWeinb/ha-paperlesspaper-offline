@@ -270,6 +270,7 @@ async def test_photo_overlay_websocket(
     assert [r["text"] for r in preview["results"].values()] == ["a", "b"]
     photos = await call(7, type=f"{DOMAIN}/photos", entry_id=entry_id)
     assert photos["photos"][0]["overlay_count"] == 2
+    assert photos["photos"][0]["overlays_enabled"] == 2
 
     await call(8, type=f"{DOMAIN}/overlay/delete", overlay_id=first["overlay_id"], **scope)
     assert [o.name for o in loaded_entry.runtime_data.photos[0].overlays] == ["B"]

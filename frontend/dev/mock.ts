@@ -178,8 +178,14 @@ const overlays: Record<string, any[]> = {
     { overlay_id: "o2", name: "Date", template: "{{ date_local(now(), 'long') }}", enabled: true, show_if: null, anchor: "bottom_center", margin: 0.03, width: null, align: "center", size: "m", text_color: "white", backing: "halo", backing_color: "white", redraw: "change", last_text: "Wednesday, October 14, 2026", last_error: null },
   ],
   hall: [],
+  "photo:pkitchen1": [
+    { overlay_id: "o3", name: "Caption", template: "Grandma's garden", enabled: true, show_if: null, anchor: "bottom_left", margin: 0.03, width: null, align: "left", size: "m", text_color: "black", backing: "box", backing_color: "white", redraw: "change" },
+  ],
+  "photo:pkitchen2": [
+    { overlay_id: "o4", name: "Caption", template: "Alps 2024", enabled: false, show_if: null, anchor: "bottom_left", margin: 0.03, width: null, align: "left", size: "m", text_color: "black", backing: "box", backing_color: "white", redraw: "change" },
+  ],
 };
-let nextOverlay = 3;
+let nextOverlay = 5;
 
 function evalTemplate(tpl: string): { text: string | null; error: string | null } {
   if (tpl.includes("| nope")) return { text: null, error: "TemplateSyntaxError: No filter named 'nope'." };
@@ -253,7 +259,10 @@ const hass: any = {
     const t = msg.type.replace("paperlessoffline/", "");
     switch (t) {
       case "frames": return delay({ frames });
-      case "photos": return delay({ photos: [...(photos[msg.entry_id] ?? [])] });
+      case "photos": return delay({ photos: (photos[msg.entry_id] ?? []).map((p) => {
+        const own = overlays[`photo:${p.photo_id}`] ?? [];
+        return { ...p, overlay_count: own.length, overlays_enabled: own.filter((o) => o.enabled).length };
+      }) });
       case "card/add": { const card = addCardMock(msg.entry_id, msg); await changed(msg.entry_id); return delay(card); }
       case "photo/update": {
         const p = photos[msg.entry_id].find((x) => x.photo_id === msg.photo_id)!;
