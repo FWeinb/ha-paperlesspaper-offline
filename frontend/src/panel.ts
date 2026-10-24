@@ -168,6 +168,33 @@ export class PaperlessPanel extends LitElement {
     </nav>`;
   }
 
+  /** A "Showing"/"Up next" picture; opens the photo editor when it shows a library photo. */
+  private renderPreview(
+    frame: Frame,
+    url: string | null,
+    slot: { kind: string | null; photo_id: string | null },
+    label: string,
+    caption: string,
+  ) {
+    const photo =
+      slot.kind === "photo" ? this.photos.find((p) => p.photo_id === slot.photo_id) : undefined;
+    const pic = html`${url ? html`<img src=${url} alt="" />` : nothing}`;
+    const style = `aspect-ratio:${frame.canvas.width}/${frame.canvas.height}`;
+    return html`<figure>
+      ${photo
+        ? html`<button
+            class="pic editable"
+            style=${style}
+            title=${localizer(this.hass)("edit_photo")}
+            @click=${() => (this.editing = photo)}
+          >
+            ${pic}
+          </button>`
+        : html`<div class="pic" style=${style}>${pic}</div>`}
+      <figcaption><span class="muted">${label}</span> ${caption}</figcaption>
+    </figure>`;
+  }
+
   private renderStatus(frame: Frame) {
     const l = localizer(this.hass);
     const showing = this.previewUrl(frame, "preview_showing");
@@ -179,18 +206,8 @@ export class PaperlessPanel extends LitElement {
           ? l("placeholder")
           : (frame.up_next.name ?? "");
     return html`<div class="status card">
-      <figure>
-        <div class="pic" style="aspect-ratio:${frame.canvas.width}/${frame.canvas.height}">
-          ${showing ? html`<img src=${showing} alt="" />` : nothing}
-        </div>
-        <figcaption><span class="muted">${l("showing")}</span> ${frame.current.name ?? ""}</figcaption>
-      </figure>
-      <figure>
-        <div class="pic" style="aspect-ratio:${frame.canvas.width}/${frame.canvas.height}">
-          ${upNext ? html`<img src=${upNext} alt="" />` : nothing}
-        </div>
-        <figcaption><span class="muted">${l("up_next")}</span> ${upNextLabel}</figcaption>
-      </figure>
+      ${this.renderPreview(frame, showing, frame.current, l("showing"), frame.current.name ?? "")}
+      ${this.renderPreview(frame, upNext, frame.up_next, l("up_next"), upNextLabel)}
       <div class="facts">
         <h1>${frame.title}</h1>
         <div class="muted">${frame.panel.model} · ${frame.client_id}</div>
@@ -453,6 +470,18 @@ export class PaperlessPanel extends LitElement {
         overflow: hidden;
         box-shadow: 0 0 0 6px #2b2b2b, 0 2px 12px 6px rgba(0, 0, 0, 0.25);
         margin: 6px;
+      }
+      button.pic {
+        display: block;
+        padding: 0;
+        border: none;
+        font: inherit;
+        cursor: pointer;
+      }
+      button.pic:hover,
+      button.pic:focus-visible {
+        outline: 2px solid var(--primary-color);
+        outline-offset: 8px;
       }
       .pic img {
         width: 100%;
