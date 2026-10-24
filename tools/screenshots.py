@@ -82,6 +82,21 @@ FRAMES = [
 ]
 EDIT_FRAME, EDIT_PHOTO = "Living room", "Sunset meadow"
 
+# Photos' own overlays: {frame: {photo name: [overlay]}}. One on and one off show
+# both states of the library's overlay badge; the edited photo shows it in the preview.
+CAPTION = {
+    "name": "Caption",
+    "template": "{{ photo.name }}",
+    "anchor": "bottom_left",
+    "size": "m",
+}
+PHOTO_OVERLAYS = {
+    "Living room": {
+        "Sunset meadow": [CAPTION],
+        "Santorini": [{**CAPTION, "enabled": False}],
+    },
+}
+
 # A card in the middle of the living room library: (frame, name, background, overlays).
 CARD_POSITION = 4
 CARD = (
@@ -274,7 +289,7 @@ async def call_service(
     session: aiohttp.ClientSession, base: str, token: str, service: str, **data
 ) -> dict:
     """Call a paperlessoffline action; return its response (empty for actions without one)."""
-    respond = service in ("add_card", "add_overlay")
+    respond = service in ("add_card", "add_overlay", "list_photos")
     async with session.post(
         f"{base}/api/services/paperlessoffline/{service}" + ("?return_response" if respond else ""),
         json=data,
@@ -300,6 +315,19 @@ async def add_card(session: aiohttp.ClientSession, base: str, token: str, entry_
         session, base, token, "move_photo",
         config_entry_id=entry_id, photo_id=card["photo_id"], position=CARD_POSITION,
     )  # fmt: skip
+
+
+async def add_photo_overlays(
+    session: aiohttp.ClientSession, base: str, token: str, entry_id: str, frame: str
+) -> None:
+    listed = await call_service(session, base, token, "list_photos", config_entry_id=entry_id)
+    ids = {p["name"]: p["photo_id"] for p in listed["photos"]}
+    for photo, overlays in PHOTO_OVERLAYS.get(frame, {}).items():
+        for overlay in overlays:
+            await call_service(
+                session, base, token, "add_overlay",
+                config_entry_id=entry_id, photo_id=ids[photo], **overlay,
+            )  # fmt: skip
 
 
 async def fetch_photos(session: aiohttp.ClientSession, cache: Path) -> None:
@@ -352,6 +380,7 @@ async def add_frames(
             r.raise_for_status()
         if name == CARD[0]:
             await add_card(session, base, token, entry_id)
+        await add_photo_overlays(session, base, token, entry_id, name)
 
         # A wake as the firmware does it: settings first, then the image with telemetry.
         async with session.get(urls["settings_url"]) as r:
