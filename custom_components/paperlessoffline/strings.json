@@ -636,7 +636,7 @@
         },
         "background_image": {
           "name": "Background picture",
-          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.garden. Fetched at every wake while the card is shown. Setting it alone switches the card to a picture background."
+          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.garden. Fetched at each wake where the card is shown. Setting it alone switches the card to a picture background."
         },
         "background_fit": {
           "name": "Picture fit",
@@ -878,7 +878,7 @@
         },
         "image": {
           "name": "Picture",
-          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.front_door. Fetched at every wake."
+          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.front_door. Fetched at each wake where the overlay is drawn."
         },
         "show_if": {
           "name": "Show if",
@@ -952,7 +952,7 @@
         },
         "image": {
           "name": "Picture",
-          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.front_door. Fetched at every wake."
+          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.front_door. Fetched at each wake where the overlay is drawn."
         },
         "show_if": {
           "name": "Show if",
@@ -1106,7 +1106,7 @@
         },
         "background_image": {
           "name": "Background picture",
-          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.garden. Fetched at every wake while the card is shown. Setting it alone switches the card to a picture background."
+          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.garden. Fetched at each wake where the card is shown. Setting it alone switches the card to a picture background."
         },
         "background_fit": {
           "name": "Picture fit",

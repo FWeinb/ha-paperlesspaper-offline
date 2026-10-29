@@ -878,7 +878,7 @@
         },
         "image": {
           "name": "Bild",
-          "description": "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.front_door. Wird bei jedem Aufwachen geholt."
+          "description": "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.front_door. Wird bei jedem Aufwachen geholt, bei dem das Overlay gezeichnet wird."
         },
         "show_if": {
           "name": "Anzeigen wenn",
@@ -952,7 +952,7 @@
         },
         "image": {
           "name": "Bild",
-          "description": "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.front_door. Wird bei jedem Aufwachen geholt."
+          "description": "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.front_door. Wird bei jedem Aufwachen geholt, bei dem das Overlay gezeichnet wird."
         },
         "show_if": {
           "name": "Anzeigen wenn",

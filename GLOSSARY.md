@@ -28,7 +28,7 @@ A library item made of text on a background, with no picture of its own.
 _Avoid_: Text card (fine in prose), slide, text photo
 
 **Card background**:
-What a card's text is drawn on: a solid panel colour, a photo from the same library, or a picture from a camera or image entity, or a URL, fetched at each wake.
+What a card's text is drawn on: a solid panel colour, a photo from the same library, or a picture from a camera or image entity, or a URL, fetched at each wake where the card is shown.
 _Avoid_: Backdrop, card image
 
 **Preset**:
@@ -62,7 +62,7 @@ A named box drawn on top of a base image: a text box written as a template, or a
 _Avoid_: Label, widget, caption (a caption is one use of an overlay)
 
 **Image overlay**:
-An overlay that shows a picture from a camera or image entity, or a URL, named by a template and fetched at each wake.
+An overlay that shows a picture from a camera or image entity, or a URL, named by a template and fetched at each wake where it is drawn.
 _Avoid_: Picture overlay, image widget, camera overlay
 
 **Photo overlay**:

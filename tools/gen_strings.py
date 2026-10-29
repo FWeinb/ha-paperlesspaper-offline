@@ -939,8 +939,8 @@ def _overlays(lang: str) -> dict:
         "image": (
             t("Picture", "Bild"),
             t(
-                "Template for a camera or image entity, or an http(s) URL, e.g. camera.front_door. Fetched at every wake.",
-                "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.front_door. Wird bei jedem Aufwachen geholt.",
+                "Template for a camera or image entity, or an http(s) URL, e.g. camera.front_door. Fetched at each wake where the overlay is drawn.",
+                "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.front_door. Wird bei jedem Aufwachen geholt, bei dem das Overlay gezeichnet wird.",
             ),
         ),
         "show_if": (
@@ -1267,7 +1267,7 @@ def _cards(lang: str) -> dict:
     background_image = (
         t("Background picture", "Hintergrundbild"),
         t(
-            "Template for a camera or image entity, or an http(s) URL, e.g. camera.garden. Fetched at every wake while the card is shown. Setting it alone switches the card to a picture background.",
+            "Template for a camera or image entity, or an http(s) URL, e.g. camera.garden. Fetched at each wake where the card is shown. Setting it alone switches the card to a picture background.",
             "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.garten. Wird bei jedem Aufwachen geholt, solange die Karte angezeigt wird. Allein angegeben, wechselt die Karte zu einem Bild-Hintergrund.",
         ),
     )
