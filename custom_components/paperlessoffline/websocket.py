@@ -14,7 +14,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.util import dt as dt_util
 import probatio as vol
 
-from .cards import CARD_BACKGROUNDS, PRESETS
+from .cards import BACKGROUND_FITS, CARD_BACKGROUNDS, PRESETS
 from .const import (
     CONF_INTERVAL,
     CONF_MOUNTING,
@@ -31,7 +31,7 @@ from .frame import SIGNAL_ANY_UPDATE, FrameManager
 from .issues import is_overdue
 from .overlay_schema import OVERLAY_SCHEMA, build_overlay
 from .render import MOUNTINGS
-from .services import card_fields, overlay_dict
+from .services import BACKGROUND_PADDING, card_fields, overlay_dict
 from .settings import FRAME_DEFAULTS_SCHEMA, GLOBAL_DEFAULTS_SCHEMA, PHOTO_OVERRIDES_SCHEMA
 from .sources import async_fetch_source
 from .store import LibraryItem
@@ -64,7 +64,7 @@ def photo_info(hass: HomeAssistant, manager: FrameManager, photo: LibraryItem) -
         "hide_frame_overlays": photo.hide_frame_overlays,
         "overlay_count": len(photo.overlays),
         "overlays_enabled": sum(o.enabled for o in photo.overlays),
-        **card_fields(photo),
+        **card_fields(manager, photo),
         "thumb_url": async_sign_path(hass, base, SIGN_EXPIRY),
         # The editor needs larger images; one per rotation so crops map 1:1.
         "display_urls": {
@@ -222,6 +222,9 @@ def ws_photos(
         vol.Optional("background", default="white"): vol.In(CARD_BACKGROUNDS),
         # The panel sends null when the background isn't a library photo.
         vol.Optional("background_photo_id"): vol.Any(None, str),
+        vol.Optional("background_image"): str,
+        vol.Optional("background_fit"): vol.In(BACKGROUND_FITS),
+        vol.Optional("background_padding"): BACKGROUND_PADDING,
     }
 )
 @callback
@@ -231,7 +234,13 @@ def ws_card_add(
     """Add a card made from a preset."""
     manager = get_manager(hass, msg["entry_id"])
     card = manager.async_add_card(
-        msg.get("name"), msg["preset"], msg["background"], msg.get("background_photo_id")
+        msg.get("name"),
+        msg["preset"],
+        msg["background"],
+        msg.get("background_photo_id"),
+        background_image=msg.get("background_image"),
+        background_fit=msg.get("background_fit"),
+        background_padding=msg.get("background_padding", 0),
     )
     connection.send_result(msg["id"], photo_info(hass, manager, card))
 
@@ -249,6 +258,9 @@ def ws_card_add(
         vol.Optional("background"): vol.In(CARD_BACKGROUNDS),
         # The panel sends null when the background isn't a library photo.
         vol.Optional("background_photo_id"): vol.Any(None, str),
+        vol.Optional("background_image"): str,
+        vol.Optional("background_fit"): vol.In(BACKGROUND_FITS),
+        vol.Optional("background_padding"): BACKGROUND_PADDING,
     }
 )
 @callback
@@ -263,6 +275,9 @@ def ws_photo_update(
         enabled=msg.get("enabled"),
         background=msg.get("background"),
         background_photo_id=msg.get("background_photo_id"),
+        background_image=msg.get("background_image"),
+        background_fit=msg.get("background_fit"),
+        background_padding=msg.get("background_padding"),
     )
     if "overrides" in msg:
         photo = manager.async_set_overrides(msg["photo_id"], msg["overrides"])
@@ -402,6 +417,9 @@ async def ws_import(
         # Cards: an unsaved background.
         vol.Optional("background"): vol.In(CARD_BACKGROUNDS),
         vol.Optional("background_photo_id"): vol.Any(None, str),
+        vol.Optional("background_image"): vol.Any(None, str),
+        vol.Optional("background_fit"): vol.In(BACKGROUND_FITS),
+        vol.Optional("background_padding"): BACKGROUND_PADDING,
         # An unsaved hide switch for the frame's overlays.
         vol.Optional("hide_frame_overlays"): bool,
     }
@@ -412,13 +430,17 @@ async def ws_preview(
 ) -> None:
     """Render a dithered preview with (unsaved) settings."""
     manager = get_manager(hass, msg["entry_id"])
-    png = await manager.async_render_preview(
+    png, background_error = await manager.async_render_preview(
         msg["photo_id"],
         msg.get("overrides"),
         msg.get("frame_defaults"),
         msg.get("global_defaults"),
-        (msg["background"], msg.get("background_photo_id")) if "background" in msg else None,
+        (msg["background"], msg.get("background_photo_id"), msg.get("background_image"))
+        if "background" in msg
+        else None,
         hide_frame_overlays=msg.get("hide_frame_overlays"),
+        background_fit=msg.get("background_fit"),
+        background_padding=msg.get("background_padding", 0),
     )
     connection.send_result(
         msg["id"],
@@ -426,6 +448,7 @@ async def ws_preview(
             "image": "data:image/png;base64," + base64.b64encode(png).decode(),
             "width": manager.canvas.width,
             "height": manager.canvas.height,
+            "background_error": background_error,
         },
     )
 

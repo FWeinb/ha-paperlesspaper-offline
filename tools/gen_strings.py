@@ -1246,8 +1246,29 @@ def _cards(lang: str) -> dict:
     background = (
         t("Background", "Hintergrund"),
         t(
-            "A colour, or 'photo' to draw the card on a photo of this frame.",
-            "Eine Farbe, oder „Foto“, um die Karte auf ein Foto dieses Rahmens zu zeichnen.",
+            "A colour, 'photo' to draw the card on a photo of this frame, or 'image' for a picture from a camera, an image entity or a URL.",
+            "Eine Farbe, „Foto“, um die Karte auf ein Foto dieses Rahmens zu zeichnen, oder „Bild“ für ein Bild einer Kamera, einer Bild-Entität oder einer URL.",
+        ),
+    )
+    background_fit = (
+        t("Picture fit", "Bildeinpassung"),
+        t(
+            "How a picture background fits the frame: like the frame's photos, filled and cropped, or scaled to fit with borders in the frame's border colour. 'default' goes back to the frame's fit.",
+            "Wie ein Bild-Hintergrund in den Rahmen passt: wie die Fotos des Rahmens, füllend zugeschnitten, oder ganz eingepasst mit Rand in der Randfarbe des Rahmens. „Wie beim Rahmen“ kehrt zur Einpassung des Rahmens zurück.",
+        ),
+    )
+    background_padding = (
+        t("Picture padding", "Bildabstand"),
+        t(
+            "With 'Fit with borders': space between the picture and the frame's edges, in percent of the frame's short side (0 to 25).",
+            "Bei „Einpassen mit Rand“: Abstand zwischen Bild und Rahmenkanten, in Prozent der kurzen Rahmenseite (0 bis 25).",
+        ),
+    )
+    background_image = (
+        t("Background picture", "Hintergrundbild"),
+        t(
+            "Template for a camera or image entity, or an http(s) URL, e.g. camera.garden. Fetched at every wake while the card is shown. Setting it alone switches the card to a picture background.",
+            "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.garten. Wird bei jedem Aufwachen geholt, solange die Karte angezeigt wird. Allein angegeben, wechselt die Karte zu einem Bild-Hintergrund.",
         ),
     )
     background_photo = (
@@ -1279,6 +1300,14 @@ def _cards(lang: str) -> dict:
                     "blue": L(t("Blue", "Blau")),
                     "yellow": L(t("Yellow", "Gelb")),
                     "photo": L(t("Photo", "Foto")),
+                    "image": L(t("Camera or picture", "Kamera oder Bild")),
+                }
+            },
+            "card_background_fit": {
+                "options": {
+                    "default": L(t("Frame default", "Wie beim Rahmen")),
+                    "cover": L(FIT["cover"]),
+                    "contain": L(FIT["contain"]),
                 }
             },
         },
@@ -1288,6 +1317,14 @@ def _cards(lang: str) -> dict:
                     t(
                         "A photo background needs the ID of a photo (not a card) of this frame.",
                         "Ein Foto-Hintergrund braucht die ID eines Fotos (keiner Karte) dieses Rahmens.",
+                    )
+                )
+            },
+            "card_needs_background_image": {
+                "message": L(
+                    t(
+                        "A picture background needs a picture source (background_image).",
+                        "Ein Bild-Hintergrund braucht eine Bildquelle (background_image).",
                     )
                 )
             },
@@ -1331,6 +1368,9 @@ def _cards(lang: str) -> dict:
                     ),
                     "background": field(background),
                     "background_photo_id": field(background_photo),
+                    "background_image": field(background_image),
+                    "background_fit": field(background_fit),
+                    "background_padding": field(background_padding),
                 },
             },
             "update_photo": {
@@ -1345,6 +1385,9 @@ def _cards(lang: str) -> dict:
                         )
                     ),
                     "background_photo_id": field(background_photo),
+                    "background_image": field(background_image),
+                    "background_fit": field(background_fit),
+                    "background_padding": field(background_padding),
                 }
             },
         },

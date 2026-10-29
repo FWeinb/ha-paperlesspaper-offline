@@ -261,7 +261,15 @@
         "green": "Grün",
         "blue": "Blau",
         "yellow": "Gelb",
-        "photo": "Foto"
+        "photo": "Foto",
+        "image": "Kamera oder Bild"
+      }
+    },
+    "card_background_fit": {
+      "options": {
+        "default": "Wie beim Rahmen",
+        "cover": "Füllen und zuschneiden",
+        "contain": "Einpassen mit Rand"
       }
     }
   },
@@ -447,6 +455,9 @@
     "invalid_card_background": {
       "message": "Ein Foto-Hintergrund braucht die ID eines Fotos (keiner Karte) dieses Rahmens."
     },
+    "card_needs_background_image": {
+      "message": "Ein Bild-Hintergrund braucht eine Bildquelle (background_image)."
+    },
     "card_has_no_render_settings": {
       "message": "Karten haben keine Darstellungseinstellungen; stattdessen den Hintergrund ändern."
     },
@@ -622,6 +633,18 @@
         "background_photo_id": {
           "name": "Hintergrundfoto-ID",
           "description": "Das Foto, auf das eine Karte mit Foto-Hintergrund gezeichnet wird, mit dessen Einstellungen."
+        },
+        "background_image": {
+          "name": "Hintergrundbild",
+          "description": "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.garten. Wird bei jedem Aufwachen geholt, solange die Karte angezeigt wird. Allein angegeben, wechselt die Karte zu einem Bild-Hintergrund."
+        },
+        "background_fit": {
+          "name": "Bildeinpassung",
+          "description": "Wie ein Bild-Hintergrund in den Rahmen passt: wie die Fotos des Rahmens, füllend zugeschnitten, oder ganz eingepasst mit Rand in der Randfarbe des Rahmens. „Wie beim Rahmen“ kehrt zur Einpassung des Rahmens zurück."
+        },
+        "background_padding": {
+          "name": "Bildabstand",
+          "description": "Bei „Einpassen mit Rand“: Abstand zwischen Bild und Rahmenkanten, in Prozent der kurzen Rahmenseite (0 bis 25)."
         }
       }
     },
@@ -1075,11 +1098,23 @@
         },
         "background": {
           "name": "Hintergrund",
-          "description": "Eine Farbe, oder „Foto“, um die Karte auf ein Foto dieses Rahmens zu zeichnen."
+          "description": "Eine Farbe, „Foto“, um die Karte auf ein Foto dieses Rahmens zu zeichnen, oder „Bild“ für ein Bild einer Kamera, einer Bild-Entität oder einer URL."
         },
         "background_photo_id": {
           "name": "Hintergrundfoto-ID",
           "description": "Das Foto, auf das eine Karte mit Foto-Hintergrund gezeichnet wird, mit dessen Einstellungen."
+        },
+        "background_image": {
+          "name": "Hintergrundbild",
+          "description": "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.garten. Wird bei jedem Aufwachen geholt, solange die Karte angezeigt wird. Allein angegeben, wechselt die Karte zu einem Bild-Hintergrund."
+        },
+        "background_fit": {
+          "name": "Bildeinpassung",
+          "description": "Wie ein Bild-Hintergrund in den Rahmen passt: wie die Fotos des Rahmens, füllend zugeschnitten, oder ganz eingepasst mit Rand in der Randfarbe des Rahmens. „Wie beim Rahmen“ kehrt zur Einpassung des Rahmens zurück."
+        },
+        "background_padding": {
+          "name": "Bildabstand",
+          "description": "Bei „Einpassen mit Rand“: Abstand zwischen Bild und Rahmenkanten, in Prozent der kurzen Rahmenseite (0 bis 25)."
         }
       }
     },

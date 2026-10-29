@@ -251,6 +251,18 @@ media browser.
   stays crisp. A photo background uses that photo's own crop and settings,
   without its overlays. When the photo is deleted, its cards turn white; the
   photo editor warns you before that.
+- **A camera or picture** can be the background too: pick the last button
+  (a picture with arrows) and enter a `camera.` or `image.` entity or an
+  `http://` or `https://` URL, as a template like an image overlay's. While
+  the card is shown, the picture is fetched at each wake (waiting up to 10
+  seconds) and drawn like a photo with the frame's settings. *Fit* chooses
+  between the frame's fit, *Fill and crop*, and *Fit with borders* to show
+  the whole picture (borders in the frame's border colour); with the last,
+  *Padding* adds space around it. If it can't be fetched, the card keeps its
+  last picture, or turns white if there is none, and the editor shows why.
+  From automations: `background: image` with `background_image`, and
+  optionally `background_fit` (`default`, `cover` or `contain`) and
+  `background_padding` (0 to 25, percent of the frame's short side).
 - **Global photo overlays** are hidden on cards by default; untick *Hide
   global photo overlays on this card* to show them.
 - Cards have a *Card* badge in the library, and their thumbnail is the

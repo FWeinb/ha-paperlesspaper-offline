@@ -321,9 +321,21 @@ def render_preview(data: bytes, opts: RenderOptions, canvas: Canvas) -> bytes:
     return render(data, opts, canvas).preview_png
 
 
-def render(data: bytes, opts: RenderOptions, canvas: Canvas) -> RenderResult:
-    """Render encoded image bytes for a canvas. Blocking; run in an executor."""
-    img = enhance(fit_image(data, opts, canvas.width, canvas.height), opts)
+def render(data: bytes, opts: RenderOptions, canvas: Canvas, padding: int = 0) -> RenderResult:
+    """Render encoded image bytes for a canvas. Blocking; run in an executor.
+
+    ``padding`` (px) keeps the image that far from every edge, on the background colour.
+    """
+    width, height = canvas.width, canvas.height
+    padding = max(0, min(padding, (min(width, height) - 2) // 2))
+    img = fit_image(data, opts, width - 2 * padding, height - 2 * padding)
+    if padding:
+        padded = Image.new(
+            "RGB", (width, height), BACKGROUNDS.get(opts.background, BACKGROUNDS["white"])
+        )
+        padded.paste(img, (padding, padding))
+        img = padded
+    img = enhance(img, opts)
     rgb = np.asarray(img, dtype=np.float32)
     positions = dither(rgb, get_palette(opts.palette), opts.dither, opts.serpentine)
     return finish(positions, canvas)

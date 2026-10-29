@@ -28,7 +28,7 @@ A library item made of text on a background, with no picture of its own.
 _Avoid_: Text card (fine in prose), slide, text photo
 
 **Card background**:
-What a card's text is drawn on: a solid panel colour, or a photo from the same library.
+What a card's text is drawn on: a solid panel colour, a photo from the same library, or a picture from a camera or image entity, or a URL, fetched at each wake.
 _Avoid_: Backdrop, card image
 
 **Preset**:

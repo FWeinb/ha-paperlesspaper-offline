@@ -261,7 +261,15 @@
         "green": "Green",
         "blue": "Blue",
         "yellow": "Yellow",
-        "photo": "Photo"
+        "photo": "Photo",
+        "image": "Camera or picture"
+      }
+    },
+    "card_background_fit": {
+      "options": {
+        "default": "Frame default",
+        "cover": "Fill and crop",
+        "contain": "Fit with borders"
       }
     }
   },
@@ -447,6 +455,9 @@
     "invalid_card_background": {
       "message": "A photo background needs the ID of a photo (not a card) of this frame."
     },
+    "card_needs_background_image": {
+      "message": "A picture background needs a picture source (background_image)."
+    },
     "card_has_no_render_settings": {
       "message": "Cards have no render settings; change the background instead."
     },
@@ -622,6 +633,18 @@
         "background_photo_id": {
           "name": "Background photo ID",
           "description": "The photo a card with a photo background is drawn on, with that photo's settings."
+        },
+        "background_image": {
+          "name": "Background picture",
+          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.garden. Fetched at every wake while the card is shown. Setting it alone switches the card to a picture background."
+        },
+        "background_fit": {
+          "name": "Picture fit",
+          "description": "How a picture background fits the frame: like the frame's photos, filled and cropped, or scaled to fit with borders in the frame's border colour. 'default' goes back to the frame's fit."
+        },
+        "background_padding": {
+          "name": "Picture padding",
+          "description": "With 'Fit with borders': space between the picture and the frame's edges, in percent of the frame's short side (0 to 25)."
         }
       }
     },
@@ -1075,11 +1098,23 @@
         },
         "background": {
           "name": "Background",
-          "description": "A colour, or 'photo' to draw the card on a photo of this frame."
+          "description": "A colour, 'photo' to draw the card on a photo of this frame, or 'image' for a picture from a camera, an image entity or a URL."
         },
         "background_photo_id": {
           "name": "Background photo ID",
           "description": "The photo a card with a photo background is drawn on, with that photo's settings."
+        },
+        "background_image": {
+          "name": "Background picture",
+          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.garden. Fetched at every wake while the card is shown. Setting it alone switches the card to a picture background."
+        },
+        "background_fit": {
+          "name": "Picture fit",
+          "description": "How a picture background fits the frame: like the frame's photos, filled and cropped, or scaled to fit with borders in the frame's border colour. 'default' goes back to the frame's fit."
+        },
+        "background_padding": {
+          "name": "Picture padding",
+          "description": "With 'Fit with borders': space between the picture and the frame's edges, in percent of the frame's short side (0 to 25)."
         }
       }
     },

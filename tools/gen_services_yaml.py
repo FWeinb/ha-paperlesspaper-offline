@@ -72,7 +72,8 @@ OVERLAY_FIELDS = {
     "redraw": select(["change", "photo"], "overlay_redraw"),
 }
 
-CARD_BACKGROUND = select([*COLORS, "photo"], "card_background")
+CARD_BACKGROUND = select([*COLORS, "photo", "image"], "card_background")
+BACKGROUND_IMAGE = {"example": "camera.garden", "selector": {"text": {}}}
 
 SERVICES = {
     "add_photo": {
@@ -88,6 +89,11 @@ SERVICES = {
         "preset": {"default": "blank", **select(["blank", "info", "notice"], "card_preset")},
         "background": {"default": "white", **CARD_BACKGROUND},
         "background_photo_id": PHOTO_ID_OPTIONAL,
+        "background_image": BACKGROUND_IMAGE,
+        "background_fit": select(["default", "cover", "contain"], "card_background_fit"),
+        "background_padding": {
+            "selector": {"number": {"min": 0, "max": 25, "unit_of_measurement": "%"}}
+        },
     },
     "remove_photo": {"config_entry_id": FRAME, "photo_id": PHOTO_ID},
     "update_photo": {
@@ -100,6 +106,11 @@ SERVICES = {
         **PHOTO_RENDER,
         "background": CARD_BACKGROUND,
         "background_photo_id": PHOTO_ID_OPTIONAL,
+        "background_image": BACKGROUND_IMAGE,
+        "background_fit": select(["default", "cover", "contain"], "card_background_fit"),
+        "background_padding": {
+            "selector": {"number": {"min": 0, "max": 25, "unit_of_measurement": "%"}}
+        },
     },
     "move_photo": {
         "config_entry_id": FRAME,

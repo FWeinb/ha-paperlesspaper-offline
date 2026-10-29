@@ -117,6 +117,8 @@ function baseImage(entry: string, photoId: string | null, w: number, h: number, 
     const c = document.createElement("canvas");
     c.width = w; c.height = h;
     const g = c.getContext("2d")!;
+    // The mock fetches no pictures: a picture background shows as the first photo.
+    if (b.background === "image") return baseImage(entry, null, w, h);
     g.fillStyle = FILL[b.background ?? "white"];
     g.fillRect(0, 0, w, h);
     return c.toDataURL();
@@ -147,6 +149,7 @@ function addCardMock(entry: string, msg: any): LibraryItem {
     photo_id: id, kind: "card", name: msg.name || ({ blank: "Card", info: "Info", notice: "Notice" } as any)[msg.preset ?? "blank"],
     enabled: true, added: new Date().toISOString(), overrides: {}, hide_frame_overlays: true,
     background: msg.background ?? "white", background_photo_id: msg.background === "photo" ? msg.background_photo_id : null,
+    background_image: msg.background === "image" ? msg.background_image : "",
     thumb_url: "", display_urls: {},
   };
   const darkBg = ["black", "blue", "red", "green"].includes(card.background!);
@@ -269,7 +272,7 @@ const hass: any = {
       case "card/add": { const card = addCardMock(msg.entry_id, msg); await changed(msg.entry_id); return delay(card); }
       case "photo/update": {
         const p = photos[msg.entry_id].find((x) => x.photo_id === msg.photo_id)!;
-        for (const k of ["name", "enabled", "overrides", "hide_frame_overlays", "background", "background_photo_id"]) if (k in msg) (p as any)[k] = msg[k];
+        for (const k of ["name", "enabled", "overrides", "hide_frame_overlays", "background", "background_photo_id", "background_image", "background_fit", "background_padding"]) if (k in msg) (p as any)[k] = msg[k];
         if (p.kind === "card" && p.background !== "photo") p.background_photo_id = null;
         await changed(msg.entry_id);
         return delay(p);

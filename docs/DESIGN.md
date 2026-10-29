@@ -684,18 +684,24 @@ overlays*). The kind is fixed once created (`overlay_kind_fixed`).
 
 ### Cards
 
-- **Model**: a library item with `kind: "card"`, `background` and
-  `background_photo_id`. Their defaults make older stores load as photos.
+- **Model**: a library item with `kind: "card"`, `background`,
+  `background_photo_id`, `background_image`, `background_fit` and
+  `background_padding`. Their defaults make older
+  stores load as photos.
   Cards have no render settings of their own.
-- **Background**: `white`, `black`, a panel colour, or `photo` with
-  `background_photo_id`.
+- **Background**: `white`, `black`, a panel colour, `photo` with
+  `background_photo_id`, or `image` with `background_image` (see *Picture
+  backgrounds*). `_card_background` validates them and clears the fields the
+  chosen background doesn't use.
 - **Rendering branches on `kind` in one place**, `FrameManager._base_render`:
   - a plain background is `render_fill`, cached as `fill:<colour>`, with no
     dithering or enhancement, so text on it stays crisp;
   - a photo background returns that photo's own cache key and producer (its
     settings, without its overlays), so card and photo share one cache entry;
   - a missing background photo falls back to white; deleting a photo used as
-    a background turns those cards white.
+    a background turns those cards white;
+  - a picture background returns the render key of the card's last picture
+    (`FrameState.card_pictures`), or white without one.
 - **Other file-assuming paths** check `is_card`: thumbnails, housekeeping, the
   EXIF read, copying and deleting.
 - **Frame overlays** are hidden on cards by default (`hide_frame_overlays`
@@ -717,23 +723,65 @@ overlays*). The kind is fixed once created (`overlay_kind_fixed`).
     (`text_color_on`).
 - **Actions**:
   - `add_card` (`name`, `preset`, `background`, optional
-    `background_photo_id`) returns the card.
+    `background_photo_id`, or `background_image`, `background_fit` and
+    `background_padding`) returns the card. A picture
+    background without a source is refused (`card_needs_background_image`).
   - `update_photo` `background` keeps its render meaning on photos (the
     border colour for "fit with borders", white or black only) and is the card
     background on cards. Other colours and `background_photo_id` are refused
     for photos (`not_a_card`), render settings for cards
-    (`card_has_no_render_settings`).
+    (`card_has_no_render_settings`). `background_image` alone switches a card
+    to a picture background, like `background_photo_id` alone to a photo.
   - `remove_photo`, `move_photo`, `show_photo` and `copy_photo` take cards as
     they are. Card text is edited with the overlay actions plus `photo_id`.
   - `copy_photo` of a card with a photo background also copies the background
     photo (added disabled), or reuses one with the same `sha256` in the target
-    frame.
-- **Output**: `list_photos`, the panel's list and diagnostics include
-  `background` and `background_photo_id` only for cards.
+    frame. A picture background is copied as its source.
+- **Output**: `list_photos` and the panel's list include `background`,
+  `background_photo_id`, `background_image`, `background_fit`,
+  `background_padding` and `background_error` (the last
+  wake's fetch error) only for cards; diagnostics only `background`.
 - **Panel**: "Add card" opens a dialog (preset, background, name); the card
   then opens in the photo editor in card mode, which shows the preview where
-  the crop area is and the background picker (colour or library photo)
-  beside it.
+  the crop area is and the background picker (colour, library photo, or
+  camera or picture with a source field, a fit, a padding slider for "Fit
+  with borders" and the live fetch error) beside it.
+
+### Picture backgrounds
+
+- **Source**: `background_image` is a template like an image overlay's
+  `image` (camera or image entity, or an http(s) URL; the frame's own previews
+  refused), fetched with `overlay_images.async_fetch`. An empty result draws
+  the card white, without an error.
+- **Render**: like a photo, with the frame's resolved settings (frame default
+  over global default), and checked against `MAX_IMAGE_PIXELS`.
+  `background_fit` (`cover` or `contain`) replaces the frame's fit; `None`
+  (`default` in the API) keeps it. "Fit with borders" uses the frame's border
+  colour (white or black). Only picture backgrounds keep a fit: other
+  backgrounds clear it (`_fit`). With `contain`, `background_padding` (0 to
+  25 % of the canvas' short side) keeps the picture that far from every edge:
+  `render(..., padding)` fits it into the smaller box and centres it on the
+  border colour. The padding in pixels is part of the cache key only when set,
+  so other renders keep their keys. Other fits clear it (`_padding`). The result goes into the render cache as
+  `picture:<sha256 of the bytes>` with the settings and canvas, so a picture
+  that didn't change is neither rendered again nor redrawn on the frame. The
+  fetched bytes aren't kept.
+- **At a wake** that shows such a card, `_evaluate_for_wake` starts the fetch
+  next to the image overlays' (`_async_card_picture`, 10 s), and
+  `_async_current_render` waits for both before rendering the base, so the
+  probe and the download get the same image.
+- **Failure** (template error, fetch error, timeout, undecodable picture):
+  the card keeps `card_pictures[card id]` while that render is still cached,
+  otherwise it turns white. The error goes to `card_picture_errors` and the
+  log. A successful fetch clears it.
+- **Previews** (`_async_base_now`: "Up next", card thumbnails, the editor's
+  preview with an unsaved source, the overlay editor) fetch live with the 5 s
+  limit and fall back the same way; the editor preview returns the error
+  (`background_error`). They don't change `card_pictures`. Pre-rendering
+  leaves the picture out; housekeeping keeps the keys "Up next" last rendered
+  to.
+- **Housekeeping** keeps `card_pictures` of cards that still use a picture
+  background; deleting a card forgets its entry.
 
 ### One-off text (`show_text`)
 
