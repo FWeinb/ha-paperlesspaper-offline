@@ -350,9 +350,10 @@ async def test_fetch_refuses_frame_previews(hass: HomeAssistant, loaded_entry) -
 async def test_fetch_refuses_other_sources(hass: HomeAssistant) -> None:
     with pytest.raises(HomeAssistantError, match="Not a camera"):
         await overlay_images.async_fetch(hass, "/local/door.jpg")
-    with pytest.raises(HomeAssistantError, match="Camera integration not set up"):
+    # Without the integration, its module (and its requirements) isn't imported.
+    with pytest.raises(HomeAssistantError, match="camera integration is not set up"):
         await overlay_images.async_fetch(hass, "camera.missing")
-    with pytest.raises(HomeAssistantError):
+    with pytest.raises(HomeAssistantError, match="image integration is not set up"):
         await overlay_images.async_fetch(hass, "image.missing")
 
 

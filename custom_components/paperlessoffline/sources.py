@@ -55,9 +55,12 @@ async def async_fetch_source(hass: HomeAssistant, data: dict) -> tuple[bytes, st
 
 async def async_entity_image(hass: HomeAssistant, entity_id: str) -> bytes:
     """The current picture of a camera or image entity."""
-    # Imported lazily: these components (and their requirements) are only
-    # loaded when the user has such entities.
-    if entity_id.split(".", 1)[0] == "camera":
+    domain = entity_id.split(".", 1)[0]
+    # Imported lazily: these components (and their requirements, such as
+    # PyTurboJPEG for cameras) are only installed once the integration is set up.
+    if domain not in hass.config.components:
+        raise HomeAssistantError(f"The {domain} integration is not set up")
+    if domain == "camera":
         from homeassistant.components import camera  # noqa: PLC0415
 
         return (await camera.async_get_image(hass, entity_id)).content
