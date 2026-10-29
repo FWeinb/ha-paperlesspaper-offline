@@ -43,7 +43,7 @@
     },
     "error": {
       "invalid_client_id": "This doesn't look like a frame ID (epd7-… or epd13- followed by 12 hex digits).",
-      "provision_failed": "Couldn't configure the frame over Bluetooth. Press its button once and try again, or untick the option to set it up manually.",
+      "provision_failed": "Couldn't configure the frame over Bluetooth. Press its button once and try again, or set it up manually.",
       "wifi_failed": "The frame couldn't join that WiFi network. Check the name and password, press the frame's button once, and try again.",
       "invalid_host": "Enter an IP address or hostname, without http:// or a port.",
       "unusable_host": "The frame can't use this address (loopback, localhost or a .local name). Choose a LAN IP address."
@@ -580,7 +580,7 @@
         },
         "reset": {
           "name": "Reset",
-          "description": "Settings to reset to the inherited default (or 'all')."
+          "description": "Settings to reset to the default value (or 'all')."
         },
         "dither": {
           "name": "Dithering",
@@ -848,7 +848,7 @@
         },
         "reset": {
           "name": "Reset",
-          "description": "Settings to reset to the inherited default (or 'all')."
+          "description": "Settings to reset to the default value (or 'all')."
         }
       }
     },
