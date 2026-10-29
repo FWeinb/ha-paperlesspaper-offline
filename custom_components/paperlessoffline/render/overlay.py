@@ -1,9 +1,10 @@
-"""Markdown text boxes drawn crisply in the panel's six colours.
+"""Markdown text boxes and pictures drawn crisply in the panel's six colours.
 
 A small markdown subset (headings, bold, italic, bullets, line breaks, colour
 spans and ``:mdi:name:`` icons) is laid out with Pillow and drawn without
 anti-aliasing onto a layer prefilled with ``SENTINEL``, using only the pure
-palette colours, so it can be composited over a dithered image exactly.
+palette colours, so it can be composited over a dithered image exactly. Image
+overlays paste a picture already dithered to the pure colours.
 """
 
 from __future__ import annotations
@@ -43,6 +44,8 @@ HEADING_SCALE = {1: 1.6, 2: 1.35, 3: 1.15}
 ALIGNS = ("left", "center", "right")
 BACKINGS = ("box", "halo", "none")
 LINE_HEIGHT = 1.3
+KINDS = ("text", "image")
+IMAGE_WIDTH = 40  # percent of the canvas width when an image overlay sets none
 
 _COLOR_NAMES = "|".join(COLORS)
 _INLINE = re.compile(
@@ -56,8 +59,9 @@ _INLINE = re.compile(
 
 @dataclass(frozen=True)
 class OverlayStyle:
-    """Where and how a text box is drawn."""
+    """Where and how a text box or picture is drawn."""
 
+    kind: str = "text"
     anchor: str = "bottom_right"
     margin: float = 0.03  # fraction of the canvas' short side
     width: int | None = None  # percent of the canvas width; None = shrink to fit
@@ -337,6 +341,23 @@ def layout(
 # ----------------------------------------------------------------- drawing
 
 
+def _place(
+    style: OverlayStyle, width: int, height: int, box_w: float, box_h: float
+) -> tuple[float, float]:
+    """Top left corner of a box at the style's anchor."""
+    margin = style.margin * min(width, height)
+    vertical, _, horizontal = style.anchor.partition("_")
+    if style.anchor == "center":
+        vertical = horizontal = "center"
+    x = {"left": margin, "center": (width - box_w) / 2, "right": width - margin - box_w}.get(
+        horizontal, margin
+    )
+    y = {"top": margin, "center": (height - box_h) / 2, "bottom": height - margin - box_h}.get(
+        vertical, margin
+    )
+    return x, y
+
+
 def _halo_color(text_color: str) -> tuple[int, int, int]:
     return COLORS["black"] if text_color in ("white", "yellow") else COLORS["white"]
 
@@ -349,18 +370,9 @@ def draw_overlay(
     rows, content_w, content_h, padding = layout(text, style, width, height)
     if not rows:
         return None
-    margin = style.margin * min(width, height)
     box_w = content_w + 2 * padding
     box_h = content_h + 2 * padding
-    vertical, _, horizontal = style.anchor.partition("_")
-    if style.anchor == "center":
-        vertical = horizontal = "center"
-    x = {"left": margin, "center": (width - box_w) / 2, "right": width - margin - box_w}.get(
-        horizontal, margin
-    )
-    y = {"top": margin, "center": (height - box_h) / 2, "bottom": height - margin - box_h}.get(
-        vertical, margin
-    )
+    x, y = _place(style, width, height, box_w, box_h)
     draw = ImageDraw.Draw(layer)
     draw.fontmode = "1"
     box = (round(x), round(y), round(x + box_w), round(y + box_h))
@@ -420,6 +432,50 @@ def _draw_halo(
                 draw.text(
                     (pos[0] + dx, pos[1] + dy), piece.text, font=piece.font, fill=color, anchor="ls"
                 )
+
+
+def _image_base(canvas_width: int, canvas_height: int) -> int:
+    # Padding and corner radius of an image's box follow the M text size.
+    return round(SIZES["m"] * min(canvas_width, canvas_height) / 480)
+
+
+def image_padding(style: OverlayStyle, canvas_width: int, canvas_height: int) -> int:
+    """Space between a picture and the edge of its backing box (none without a box)."""
+    return round(_image_base(canvas_width, canvas_height) * 0.5) if style.backing == "box" else 0
+
+
+def image_size(
+    size: tuple[int, int], style: OverlayStyle, canvas_width: int, canvas_height: int
+) -> tuple[int, int]:
+    """Size a picture of ``size`` is drawn at: the box width with its aspect ratio kept.
+
+    The height is capped so the box fits the canvas minus its margins.
+    """
+    margin = style.margin * min(canvas_width, canvas_height)
+    padding = image_padding(style, canvas_width, canvas_height)
+    box_w = min(canvas_width * (style.width or IMAGE_WIDTH) / 100, canvas_width - 2 * margin)
+    max_w = max(1.0, box_w - 2 * padding)
+    max_h = max(1.0, canvas_height - 2 * margin - 2 * padding)
+    scale = min(max_w / size[0], max_h / size[1])
+    return max(1, round(size[0] * scale)), max(1, round(size[1] * scale))
+
+
+def draw_image(
+    layer: Image.Image, picture: Image.Image, style: OverlayStyle
+) -> tuple[int, int, int, int]:
+    """Paste a picture sized by ``image_size`` onto ``layer``; returns its box."""
+    width, height = layer.size
+    padding = image_padding(style, width, height)
+    box_w, box_h = picture.width + 2 * padding, picture.height + 2 * padding
+    x, y = _place(style, width, height, box_w, box_h)
+    box = (round(x), round(y), round(x) + box_w, round(y) + box_h)
+    if padding:
+        radius = round(min(_image_base(width, height), 40) * 0.3)
+        ImageDraw.Draw(layer).rounded_rectangle(
+            box, radius=radius, fill=COLORS.get(style.backing_color, COLORS["white"])
+        )
+    layer.paste(picture, (box[0] + padding, box[1] + padding))
+    return box
 
 
 def new_layer(width: int, height: int) -> Image.Image:

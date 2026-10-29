@@ -553,12 +553,23 @@ add_overlay:
       required: true
       selector:
         text: {}
+    kind:
+      default: text
+      selector:
+        select:
+          options:
+          - text
+          - image
+          translation_key: overlay_kind
     template:
       example: ":mdi:thermometer: **{{ states('sensor.outdoor') }} \xB0C**"
       selector:
         text:
           multiline: true
-      required: true
+    image:
+      example: camera.front_door
+      selector:
+        text: {}
     show_if:
       selector:
         text:
@@ -672,6 +683,10 @@ update_overlay:
       selector:
         text:
           multiline: true
+    image:
+      example: camera.front_door
+      selector:
+        text: {}
     show_if:
       selector:
         text:

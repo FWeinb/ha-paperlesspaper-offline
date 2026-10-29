@@ -227,6 +227,12 @@
         "yellow": "Gelb"
       }
     },
+    "overlay_kind": {
+      "options": {
+        "text": "Text",
+        "image": "Bild"
+      }
+    },
     "overlay_backing": {
       "options": {
         "box": "Box",
@@ -428,6 +434,15 @@
     },
     "overlay_not_found": {
       "message": "Overlay {overlay_id} nicht gefunden."
+    },
+    "overlay_kind_fixed": {
+      "message": "Die Art eines Overlays lässt sich nicht ändern; füge stattdessen ein neues Overlay hinzu."
+    },
+    "overlay_needs_template": {
+      "message": "Ein Text-Overlay braucht einen Text."
+    },
+    "overlay_needs_image": {
+      "message": "Ein Bild-Overlay braucht eine Bildquelle."
     },
     "invalid_card_background": {
       "message": "Ein Foto-Hintergrund braucht die ID eines Fotos (keiner Karte) dieses Rahmens."
@@ -816,7 +831,7 @@
     },
     "add_overlay": {
       "name": "Overlay hinzufügen",
-      "description": "Fügt ein globales Foto-Overlay hinzu (eine Textbox über jedem Foto eines Rahmens) oder, mit Foto-ID, ein Foto-Overlay nur für dieses Foto.",
+      "description": "Fügt ein globales Foto-Overlay hinzu (eine Textbox oder ein Bild über jedem Foto eines Rahmens) oder, mit Foto-ID, ein Foto-Overlay nur für dieses Foto.",
       "fields": {
         "config_entry_id": {
           "name": "Rahmen",
@@ -830,9 +845,17 @@
           "name": "Name",
           "description": "Im Panel angezeigter Name."
         },
+        "kind": {
+          "name": "Art",
+          "description": "Eine Textbox oder ein Bild. Lässt sich später nicht ändern."
+        },
         "template": {
           "name": "Text",
           "description": "Markdown mit Home-Assistant-Templates, z. B. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**."
+        },
+        "image": {
+          "name": "Bild",
+          "description": "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.front_door. Wird bei jedem Aufwachen geholt."
         },
         "show_if": {
           "name": "Anzeigen wenn",
@@ -852,7 +875,7 @@
         },
         "width": {
           "name": "Breite",
-          "description": "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen."
+          "description": "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen (40 % bei einem Bild)."
         },
         "margin": {
           "name": "Abstand",
@@ -904,6 +927,10 @@
           "name": "Text",
           "description": "Markdown mit Home-Assistant-Templates, z. B. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**."
         },
+        "image": {
+          "name": "Bild",
+          "description": "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.front_door. Wird bei jedem Aufwachen geholt."
+        },
         "show_if": {
           "name": "Anzeigen wenn",
           "description": "Optionales Template; das Overlay wird nur gezeichnet, wenn es etwas Wahres ergibt."
@@ -922,7 +949,7 @@
         },
         "width": {
           "name": "Breite",
-          "description": "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen."
+          "description": "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen (40 % bei einem Bild)."
         },
         "margin": {
           "name": "Abstand",

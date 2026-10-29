@@ -103,6 +103,7 @@ e-paper photo frames running the
 | `cards.py` | Card backgrounds, presets, overlay copies |
 | `exif.py` | Capture date and location from the EXIF header |
 | `templates.py`, `overlay_schema.py` | Overlay template evaluation and helpers; overlay validation |
+| `overlay_images.py` | Fetching image overlays' pictures; their snapshots on disk |
 | `views.py` | Frame endpoints (image, settings) and panel endpoints (upload, thumbnails, previews) |
 | `websocket.py`, `frontend.py` | Panel API; panel and card registration |
 | `services.py`, `services.yaml`, `sources.py` | Actions and the image sources they accept |
@@ -325,8 +326,9 @@ e-paper photo frames running the
 \* Disabled by default.
 
 \*\* Their state (last updated) is what the panel's picture URLs change with:
-*Showing* follows the served image, *Up next* the image the next wake would
-get, with overlays at their current values (`FrameManager.up_next_look`).
+*Showing* follows the served image, *Up next* its base render, the overlay
+definitions and their current texts (`FrameManager.up_next_look`), but not
+new pictures of image overlays, which would refresh it at every fetch.
 
 - **Pending changes** lists what the frame hasn't picked up yet: settings, a
   queued photo, a one-off, edited overlays, a renamed frame's placeholder.
@@ -485,9 +487,9 @@ its editor comes from `getConfigForm`.
 
 ## 11. Overlays
 
-Text, entity values and icons drawn onto what the frame shows. Values are
-evaluated at a wake, so on the wall they are a snapshot of that moment, not
-live.
+Text, entity values, icons and pictures drawn onto what the frame shows.
+Values are evaluated at a wake, so on the wall they are a snapshot of that
+moment, not live.
 
 ### Kinds
 
@@ -504,10 +506,12 @@ live.
 
 ### Model
 
-`OverlayDef`: `id`, `name`, `enabled`, `template`, `show_if`, `anchor`,
-`margin`, `width`, `align`, `size`, `text_color`, `backing` (`box | halo |
-none`), `backing_color`, `redraw` (`change | photo`). Items have
-`hide_frame_overlays`.
+`OverlayDef`: `id`, `name`, `kind` (`text | image`), `enabled`, `template`,
+`image`, `show_if`, `anchor`, `margin`, `width`, `align`, `size`,
+`text_color`, `backing` (`box | halo | none`), `backing_color`, `redraw`
+(`change | photo`). Items have `hide_frame_overlays`. A text overlay draws
+`template`; an image overlay draws the picture `image` names (see *Image
+overlays*). The kind is fixed once created (`overlay_kind_fixed`).
 
 ### Content
 
@@ -559,18 +563,61 @@ none`), `backing_color`, `redraw` (`change | photo`). Items have
   colour, 1 or 2 px by size), or none. Colour spans override the text colour.
 - No automatic collision avoidance; the live preview shows overlaps.
 
+### Image overlays
+
+- **Source**: `image` is a template that renders to a `camera.*` or `image.*`
+  entity id, or an `http(s)://` URL (`overlay_images.async_fetch`). Entities
+  go through `camera.async_get_image` and `image.async_get_image`, URLs through
+  the same download as `show_image` (50 MB limit; 100 MP when decoded).
+  Anything else is an error. An empty result hides the overlay, like an empty
+  text. The integration's own image entities are refused: drawing a preview
+  renders the previews again.
+- **Size**: the box width (default 40 % of the canvas, `IMAGE_WIDTH`); the
+  picture keeps its aspect ratio and is shrunk further if its height would not
+  fit the canvas minus margins (`render.overlay.image_size`). There is no
+  "fit to text" width.
+- **Look**: the picture is decoded shrink-first, enhanced and dithered with the
+  frame's own settings (frame default over global default; no per-overlay
+  settings), and stored in the pure colours (`render_snapshot`). Backing `box`
+  draws a padded rounded box (padding and radius of the M size) in the backing
+  colour; `none` the bare picture. `halo` is not offered and draws like
+  `none`. Text size, alignment and text colour are unused.
+- **Snapshots** (`snapshots/<id>.png`, `overlay_images.Snapshots`): the
+  dithered picture at its drawn size. The id hashes the fetched bytes, the
+  overlay's style, the render settings and the canvas, so the same picture is
+  dithered once. Nothing is kept in memory.
+- **At a wake**: the source is evaluated with the texts, then the pictures are
+  fetched together in a background task (`_async_snapshots`), each limited to
+  10 s (`WAKE_TIMEOUT`). The settings request starts it; the image request
+  waits for it before compositing, so the frame's redirect probe and download
+  get the same image. The snapshot ids are stored in
+  `FrameState.overlay_images`, the evaluated source in `overlay_texts`.
+- **Errors**: an unknown source, a failed or too large download, an
+  undecodable picture or the timeout leave only that overlay out, are logged
+  and shown in the panel (`overlay_errors`), like a failing template.
+- **Redraw policy**: `change` compares snapshot ids, so a camera whose picture
+  changes redraws the frame at every wake; `photo` keeps the snapshot while
+  the same item is shown.
+- **Previews** ("Up next", card thumbnails, the overlay editor, unsaved photo
+  settings) fetch live with a 5 s limit (`PREVIEW_TIMEOUT`) and share the
+  snapshots. Pre-rendering after a change leaves pictures out, so editing the
+  library doesn't fetch every camera; housekeeping keeps the final key "Up
+  next" last rendered to.
+
 ### Rendering
 
 1. **Base image**: the item is rendered and cached as usual.
 2. **Overlay layer**: each overlay's evaluated markdown is laid out and drawn
    onto an RGB layer prefilled with a sentinel colour (magenta), without
-   anti-aliasing, using only the six pure palette colours.
+   anti-aliasing, using only the six pure palette colours. An image overlay's
+   snapshot, already in those colours, is pasted in its place in the drawing
+   order.
 3. **Compositing** (`render/pipeline.py`): the cached base BMP is decoded back
    into canvas palette positions; this round trip is lossless for every
    mounting. Every layer pixel that isn't the sentinel replaces the base
    pixel, and the result is encoded as usual.
-4. **Composite cache key** = base key + every overlay's evaluated text + its
-   style. The frame's base image is kept in the cache, so a value change only
+4. **Composite cache key** = base key + every overlay's evaluated text (an
+   image overlay's snapshot id) + its style. The frame's base image is kept in the cache, so a value change only
    costs the cheap composite, and `Last-Modified` changes exactly when the
    result does.
 
@@ -602,6 +649,11 @@ none`), `backing_color`, `redraw` (`change | photo`). Items have
   reorder, add, copy; the editor has the text and "show if" fields, a 3 × 3
   anchor picker, size, width, alignment, colours, backing and redraw, and a
   live preview with current values and errors next to the field.
+  - The add menu's text presets are followed by *Camera or picture*, an image
+    overlay on the first camera or image entity. Its editor shows the source
+    field instead of the text, the width as a slider (no "fit text"), *Around
+    the picture* (box or nothing) and the box colour, and no text size,
+    alignment or text colour. The list shows a picture icon and the source.
   - Unsaved drafts are previewed with the id `draft`, so the returned text or
     error matches the field being edited. `overlay/preview` takes `for_photo`:
     with it the drafts are the item's own overlays and the stored global ones
@@ -619,7 +671,10 @@ none`), `backing_color`, `redraw` (`change | photo`). Items have
   text fields are used. Escape inside the editor is left to CodeMirror.
 - **Actions**: `add_overlay`, `update_overlay`, `remove_overlay`,
   `move_overlay` and `list_overlays` take an optional `photo_id`; without it
-  they act on the global list. `copy_overlays` copies the global overlays to
+  they act on the global list. `add_overlay` takes `kind` (default `text`)
+  and needs `template` for text (`overlay_needs_template`) or `image` for a
+  picture (`overlay_needs_image`); `update_overlay` refuses a different
+  `kind`. `copy_overlays` copies the global overlays to
   another frame, or with `photo_id` and `to_photo_ids` a photo's overlays to
   other items of the same frame; `replace` replaces instead of adding. Copies
   get new ids; a source listed as a target is skipped, and all ids are checked
@@ -796,6 +851,9 @@ none`), `backing_color`, `redraw` (`change | photo`). Items have
   `.storage/paperlessoffline.<entry_id>` stores of config entries that no
   longer exist. Only names that look like entry ids (ULIDs) are touched, and
   the global store is never removed.
+- **Snapshots** of image overlays (`snapshots/*.png`): those the last wake
+  uses (`overlay_images`) are kept; others, from older wakes and previews, go
+  after the 10 minute grace period.
 - **When**: after each pre-render (debounced after every change), so also at
   entry setup, and per frame every hour (`FrameManager.async_housekeeping`);
   orphaned entries at integration setup and every hour. Housekeeping never

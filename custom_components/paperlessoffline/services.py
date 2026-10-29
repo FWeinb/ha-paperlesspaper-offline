@@ -87,8 +87,7 @@ SCHEMAS: dict[str, vol.Schema] = {
         {
             **_OVERLAY_ENTRY,
             vol.Required("name"): cv.string,
-            vol.Required("template"): cv.string,
-            **{k: v for k, v in _OVERLAY_OPTIONAL.items() if str(k) not in ("name", "template")},
+            **{k: v for k, v in _OVERLAY_OPTIONAL.items() if str(k) != "name"},
         }
     ),
     SERVICE_UPDATE_OVERLAY: vol.Schema({**_OVERLAY_REF, **_OVERLAY_OPTIONAL}),
@@ -354,6 +353,12 @@ def overlay_dict(manager: Any, overlay: OverlayDef) -> dict[str, Any]:
 
 async def _add_overlay(call: ServiceCall) -> ServiceResponse:
     manager = get_manager(call.hass, call.data[ATTR_ENTRY])
+    # A text overlay needs its text, an image overlay its source.
+    needed = "image" if call.data.get("kind") == "image" else "template"
+    if not str(call.data.get(needed, "")).strip():
+        raise ServiceValidationError(
+            translation_domain=DOMAIN, translation_key=f"overlay_needs_{needed}"
+        )
     overlay = manager.async_save_overlay(build_overlay(dict(call.data)), call.data.get(ATTR_PHOTO))
     return overlay_dict(manager, overlay)
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 import io
 import math
@@ -15,7 +16,15 @@ from PIL import Image, ImageEnhance
 
 from .bmp import encode_bmp4
 from .dither import dither, nearest
-from .overlay import COLORS, SENTINEL, OverlayStyle, draw_overlay, new_layer
+from .overlay import (
+    COLORS,
+    SENTINEL,
+    OverlayStyle,
+    draw_image,
+    draw_overlay,
+    image_size,
+    new_layer,
+)
 from .palette import DEVICE_INDICES, PERCEIVED, PURE, get_palette, nibble_lut
 from .placeholder import PlaceholderText, draw_placeholder
 
@@ -393,14 +402,45 @@ def positions_from_bmp(bmp: bytes, canvas: Canvas) -> np.ndarray:
     return np.rot90(native, -canvas.rot90)
 
 
+def render_snapshot(
+    data: bytes, style: OverlayStyle, opts: RenderOptions, canvas: Canvas, max_pixels: int
+) -> bytes:
+    """Fit and dither a picture for an image overlay; a PNG in the pure colours.
+
+    ``opts`` are the frame's settings (enhancement, palette, dithering). Raises
+    TooManyPixelsError above ``max_pixels``. Blocking; run in an executor.
+    """
+    validate_image(data, max_pixels)
+    img = open_image(data)
+    size = upright_size(img)
+    out = image_size(size, style, canvas.width, canvas.height)
+    img, box = load_region(img, 0, (0, 0, *size), out, BACKGROUNDS["white"])
+    fitted = enhance(img.resize(out, Image.Resampling.LANCZOS, box=box, reducing_gap=3.0), opts)
+    rgb = np.asarray(fitted, dtype=np.float32)
+    positions = dither(rgb, get_palette(opts.palette), opts.dither, opts.serpentine)
+    buf = io.BytesIO()
+    Image.fromarray(PURE[positions].astype(np.uint8), "RGB").save(buf, format="PNG")
+    return buf.getvalue()
+
+
 def composite(
-    base_bmp: bytes, overlays: list[tuple[str, OverlayStyle]], canvas: Canvas
+    base_bmp: bytes,
+    overlays: list[tuple[str, OverlayStyle]],
+    canvas: Canvas,
+    snapshots: Mapping[str, bytes] | None = None,
 ) -> RenderResult:
-    """Draw text boxes over an already dithered image. Blocking; run in an executor."""
+    """Draw text boxes and pictures over an already dithered image.
+
+    An image overlay's text is the id of its picture in ``snapshots`` (PNGs from
+    ``render_snapshot``); a missing one is left out. Blocking; run in an executor.
+    """
     positions = np.ascontiguousarray(positions_from_bmp(base_bmp, canvas))
     layer = new_layer(canvas.width, canvas.height)
     for text, style in overlays:
-        draw_overlay(layer, text, style)
+        if style.kind != "image":
+            draw_overlay(layer, text, style)
+        elif snapshots and (png := snapshots.get(text)):
+            draw_image(layer, Image.open(io.BytesIO(png)).convert("RGB"), style)
     rgb = np.asarray(layer)
     drawn = ~(rgb == SENTINEL).all(axis=2)
     if drawn.any():

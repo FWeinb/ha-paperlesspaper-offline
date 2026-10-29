@@ -137,6 +137,9 @@ export interface Overlay {
   overlay_id?: string;
   name: string;
   template: string;
+  /** A text box, or a picture whose source is the `image` template. Fixed once saved. */
+  kind?: "text" | "image";
+  image?: string;
   enabled: boolean;
   show_if: string | null;
   anchor: Anchor;

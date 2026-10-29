@@ -929,6 +929,20 @@ def _overlays(lang: str) -> dict:
                 "Markdown mit Home-Assistant-Templates, z. B. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**.",
             ),
         ),
+        "kind": (
+            t("Kind", "Art"),
+            t(
+                "A text box or a picture. Can't be changed later.",
+                "Eine Textbox oder ein Bild. Lässt sich später nicht ändern.",
+            ),
+        ),
+        "image": (
+            t("Picture", "Bild"),
+            t(
+                "Template for a camera or image entity, or an http(s) URL, e.g. camera.front_door. Fetched at every wake.",
+                "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.front_door. Wird bei jedem Aufwachen geholt.",
+            ),
+        ),
         "show_if": (
             t("Show if", "Anzeigen wenn"),
             t(
@@ -954,8 +968,8 @@ def _overlays(lang: str) -> dict:
         "width": (
             t("Width", "Breite"),
             t(
-                "Box width in percent of the frame; empty to fit the text.",
-                "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen.",
+                "Box width in percent of the frame; empty to fit the text (40 % for a picture).",
+                "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen (40 % bei einem Bild).",
             ),
         ),
         "margin": (
@@ -1013,14 +1027,16 @@ def _overlays(lang: str) -> dict:
         "add_overlay": (
             t("Add overlay", "Overlay hinzufügen"),
             t(
-                "Adds a global photo overlay (a text box drawn over every photo of a frame), or with a photo ID, a photo overlay for that one photo.",
-                "Fügt ein globales Foto-Overlay hinzu (eine Textbox über jedem Foto eines Rahmens) oder, mit Foto-ID, ein Foto-Overlay nur für dieses Foto.",
+                "Adds a global photo overlay (a text box or picture drawn over every photo of a frame), or with a photo ID, a photo overlay for that one photo.",
+                "Fügt ein globales Foto-Overlay hinzu (eine Textbox oder ein Bild über jedem Foto eines Rahmens) oder, mit Foto-ID, ein Foto-Overlay nur für dieses Foto.",
             ),
             [
                 "config_entry_id",
                 "photo_id",
                 "name",
+                "kind",
                 "template",
+                "image",
                 "show_if",
                 "enabled",
                 "anchor",
@@ -1043,6 +1059,7 @@ def _overlays(lang: str) -> dict:
                 "overlay_id",
                 "name",
                 "template",
+                "image",
                 "show_if",
                 "enabled",
                 "anchor",
@@ -1124,6 +1141,7 @@ def _overlays(lang: str) -> dict:
                 }
             ),
             "overlay_color": opts(colors),
+            "overlay_kind": opts({"text": t("Text", "Text"), "image": t("Picture", "Bild")}),
             "overlay_backing": opts(
                 {
                     "box": t("Box", "Box"),
@@ -1153,6 +1171,27 @@ def _overlays(lang: str) -> dict:
             "overlay_not_found": {
                 "message": L(
                     t("Overlay {overlay_id} not found.", "Overlay {overlay_id} nicht gefunden.")
+                )
+            },
+            "overlay_kind_fixed": {
+                "message": L(
+                    t(
+                        "An overlay's kind can't be changed; add a new overlay instead.",
+                        "Die Art eines Overlays lässt sich nicht ändern; füge stattdessen ein neues Overlay hinzu.",
+                    )
+                )
+            },
+            "overlay_needs_template": {
+                "message": L(
+                    t("A text overlay needs a text.", "Ein Text-Overlay braucht einen Text.")
+                )
+            },
+            "overlay_needs_image": {
+                "message": L(
+                    t(
+                        "An image overlay needs a picture source.",
+                        "Ein Bild-Overlay braucht eine Bildquelle.",
+                    )
                 )
             },
         },

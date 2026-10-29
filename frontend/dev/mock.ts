@@ -187,6 +187,9 @@ const overlays: Record<string, any[]> = {
 };
 let nextOverlay = 5;
 
+/** An overlay's text now; an image overlay's is its source (the mock draws no picture). */
+const evalOverlay = (o: any) => (o.kind === "image" ? { text: o.image || null, error: null } : evalTemplate(o.template ?? ""));
+
 function evalTemplate(tpl: string): { text: string | null; error: string | null } {
   if (tpl.includes("| nope")) return { text: null, error: "TemplateSyntaxError: No filter named 'nope'." };
   const text = tpl
@@ -291,7 +294,7 @@ const hass: any = {
       case "overlay/save": {
         const list = (overlays[scopeKey(msg)] ??= []);
         const { id, ...rest } = msg.overlay;
-        const r = evalTemplate(rest.template ?? "");
+        const r = evalOverlay(rest);
         if (id) { const i = list.findIndex((o) => o.overlay_id === id); list[i] = { ...list[i], ...rest, overlay_id: id }; return delay(list[i]); }
         const created = { ...rest, overlay_id: `o${nextOverlay++}`, last_text: r.text, last_error: r.error };
         list.push(created); if (msg.photo_id) await changed(msg.entry_id); return delay(created);
@@ -306,7 +309,7 @@ const hass: any = {
         const list = msg.for_photo ? [...drafts, ...(overlays[msg.entry_id] ?? [])] : drafts;
         const base = baseImage(msg.entry_id, msg.photo_id, frame.canvas.width / 2, frame.canvas.height / 2);
         const image = await drawOverlayMock(base, list, frame.canvas.width / 2, frame.canvas.height / 2);
-        const results = Object.fromEntries(list.map((o: any) => [o.overlay_id, evalTemplate(o.template)]));
+        const results = Object.fromEntries(list.map((o: any) => [o.overlay_id, evalOverlay(o)]));
         return previewDelay({ image, width: frame.canvas.width, height: frame.canvas.height, results });
       }
       case "media_source/browse_media":

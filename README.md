@@ -143,10 +143,11 @@ show_up_next: true
 title: Kitchen                # optional
 ```
 
-## Text overlays
+## Overlays
 
 Overlays are text boxes drawn sharply on top of photos: the weather, a sensor
-value, the date or a caption.
+value, the date or a caption. An overlay can also be a picture: a camera
+snapshot, an image entity or an image from a URL.
 
 - **Global photo overlays** appear on every photo of a frame. Edit them in the
   panel: *Settings* tab, section *Global photo overlays*.
@@ -212,6 +213,21 @@ Values are read when the frame wakes, so they are as fresh as the last wake.
 If a template is broken, only that overlay is left out and the panel shows the
 error.
 
+**Pictures.** Choose *Camera or picture* in the *Add overlay* menu. The source
+is a template that gives a `camera.` or `image.` entity, or an `http://` or
+`https://` URL, so it can change with your home:
+
+```text
+{{ 'camera.front_door' if is_state('binary_sensor.doorbell', 'on') else 'image.weather_map' }}
+```
+
+The picture is fetched when the frame wakes (waiting up to 10 seconds),
+dithered with the frame's settings and drawn at the overlay's width, keeping
+its shape. *Around the picture* is a coloured box or nothing. An empty source
+hides the overlay; a source that fails leaves only that overlay out, and the
+panel shows why. From automations, use `add_overlay` with `kind: image` and
+`image`. A frame's own *Showing* and *Up next* pictures can't be used.
+
 ## Text cards
 
 A text card is a library item made of text instead of a photo: a notice, a
@@ -228,7 +244,7 @@ media browser.
   The texts are written in Home Assistant's language. The card then opens in
   the editor.
 - **The text** is the card's overlays (section *Card text*), so everything
-  from [Text overlays](#text-overlays) works: markdown, templates, icons,
+  from [Overlays](#overlays) works: markdown, templates, icons,
   *Show if*. Values are read at each wake, like on photos.
 - **The background** is white, black, one of the panel's colours, or a photo
   from the library. Plain colours are drawn without dithering, so the text

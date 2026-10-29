@@ -58,8 +58,12 @@ _Avoid_: Raw image, dithered image
 ## Overlays
 
 **Overlay**:
-A named text box, written as a template, drawn on top of a base image.
+A named box drawn on top of a base image: a text box written as a template, or an image overlay.
 _Avoid_: Label, widget, caption (a caption is one use of an overlay)
+
+**Image overlay**:
+An overlay that shows a picture from a camera or image entity, or a URL, named by a template and fetched at each wake.
+_Avoid_: Picture overlay, image widget, camera overlay
 
 **Photo overlay**:
 An overlay that belongs to one library item and is drawn only on it; a card's photo overlays are its content.

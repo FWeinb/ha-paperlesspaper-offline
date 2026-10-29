@@ -58,11 +58,17 @@ class LibraryItem:
 
 @dataclass
 class OverlayDef:
-    """A markdown/template text box drawn over what a frame shows."""
+    """A markdown/template text box, or a picture, drawn over what a frame shows.
+
+    An image overlay (``kind`` "image") draws the picture its ``image`` template
+    names (a camera or image entity, or an http(s) URL); ``template`` is unused.
+    """
 
     id: str
     name: str
     template: str
+    kind: str = "text"  # "text" | "image"; fixed once created
+    image: str = ""
     enabled: bool = True
     show_if: str | None = None
     anchor: str = "bottom_right"
@@ -131,6 +137,8 @@ class FrameState:
     overlay_texts: dict[str, str | None] = field(default_factory=dict)
     overlay_eval_base: str | None = None
     overlay_errors: dict[str, str] = field(default_factory=dict)
+    # Snapshot ids of the image overlays' pictures fetched at the last wake.
+    overlay_images: dict[str, str] = field(default_factory=dict)
     ble_status: dict[str, Any] = field(default_factory=dict)
     ble_read_at: float | None = None
     ble_error: str | None = None

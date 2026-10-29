@@ -227,6 +227,12 @@
         "yellow": "Yellow"
       }
     },
+    "overlay_kind": {
+      "options": {
+        "text": "Text",
+        "image": "Picture"
+      }
+    },
     "overlay_backing": {
       "options": {
         "box": "Box",
@@ -428,6 +434,15 @@
     },
     "overlay_not_found": {
       "message": "Overlay {overlay_id} not found."
+    },
+    "overlay_kind_fixed": {
+      "message": "An overlay's kind can't be changed; add a new overlay instead."
+    },
+    "overlay_needs_template": {
+      "message": "A text overlay needs a text."
+    },
+    "overlay_needs_image": {
+      "message": "An image overlay needs a picture source."
     },
     "invalid_card_background": {
       "message": "A photo background needs the ID of a photo (not a card) of this frame."
@@ -816,7 +831,7 @@
     },
     "add_overlay": {
       "name": "Add overlay",
-      "description": "Adds a global photo overlay (a text box drawn over every photo of a frame), or with a photo ID, a photo overlay for that one photo.",
+      "description": "Adds a global photo overlay (a text box or picture drawn over every photo of a frame), or with a photo ID, a photo overlay for that one photo.",
       "fields": {
         "config_entry_id": {
           "name": "Frame",
@@ -830,9 +845,17 @@
           "name": "Name",
           "description": "Name shown in the panel."
         },
+        "kind": {
+          "name": "Kind",
+          "description": "A text box or a picture. Can't be changed later."
+        },
         "template": {
           "name": "Text",
           "description": "Markdown with Home Assistant templates, e.g. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**."
+        },
+        "image": {
+          "name": "Picture",
+          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.front_door. Fetched at every wake."
         },
         "show_if": {
           "name": "Show if",
@@ -852,7 +875,7 @@
         },
         "width": {
           "name": "Width",
-          "description": "Box width in percent of the frame; empty to fit the text."
+          "description": "Box width in percent of the frame; empty to fit the text (40 % for a picture)."
         },
         "margin": {
           "name": "Margin",
@@ -904,6 +927,10 @@
           "name": "Text",
           "description": "Markdown with Home Assistant templates, e.g. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**."
         },
+        "image": {
+          "name": "Picture",
+          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.front_door. Fetched at every wake."
+        },
         "show_if": {
           "name": "Show if",
           "description": "Optional template; the overlay is only drawn when it renders to something truthy."
@@ -922,7 +949,7 @@
         },
         "width": {
           "name": "Width",
-          "description": "Box width in percent of the frame; empty to fit the text."
+          "description": "Box width in percent of the frame; empty to fit the text (40 % for a picture)."
         },
         "margin": {
           "name": "Margin",
