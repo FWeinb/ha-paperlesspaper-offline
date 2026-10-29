@@ -434,3 +434,19 @@ async def test_up_next_preview_has_live_overlay(
     assert with_overlay != bare
     img = Image.open(io.BytesIO(with_overlay))
     assert img.size == (manager.canvas.width, manager.canvas.height)
+
+
+async def test_up_next_entity_follows_overlays(
+    hass: HomeAssistant, loaded_entry, photo_path
+) -> None:
+    """The panel shows "Up next" by the entity's picture URL, which changes with its state."""
+    hass.states.async_set("sensor.t", "1")
+    await _setup_overlay(hass, loaded_entry, photo_path)
+    await hass.async_block_till_done()
+    before = hass.states.get("image.kitchen_up_next").state
+
+    await _call(
+        hass, "add_overlay", config_entry_id=loaded_entry.entry_id, name="Label", template="Hi"
+    )
+    await hass.async_block_till_done()
+    assert hass.states.get("image.kitchen_up_next").state != before

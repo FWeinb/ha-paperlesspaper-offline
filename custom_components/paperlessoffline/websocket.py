@@ -220,7 +220,8 @@ def ws_photos(
         vol.Optional("name"): cv.string,
         vol.Optional("preset", default="blank"): vol.In(PRESETS),
         vol.Optional("background", default="white"): vol.In(CARD_BACKGROUNDS),
-        vol.Optional("background_photo_id"): str,
+        # The panel sends null when the background isn't a library photo.
+        vol.Optional("background_photo_id"): vol.Any(None, str),
     }
 )
 @callback
@@ -246,7 +247,8 @@ def ws_card_add(
         vol.Optional("hide_frame_overlays"): cv.boolean,
         # Cards only.
         vol.Optional("background"): vol.In(CARD_BACKGROUNDS),
-        vol.Optional("background_photo_id"): str,
+        # The panel sends null when the background isn't a library photo.
+        vol.Optional("background_photo_id"): vol.Any(None, str),
     }
 )
 @callback

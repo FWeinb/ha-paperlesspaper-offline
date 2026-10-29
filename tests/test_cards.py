@@ -486,3 +486,38 @@ async def test_websocket_preview_with_unsaved_background(
     assert len(_colors(img)) == 1
     assert img.getpixel((0, 0)) != (255, 255, 255)
     assert manager.get_photo(card).background == "white"  # not saved
+
+
+async def test_panel_saves_colour_background(
+    hass: HomeAssistant, hass_ws_client, loaded_entry
+) -> None:
+    """The panel sends background_photo_id null for every background but a photo."""
+    ws = await hass_ws_client(hass)
+    entry_id = loaded_entry.entry_id
+    await ws.send_json(
+        {
+            "id": 1,
+            "type": f"{DOMAIN}/card/add",
+            "entry_id": entry_id,
+            "background": "red",
+            "background_photo_id": None,
+        }
+    )
+    msg = await ws.receive_json()
+    assert msg["success"], msg
+    await ws.send_json(
+        {
+            "id": 2,
+            "type": f"{DOMAIN}/photo/update",
+            "entry_id": entry_id,
+            "photo_id": msg["result"]["photo_id"],
+            "name": "Party",
+            "enabled": True,
+            "hide_frame_overlays": True,
+            "background": "blue",
+            "background_photo_id": None,
+        }
+    )
+    msg = await ws.receive_json()
+    assert msg["success"], msg
+    assert (msg["result"]["name"], msg["result"]["background"]) == ("Party", "blue")

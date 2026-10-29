@@ -901,6 +901,14 @@ class FrameManager:
             return base, await self._async_render_composite(base, draw)
         return base, base
 
+    def up_next_look(self) -> str:
+        """Changes whenever "Up next" would look different.
+
+        The final key covers the base render and the overlays drawn on it with
+        their current texts, so edited overlays and new values change it.
+        """
+        return self._up_next_keys()[1]
+
     def _up_next_keys(self) -> tuple[str, str]:
         """Cache keys _async_render_up_next would use, without rendering."""
         kind, photo, draw = self._up_next_parts()

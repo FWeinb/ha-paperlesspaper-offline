@@ -314,7 +314,7 @@ e-paper photo frames running the
 
 | Platform        | Entity                                                         |
 |-----------------|----------------------------------------------------------------|
-| `image`         | *Showing* and *Up next* previews                               |
+| `image`         | *Showing* and *Up next* previews\*\*                           |
 | `select`        | *Up next*, *Slideshow order*                                   |
 | `button`        | *Skip photo*                                                   |
 | `number`        | *Refresh interval*                                             |
@@ -323,6 +323,10 @@ e-paper photo frames running the
 | `binary_sensor` | In sync, charging, USB power                                   |
 
 \* Disabled by default.
+
+\*\* Their state (last updated) is what the panel's picture URLs change with:
+*Showing* follows the served image, *Up next* the image the next wake would
+get, with overlays at their current values (`FrameManager.up_next_look`).
 
 - **Pending changes** lists what the frame hasn't picked up yet: settings, a
   queued photo, a one-off, edited overlays, a renamed frame's placeholder.
