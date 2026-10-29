@@ -140,11 +140,30 @@ add_card:
           - blue
           - yellow
           - photo
+          - image
           translation_key: card_background
     background_photo_id:
       example: a1b2c3d4e5f6
       selector:
         text: {}
+    background_image:
+      example: camera.garden
+      selector:
+        text: {}
+    background_fit:
+      selector:
+        select:
+          options:
+          - default
+          - cover
+          - contain
+          translation_key: card_background_fit
+    background_padding:
+      selector:
+        number:
+          min: 0
+          max: 25
+          unit_of_measurement: '%'
 remove_photo:
   fields:
     config_entry_id:
@@ -228,6 +247,7 @@ update_photo:
           - blue
           - yellow
           - photo
+          - image
           translation_key: card_background
     brightness:
       selector:
@@ -280,6 +300,24 @@ update_photo:
       example: a1b2c3d4e5f6
       selector:
         text: {}
+    background_image:
+      example: camera.garden
+      selector:
+        text: {}
+    background_fit:
+      selector:
+        select:
+          options:
+          - default
+          - cover
+          - contain
+          translation_key: card_background_fit
+    background_padding:
+      selector:
+        number:
+          min: 0
+          max: 25
+          unit_of_measurement: '%'
 move_photo:
   fields:
     config_entry_id:
@@ -553,12 +591,23 @@ add_overlay:
       required: true
       selector:
         text: {}
+    kind:
+      default: text
+      selector:
+        select:
+          options:
+          - text
+          - image
+          translation_key: overlay_kind
     template:
       example: ":mdi:thermometer: **{{ states('sensor.outdoor') }} \xB0C**"
       selector:
         text:
           multiline: true
-      required: true
+    image:
+      example: camera.front_door
+      selector:
+        text: {}
     show_if:
       selector:
         text:
@@ -672,6 +721,10 @@ update_overlay:
       selector:
         text:
           multiline: true
+    image:
+      example: camera.front_door
+      selector:
+        text: {}
     show_if:
       selector:
         text:

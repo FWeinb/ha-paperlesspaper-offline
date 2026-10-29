@@ -1,4 +1,4 @@
-import { mdiClose, mdiContentCopy, mdiDelete, mdiDrag, mdiPlus, mdiTextBoxOutline } from "@mdi/js";
+import { mdiClose, mdiContentCopy, mdiDelete, mdiDrag, mdiImageOutline, mdiPlus, mdiTextBoxOutline } from "@mdi/js";
 import { LitElement, css, html, nothing, type PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
@@ -64,6 +64,9 @@ function presets(l: ReturnType<typeof localizer>, hass: HomeAssistant): Record<s
     Object.keys(hass.states ?? {}).find(
       (id) => id.startsWith("sensor.") && hass.states[id].attributes.device_class === "temperature",
     ) ?? "sensor.outdoor_temperature";
+  const camera =
+    Object.keys(hass.states ?? {}).find((id) => id.startsWith("camera.") || id.startsWith("image.")) ??
+    "camera.front_door";
   return {
     sensor: blank(l("preset_sensor"), `:mdi:thermometer: **{{ states('${sensor}') }} °C**`, "top_right"),
     weather: blank(
@@ -73,8 +76,11 @@ function presets(l: ReturnType<typeof localizer>, hass: HomeAssistant): Record<s
     ),
     date: { ...blank(l("preset_date"), "{{ date_local(now(), 'long') }}", "bottom_center"), backing: "halo", text_color: "white" },
     blank: blank(l("preset_blank"), ""),
+    image: { ...blank(l("preset_image"), "", "top_right"), kind: "image", image: camera, width: 40 },
   };
 }
+
+const isImage = (o: Overlay) => o.kind === "image";
 
 /** The global photo overlays of a frame, or (with `photo`) one photo's overlays: add, edit, toggle, reorder, copy. */
 @customElement("pp-overlays")
@@ -361,6 +367,8 @@ export class OverlayList extends LitElement {
                   ${(["sensor", "weather", "date", "blank"] as const).map(
                     (key) => html`<button @click=${() => this.add(p[key])}>${l(`preset_${key}`)}</button>`,
                   )}
+                  <hr />
+                  <button @click=${() => this.add(p.image)}>${icon(mdiImageOutline)} ${l("preset_image")}</button>
                 </div>`
               : nothing}
           </div>
@@ -386,10 +394,12 @@ export class OverlayList extends LitElement {
               >
                 <span class="grip">${icon(mdiDrag)}</span>
                 <span class="body">
-                  <span class="name">${icon(mdiTextBoxOutline)} ${o.name}</span>
-                  <code>${o.template.split("\n")[0]}</code>
+                  <span class="name">${icon(isImage(o) ? mdiImageOutline : mdiTextBoxOutline)} ${o.name}</span>
+                  <code>${(isImage(o) ? (o.image ?? "") : o.template).split("\n")[0]}</code>
                   ${o.last_error
-                    ? html`<span class="error small">${l("overlay_error", { error: o.last_error })}</span>`
+                    ? html`<span class="error small"
+                        >${l(isImage(o) ? "image_error" : "overlay_error", { error: o.last_error })}</span
+                      >`
                     : o.last_text
                       ? html`<span class="muted small">${l("shows_now", { text: o.last_text })}</span>`
                       : nothing}
@@ -552,6 +562,12 @@ export class OverlayList extends LitElement {
       }
       .menu button:hover {
         background: color-mix(in srgb, var(--pp-text) 6%, transparent);
+      }
+      .menu hr {
+        width: 100%;
+        margin: 4px 0;
+        border: none;
+        border-top: 1px solid var(--pp-border);
       }
       ul {
         list-style: none;
@@ -723,10 +739,83 @@ export class OverlayEditor extends LitElement {
     </select>`;
   }
 
+  private renderSource(l: ReturnType<typeof localizer>) {
+    const d = this.draft;
+    const image = isImage(d);
+    const key = image ? "image" : "template";
+    const value = (image ? d.image : d.template) ?? "";
+    return html`<label class="field">
+        ${l(image ? "overlay_image" : "overlay_text")}
+        ${this.codeEditor
+          ? html`<ha-code-editor
+              class=${image ? "show-if" : "template"}
+              mode="jinja2"
+              dir="ltr"
+              .hass=${this.hass}
+              .value=${value}
+              .autocompleteEntities=${true}
+              .autocompleteIcons=${!image}
+              .linewrap=${true}
+              @value-changed=${(e: CustomEvent<{ value: string }>) => {
+                e.stopPropagation();
+                this.set(key, e.detail.value);
+              }}
+            ></ha-code-editor>`
+          : html`<textarea
+              class="template"
+              rows=${image ? 2 : 5}
+              spellcheck="false"
+              .value=${value}
+              @input=${(e: Event) => this.set(key, (e.target as HTMLTextAreaElement).value)}
+            ></textarea>`}
+      </label>
+      <span class="muted small">${l(image ? "overlay_image_help" : "overlay_help")}</span>
+      ${this.result?.error
+        ? html`<span class="error small">${l(image ? "image_error" : "overlay_error", { error: this.result.error })}</span>`
+        : this.result && this.result.text === null
+          ? html`<span class="muted small">${l("overlay_hidden")}</span>`
+          : nothing}`;
+  }
+
+  private renderWidth(l: ReturnType<typeof localizer>) {
+    const d = this.draft;
+    // A picture always has a width (40 % when none is set); a text box can fit its text.
+    const width = isImage(d) ? (d.width ?? 40) : d.width;
+    return html`<div class="field">
+      <span class="row">
+        ${l("box_width")}
+        ${isImage(d)
+          ? nothing
+          : html`<label class="check">
+              <input
+                type="checkbox"
+                .checked=${d.width === null}
+                @change=${(e: Event) => this.set("width", (e.target as HTMLInputElement).checked ? null : 50)}
+              />
+              ${l("width_auto")}
+            </label>`}
+      </span>
+      ${width !== null
+        ? html`<div class="slider">
+            <input
+              type="range"
+              min="10"
+              max="100"
+              step="5"
+              .value=${String(width)}
+              @input=${(e: Event) => this.set("width", Number((e.target as HTMLInputElement).value))}
+            />
+            <span>${width} %</span>
+          </div>`
+        : nothing}
+    </div>`;
+  }
+
   protected override render() {
     if (!this.draft) return nothing;
     const l = localizer(this.hass);
     const d = this.draft;
+    const image = isImage(d);
     return html`<div class="scrim" @click=${(e: Event) => e.target === e.currentTarget && this.close()}>
       <div class="dialog card" role="dialog" aria-modal="true" aria-label=${l("edit_overlay")}>
         <header>
@@ -741,37 +830,7 @@ export class OverlayEditor extends LitElement {
         </header>
         <div class="body">
           <section class="fields">
-            <label class="field">
-              ${l("overlay_text")}
-              ${this.codeEditor
-                ? html`<ha-code-editor
-                    class="template"
-                    mode="jinja2"
-                    dir="ltr"
-                    .hass=${this.hass}
-                    .value=${d.template}
-                    .autocompleteEntities=${true}
-                    .autocompleteIcons=${true}
-                    .linewrap=${true}
-                    @value-changed=${(e: CustomEvent<{ value: string }>) => {
-                      e.stopPropagation();
-                      this.set("template", e.detail.value);
-                    }}
-                  ></ha-code-editor>`
-                : html`<textarea
-                    class="template"
-                    rows="5"
-                    spellcheck="false"
-                    .value=${d.template}
-                    @input=${(e: Event) => this.set("template", (e.target as HTMLTextAreaElement).value)}
-                  ></textarea>`}
-            </label>
-            <span class="muted small">${l("overlay_help")}</span>
-            ${this.result?.error
-              ? html`<span class="error small">${l("overlay_error", { error: this.result.error })}</span>`
-              : this.result && this.result.text === null
-                ? html`<span class="muted small">${l("overlay_hidden")}</span>`
-                : nothing}
+            ${this.renderSource(l)}
             <div class="grid2">
               <div class="field">
                 ${l("position")}
@@ -786,53 +845,37 @@ export class OverlayEditor extends LitElement {
                   )}
                 </div>
               </div>
-              <div class="stack">
-                <label class="field">${l("text_size")} ${this.select("size", ["s", "m", "l", "xl", "xxl"], (o) => l(`size_${o}` as never))}</label>
-                <label class="field">${l("alignment")} ${this.select("align", ["left", "center", "right"], (o) => l(`align_${o}` as never))}</label>
-              </div>
-            </div>
-            <div class="field">
-              <span class="row">
-                ${l("box_width")}
-                <label class="check">
-                  <input
-                    type="checkbox"
-                    .checked=${d.width === null}
-                    @change=${(e: Event) => this.set("width", (e.target as HTMLInputElement).checked ? null : 50)}
-                  />
-                  ${l("width_auto")}
-                </label>
-              </span>
-              ${d.width !== null
-                ? html`<div class="slider">
-                    <input
-                      type="range"
-                      min="10"
-                      max="100"
-                      step="5"
-                      .value=${String(d.width)}
-                      @input=${(e: Event) => this.set("width", Number((e.target as HTMLInputElement).value))}
-                    />
-                    <span>${d.width} %</span>
+              ${image
+                ? html`<div class="stack">
+                    <label class="field"
+                      >${l("backing_image")}
+                      ${this.select("backing", ["box", "none"], (o) => l(`backing_${o}` as never))}</label
+                    >
                   </div>`
-                : nothing}
+                : html`<div class="stack">
+                    <label class="field">${l("text_size")} ${this.select("size", ["s", "m", "l", "xl", "xxl"], (o) => l(`size_${o}` as never))}</label>
+                    <label class="field">${l("alignment")} ${this.select("align", ["left", "center", "right"], (o) => l(`align_${o}` as never))}</label>
+                  </div>`}
             </div>
-            <div class="grid2">
-              <div class="field">
-                ${l("text_color")}
-                <div class="swatches">
-                  ${COLORS.map(
-                    (c) => html`<button
-                      class=${d.text_color === c ? "on" : ""}
-                      style="background:${SWATCH[c]}"
-                      title=${l(`color_${c}` as never)}
-                      @click=${() => this.set("text_color", c)}
-                    ></button>`,
-                  )}
-                </div>
-              </div>
-              <label class="field">${l("backing")} ${this.select("backing", ["box", "halo", "none"], (o) => l(`backing_${o}` as never))}</label>
-            </div>
+            ${this.renderWidth(l)}
+            ${image
+              ? nothing
+              : html`<div class="grid2">
+                  <div class="field">
+                    ${l("text_color")}
+                    <div class="swatches">
+                      ${COLORS.map(
+                        (c) => html`<button
+                          class=${d.text_color === c ? "on" : ""}
+                          style="background:${SWATCH[c]}"
+                          title=${l(`color_${c}` as never)}
+                          @click=${() => this.set("text_color", c)}
+                        ></button>`,
+                      )}
+                    </div>
+                  </div>
+                  <label class="field">${l("backing")} ${this.select("backing", ["box", "halo", "none"], (o) => l(`backing_${o}` as never))}</label>
+                </div>`}
             ${d.backing === "box"
               ? html`<div class="field">
                   ${l("box_color")}
@@ -871,7 +914,12 @@ export class OverlayEditor extends LitElement {
                     @input=${(e: Event) => this.set("show_if", (e.target as HTMLTextAreaElement).value || null)}
                   ></textarea>`}
             </label>
-            <label class="field">${l("redraw")} ${this.select("redraw", ["change", "photo"], (o) => l(`redraw_${o}` as never))}</label>
+            <label class="field"
+              >${l("redraw")}
+              ${this.select("redraw", ["change", "photo"], (o) =>
+                l(o === "change" && image ? "redraw_change_image" : (`redraw_${o}` as never)),
+              )}</label
+            >
             <label class="check">
               <input type="checkbox" .checked=${d.enabled} @change=${(e: Event) => this.set("enabled", (e.target as HTMLInputElement).checked)} />
               ${l("enabled")}

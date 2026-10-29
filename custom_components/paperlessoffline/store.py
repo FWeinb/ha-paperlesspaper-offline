@@ -35,9 +35,15 @@ class LibraryItem:
     location: dict[str, float] | None = None  # latitude, longitude, optionally altitude
     exif_read: bool = False
     kind: str = KIND_PHOTO
-    # Cards only: "white", "black", a panel colour, or "photo" (background_photo_id).
+    # Cards only: "white", "black", a panel colour, "photo" (background_photo_id),
+    # or "image" (background_image: a template naming a camera or image entity, or a URL).
     background: str = "white"
     background_photo_id: str | None = None
+    background_image: str = ""
+    # A picture background's fit ("cover", "contain"); None follows the frame's fit.
+    background_fit: str | None = None
+    # With fit "contain": space around the picture, in percent of the short side.
+    background_padding: int = 0
 
     @property
     def is_card(self) -> bool:
@@ -58,11 +64,17 @@ class LibraryItem:
 
 @dataclass
 class OverlayDef:
-    """A markdown/template text box drawn over what a frame shows."""
+    """A markdown/template text box, or a picture, drawn over what a frame shows.
+
+    An image overlay (``kind`` "image") draws the picture its ``image`` template
+    names (a camera or image entity, or an http(s) URL); ``template`` is unused.
+    """
 
     id: str
     name: str
     template: str
+    kind: str = "text"  # "text" | "image"; fixed once created
+    image: str = ""
     enabled: bool = True
     show_if: str | None = None
     anchor: str = "bottom_right"
@@ -131,6 +143,12 @@ class FrameState:
     overlay_texts: dict[str, str | None] = field(default_factory=dict)
     overlay_eval_base: str | None = None
     overlay_errors: dict[str, str] = field(default_factory=dict)
+    # Snapshot ids of the image overlays' pictures fetched at the last wake.
+    overlay_images: dict[str, str] = field(default_factory=dict)
+    # Cards with a picture background: render key of the last picture fetched
+    # successfully at a wake, and the error of the last wake's fetch, by card id.
+    card_pictures: dict[str, str] = field(default_factory=dict)
+    card_picture_errors: dict[str, str] = field(default_factory=dict)
     ble_status: dict[str, Any] = field(default_factory=dict)
     ble_read_at: float | None = None
     ble_error: str | None = None

@@ -41,26 +41,32 @@ async def async_fetch_source(hass: HomeAssistant, data: dict) -> tuple[bytes, st
     if key == ATTR_FILE_PATH:
         return await _async_read_path(hass, Path(value))
     if key == ATTR_URL:
-        return await _async_download(hass, value), _name_from_url(value)
+        return await async_download(hass, value), _name_from_url(value)
     if key == ATTR_ENTITY:
-        domain = value.split(".", 1)[0]
         try:
-            # Imported lazily: these components (and their requirements) are
-            # only loaded when the user has such entities.
-            if domain == "camera":
-                from homeassistant.components import camera  # noqa: PLC0415
-
-                content = (await camera.async_get_image(hass, value)).content
-            else:
-                from homeassistant.components import image  # noqa: PLC0415
-
-                content = (await image.async_get_image(hass, value)).content
+            content = await async_entity_image(hass, value)
         except (HomeAssistantError, KeyError) as err:
             raise _error("source_failed", error=str(err)) from err
         state = hass.states.get(value)
         name = state.name if state else value
         return content, str(name)
     return await _async_media_source(hass, value)
+
+
+async def async_entity_image(hass: HomeAssistant, entity_id: str) -> bytes:
+    """The current picture of a camera or image entity."""
+    domain = entity_id.split(".", 1)[0]
+    # Imported lazily: these components (and their requirements, such as
+    # PyTurboJPEG for cameras) are only installed once the integration is set up.
+    if domain not in hass.config.components:
+        raise HomeAssistantError(f"The {domain} integration is not set up")
+    if domain == "camera":
+        from homeassistant.components import camera  # noqa: PLC0415
+
+        return (await camera.async_get_image(hass, entity_id)).content
+    from homeassistant.components import image  # noqa: PLC0415
+
+    return (await image.async_get_image(hass, entity_id)).content
 
 
 async def _async_read_path(hass: HomeAssistant, path: Path) -> tuple[bytes, str]:
@@ -79,7 +85,8 @@ async def _async_read_path(hass: HomeAssistant, path: Path) -> tuple[bytes, str]
     return data, path.stem
 
 
-async def _async_download(hass: HomeAssistant, url: str) -> bytes:
+async def async_download(hass: HomeAssistant, url: str) -> bytes:
+    """Download an image, refusing more than MAX_UPLOAD_BYTES; a path is on HA itself."""
     if url.startswith("/"):
         url = get_url(hass, allow_external=False) + url
     session = async_get_clientsession(hass)
@@ -107,7 +114,7 @@ async def _async_media_source(hass: HomeAssistant, media_id: str) -> tuple[bytes
     if resolved.path is not None:
         data, _ = await _async_read_path_unchecked(hass, resolved.path)
         return data, Path(name).stem
-    return await _async_download(hass, resolved.url), Path(name).stem
+    return await async_download(hass, resolved.url), Path(name).stem
 
 
 async def _async_read_path_unchecked(hass: HomeAssistant, path: Path) -> tuple[bytes, str]:

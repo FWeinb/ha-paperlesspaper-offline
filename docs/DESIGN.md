@@ -103,6 +103,7 @@ e-paper photo frames running the
 | `cards.py` | Card backgrounds, presets, overlay copies |
 | `exif.py` | Capture date and location from the EXIF header |
 | `templates.py`, `overlay_schema.py` | Overlay template evaluation and helpers; overlay validation |
+| `overlay_images.py` | Fetching image overlays' pictures; their snapshots on disk |
 | `views.py` | Frame endpoints (image, settings) and panel endpoints (upload, thumbnails, previews) |
 | `websocket.py`, `frontend.py` | Panel API; panel and card registration |
 | `services.py`, `services.yaml`, `sources.py` | Actions and the image sources they accept |
@@ -314,7 +315,7 @@ e-paper photo frames running the
 
 | Platform        | Entity                                                         |
 |-----------------|----------------------------------------------------------------|
-| `image`         | *Showing* and *Up next* previews                               |
+| `image`         | *Showing* and *Up next* previews\*\*                           |
 | `select`        | *Up next*, *Slideshow order*                                   |
 | `button`        | *Skip photo*                                                   |
 | `number`        | *Refresh interval*                                             |
@@ -323,6 +324,11 @@ e-paper photo frames running the
 | `binary_sensor` | In sync, charging, USB power                                   |
 
 \* Disabled by default.
+
+\*\* Their state (last updated) is what the panel's picture URLs change with:
+*Showing* follows the served image, *Up next* its base render, the overlay
+definitions and their current texts (`FrameManager.up_next_look`), but not
+new pictures of image overlays, which would refresh it at every fetch.
 
 - **Pending changes** lists what the frame hasn't picked up yet: settings, a
   queued photo, a one-off, edited overlays, a renamed frame's placeholder.
@@ -481,9 +487,9 @@ its editor comes from `getConfigForm`.
 
 ## 11. Overlays
 
-Text, entity values and icons drawn onto what the frame shows. Values are
-evaluated at a wake, so on the wall they are a snapshot of that moment, not
-live.
+Text, entity values, icons and pictures drawn onto what the frame shows.
+Values are evaluated at a wake, so on the wall they are a snapshot of that
+moment, not live.
 
 ### Kinds
 
@@ -500,10 +506,12 @@ live.
 
 ### Model
 
-`OverlayDef`: `id`, `name`, `enabled`, `template`, `show_if`, `anchor`,
-`margin`, `width`, `align`, `size`, `text_color`, `backing` (`box | halo |
-none`), `backing_color`, `redraw` (`change | photo`). Items have
-`hide_frame_overlays`.
+`OverlayDef`: `id`, `name`, `kind` (`text | image`), `enabled`, `template`,
+`image`, `show_if`, `anchor`, `margin`, `width`, `align`, `size`,
+`text_color`, `backing` (`box | halo | none`), `backing_color`, `redraw`
+(`change | photo`). Items have `hide_frame_overlays`. A text overlay draws
+`template`; an image overlay draws the picture `image` names (see *Image
+overlays*). The kind is fixed once created (`overlay_kind_fixed`).
 
 ### Content
 
@@ -555,18 +563,61 @@ none`), `backing_color`, `redraw` (`change | photo`). Items have
   colour, 1 or 2 px by size), or none. Colour spans override the text colour.
 - No automatic collision avoidance; the live preview shows overlaps.
 
+### Image overlays
+
+- **Source**: `image` is a template that renders to a `camera.*` or `image.*`
+  entity id, or an `http(s)://` URL (`overlay_images.async_fetch`). Entities
+  go through `camera.async_get_image` and `image.async_get_image`, URLs through
+  the same download as `show_image` (50 MB limit; 100 MP when decoded).
+  Anything else is an error. An empty result hides the overlay, like an empty
+  text. The integration's own image entities are refused: drawing a preview
+  renders the previews again.
+- **Size**: the box width (default 40 % of the canvas, `IMAGE_WIDTH`); the
+  picture keeps its aspect ratio and is shrunk further if its height would not
+  fit the canvas minus margins (`render.overlay.image_size`). There is no
+  "fit to text" width.
+- **Look**: the picture is decoded shrink-first, enhanced and dithered with the
+  frame's own settings (frame default over global default; no per-overlay
+  settings), and stored in the pure colours (`render_snapshot`). Backing `box`
+  draws a padded rounded box (padding and radius of the M size) in the backing
+  colour; `none` the bare picture. `halo` is not offered and draws like
+  `none`. Text size, alignment and text colour are unused.
+- **Snapshots** (`snapshots/<id>.png`, `overlay_images.Snapshots`): the
+  dithered picture at its drawn size. The id hashes the fetched bytes, the
+  overlay's style, the render settings and the canvas, so the same picture is
+  dithered once. Nothing is kept in memory.
+- **At a wake**: the source is evaluated with the texts, then the pictures are
+  fetched together in a background task (`_async_snapshots`), each limited to
+  10 s (`WAKE_TIMEOUT`). The settings request starts it; the image request
+  waits for it before compositing, so the frame's redirect probe and download
+  get the same image. The snapshot ids are stored in
+  `FrameState.overlay_images`, the evaluated source in `overlay_texts`.
+- **Errors**: an unknown source, a failed or too large download, an
+  undecodable picture or the timeout leave only that overlay out, are logged
+  and shown in the panel (`overlay_errors`), like a failing template.
+- **Redraw policy**: `change` compares snapshot ids, so a camera whose picture
+  changes redraws the frame at every wake; `photo` keeps the snapshot while
+  the same item is shown.
+- **Previews** ("Up next", card thumbnails, the overlay editor, unsaved photo
+  settings) fetch live with a 5 s limit (`PREVIEW_TIMEOUT`) and share the
+  snapshots. Pre-rendering after a change leaves pictures out, so editing the
+  library doesn't fetch every camera; housekeeping keeps the final key "Up
+  next" last rendered to.
+
 ### Rendering
 
 1. **Base image**: the item is rendered and cached as usual.
 2. **Overlay layer**: each overlay's evaluated markdown is laid out and drawn
    onto an RGB layer prefilled with a sentinel colour (magenta), without
-   anti-aliasing, using only the six pure palette colours.
+   anti-aliasing, using only the six pure palette colours. An image overlay's
+   snapshot, already in those colours, is pasted in its place in the drawing
+   order.
 3. **Compositing** (`render/pipeline.py`): the cached base BMP is decoded back
    into canvas palette positions; this round trip is lossless for every
    mounting. Every layer pixel that isn't the sentinel replaces the base
    pixel, and the result is encoded as usual.
-4. **Composite cache key** = base key + every overlay's evaluated text + its
-   style. The frame's base image is kept in the cache, so a value change only
+4. **Composite cache key** = base key + every overlay's evaluated text (an
+   image overlay's snapshot id) + its style. The frame's base image is kept in the cache, so a value change only
    costs the cheap composite, and `Last-Modified` changes exactly when the
    result does.
 
@@ -598,6 +649,11 @@ none`), `backing_color`, `redraw` (`change | photo`). Items have
   reorder, add, copy; the editor has the text and "show if" fields, a 3 × 3
   anchor picker, size, width, alignment, colours, backing and redraw, and a
   live preview with current values and errors next to the field.
+  - The add menu's text presets are followed by *Camera or picture*, an image
+    overlay on the first camera or image entity. Its editor shows the source
+    field instead of the text, the width as a slider (no "fit text"), *Around
+    the picture* (box or nothing) and the box colour, and no text size,
+    alignment or text colour. The list shows a picture icon and the source.
   - Unsaved drafts are previewed with the id `draft`, so the returned text or
     error matches the field being edited. `overlay/preview` takes `for_photo`:
     with it the drafts are the item's own overlays and the stored global ones
@@ -615,7 +671,10 @@ none`), `backing_color`, `redraw` (`change | photo`). Items have
   text fields are used. Escape inside the editor is left to CodeMirror.
 - **Actions**: `add_overlay`, `update_overlay`, `remove_overlay`,
   `move_overlay` and `list_overlays` take an optional `photo_id`; without it
-  they act on the global list. `copy_overlays` copies the global overlays to
+  they act on the global list. `add_overlay` takes `kind` (default `text`)
+  and needs `template` for text (`overlay_needs_template`) or `image` for a
+  picture (`overlay_needs_image`); `update_overlay` refuses a different
+  `kind`. `copy_overlays` copies the global overlays to
   another frame, or with `photo_id` and `to_photo_ids` a photo's overlays to
   other items of the same frame; `replace` replaces instead of adding. Copies
   get new ids; a source listed as a target is skipped, and all ids are checked
@@ -625,18 +684,24 @@ none`), `backing_color`, `redraw` (`change | photo`). Items have
 
 ### Cards
 
-- **Model**: a library item with `kind: "card"`, `background` and
-  `background_photo_id`. Their defaults make older stores load as photos.
+- **Model**: a library item with `kind: "card"`, `background`,
+  `background_photo_id`, `background_image`, `background_fit` and
+  `background_padding`. Their defaults make older
+  stores load as photos.
   Cards have no render settings of their own.
-- **Background**: `white`, `black`, a panel colour, or `photo` with
-  `background_photo_id`.
+- **Background**: `white`, `black`, a panel colour, `photo` with
+  `background_photo_id`, or `image` with `background_image` (see *Picture
+  backgrounds*). `_card_background` validates them and clears the fields the
+  chosen background doesn't use.
 - **Rendering branches on `kind` in one place**, `FrameManager._base_render`:
   - a plain background is `render_fill`, cached as `fill:<colour>`, with no
     dithering or enhancement, so text on it stays crisp;
   - a photo background returns that photo's own cache key and producer (its
     settings, without its overlays), so card and photo share one cache entry;
   - a missing background photo falls back to white; deleting a photo used as
-    a background turns those cards white.
+    a background turns those cards white;
+  - a picture background returns the render key of the card's last picture
+    (`FrameState.card_pictures`), or white without one.
 - **Other file-assuming paths** check `is_card`: thumbnails, housekeeping, the
   EXIF read, copying and deleting.
 - **Frame overlays** are hidden on cards by default (`hide_frame_overlays`
@@ -658,23 +723,65 @@ none`), `backing_color`, `redraw` (`change | photo`). Items have
     (`text_color_on`).
 - **Actions**:
   - `add_card` (`name`, `preset`, `background`, optional
-    `background_photo_id`) returns the card.
+    `background_photo_id`, or `background_image`, `background_fit` and
+    `background_padding`) returns the card. A picture
+    background without a source is refused (`card_needs_background_image`).
   - `update_photo` `background` keeps its render meaning on photos (the
     border colour for "fit with borders", white or black only) and is the card
     background on cards. Other colours and `background_photo_id` are refused
     for photos (`not_a_card`), render settings for cards
-    (`card_has_no_render_settings`).
+    (`card_has_no_render_settings`). `background_image` alone switches a card
+    to a picture background, like `background_photo_id` alone to a photo.
   - `remove_photo`, `move_photo`, `show_photo` and `copy_photo` take cards as
     they are. Card text is edited with the overlay actions plus `photo_id`.
   - `copy_photo` of a card with a photo background also copies the background
     photo (added disabled), or reuses one with the same `sha256` in the target
-    frame.
-- **Output**: `list_photos`, the panel's list and diagnostics include
-  `background` and `background_photo_id` only for cards.
+    frame. A picture background is copied as its source.
+- **Output**: `list_photos` and the panel's list include `background`,
+  `background_photo_id`, `background_image`, `background_fit`,
+  `background_padding` and `background_error` (the last
+  wake's fetch error) only for cards; diagnostics only `background`.
 - **Panel**: "Add card" opens a dialog (preset, background, name); the card
   then opens in the photo editor in card mode, which shows the preview where
-  the crop area is and the background picker (colour or library photo)
-  beside it.
+  the crop area is and the background picker (colour, library photo, or
+  camera or picture with a source field, a fit, a padding slider for "Fit
+  with borders" and the live fetch error) beside it.
+
+### Picture backgrounds
+
+- **Source**: `background_image` is a template like an image overlay's
+  `image` (camera or image entity, or an http(s) URL; the frame's own previews
+  refused), fetched with `overlay_images.async_fetch`. An empty result draws
+  the card white, without an error.
+- **Render**: like a photo, with the frame's resolved settings (frame default
+  over global default), and checked against `MAX_IMAGE_PIXELS`.
+  `background_fit` (`cover` or `contain`) replaces the frame's fit; `None`
+  (`default` in the API) keeps it. "Fit with borders" uses the frame's border
+  colour (white or black). Only picture backgrounds keep a fit: other
+  backgrounds clear it (`_fit`). With `contain`, `background_padding` (0 to
+  25 % of the canvas' short side) keeps the picture that far from every edge:
+  `render(..., padding)` fits it into the smaller box and centres it on the
+  border colour. The padding in pixels is part of the cache key only when set,
+  so other renders keep their keys. Other fits clear it (`_padding`). The result goes into the render cache as
+  `picture:<sha256 of the bytes>` with the settings and canvas, so a picture
+  that didn't change is neither rendered again nor redrawn on the frame. The
+  fetched bytes aren't kept.
+- **At a wake** that shows such a card, `_evaluate_for_wake` starts the fetch
+  next to the image overlays' (`_async_card_picture`, 10 s), and
+  `_async_current_render` waits for both before rendering the base, so the
+  probe and the download get the same image.
+- **Failure** (template error, fetch error, timeout, undecodable picture):
+  the card keeps `card_pictures[card id]` while that render is still cached,
+  otherwise it turns white. The error goes to `card_picture_errors` and the
+  log. A successful fetch clears it.
+- **Previews** (`_async_base_now`: "Up next", card thumbnails, the editor's
+  preview with an unsaved source, the overlay editor) fetch live with the 5 s
+  limit and fall back the same way; the editor preview returns the error
+  (`background_error`). They don't change `card_pictures`. Pre-rendering
+  leaves the picture out; housekeeping keeps the keys "Up next" last rendered
+  to.
+- **Housekeeping** keeps `card_pictures` of cards that still use a picture
+  background; deleting a card forgets its entry.
 
 ### One-off text (`show_text`)
 
@@ -792,6 +899,9 @@ none`), `backing_color`, `redraw` (`change | photo`). Items have
   `.storage/paperlessoffline.<entry_id>` stores of config entries that no
   longer exist. Only names that look like entry ids (ULIDs) are touched, and
   the global store is never removed.
+- **Snapshots** of image overlays (`snapshots/*.png`): those the last wake
+  uses (`overlay_images`) are kept; others, from older wakes and previews, go
+  after the 10 minute grace period.
 - **When**: after each pre-render (debounced after every change), so also at
   entry setup, and per frame every hour (`FrameManager.async_housekeeping`);
   orphaned entries at integration setup and every hour. Housekeeping never

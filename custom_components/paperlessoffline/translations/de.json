@@ -20,7 +20,7 @@
       },
       "bluetooth_confirm": {
         "title": "{client_id} einrichten",
-        "description": "Home Assistant konfiguriert den Rahmen per Bluetooth, damit er seine Bilder von `{base_url}` abruft. Den Rahmen im Einrichtungsmodus halten (Taste einmal drücken).",
+        "description": "Home Assistant konfiguriert den Rahmen per Bluetooth, damit er seine Bilder von `{base_url}` abruft. Den Rahmen in den Einrichtungsmodus versetzen (Taste einmal drücken).",
         "data": {
           "name": "Name",
           "provision": "Rahmen jetzt per Bluetooth konfigurieren",
@@ -43,7 +43,7 @@
     },
     "error": {
       "invalid_client_id": "Das sieht nicht nach einer Rahmen-ID aus (epd7-… oder epd13- gefolgt von 12 Hex-Ziffern).",
-      "provision_failed": "Der Rahmen konnte nicht per Bluetooth konfiguriert werden. Taste einmal drücken und erneut versuchen oder die Option abwählen, um ihn manuell einzurichten.",
+      "provision_failed": "Der Rahmen konnte nicht per Bluetooth konfiguriert werden. Taste einmal drücken und erneut versuchen oder ihn manuell einrichten.",
       "wifi_failed": "Der Rahmen konnte sich nicht mit diesem WLAN verbinden. Name und Passwort prüfen, Taste einmal drücken und erneut versuchen.",
       "invalid_host": "Eine IP-Adresse oder einen Hostnamen ohne http:// und Port eingeben.",
       "unusable_host": "Der Rahmen kann diese Adresse nicht nutzen (Loopback, localhost oder ein .local-Name). Eine LAN-IP-Adresse wählen."
@@ -92,7 +92,7 @@
               "palette": "Palette",
               "dither": "Dithering",
               "serpentine": "Serpentinen-Abtastung",
-              "fit": "Einpassung",
+              "fit": "Anpassung",
               "background": "Hintergrund",
               "brightness": "Helligkeit",
               "contrast": "Kontrast",
@@ -227,6 +227,12 @@
         "yellow": "Gelb"
       }
     },
+    "overlay_kind": {
+      "options": {
+        "text": "Text",
+        "image": "Bild"
+      }
+    },
     "overlay_backing": {
       "options": {
         "box": "Box",
@@ -255,7 +261,15 @@
         "green": "Grün",
         "blue": "Blau",
         "yellow": "Gelb",
-        "photo": "Foto"
+        "photo": "Foto",
+        "image": "Kamera oder Bild"
+      }
+    },
+    "card_background_fit": {
+      "options": {
+        "default": "Wie beim Rahmen",
+        "cover": "Füllen und zuschneiden",
+        "contain": "Einpassen mit Rand"
       }
     }
   },
@@ -418,19 +432,31 @@
       "message": "Genau eine Quelle angeben: Dateipfad, URL, Medien oder Kamera-/Bild-Entität."
     },
     "path_not_allowed": {
-      "message": "{path} liegt nicht in einem erlaubten Verzeichnis (allowlist_external_dirs)."
+      "message": "{path} liegt nicht in einem Verzeichnis, auf das Zugriff gewährt ist (allowlist_external_dirs)."
     },
     "source_failed": {
       "message": "Bild konnte nicht abgerufen werden: {error}"
     },
     "copy_overlays_needs_targets": {
-      "message": "Gib einen Zielrahmen an, oder ein Quellfoto zusammen mit Zielfotos."
+      "message": "Einen Zielrahmen angeben, oder ein Quellfoto zusammen mit Zielfotos."
     },
     "overlay_not_found": {
       "message": "Overlay {overlay_id} nicht gefunden."
     },
+    "overlay_kind_fixed": {
+      "message": "Die Art eines Overlays lässt sich nicht ändern; stattdessen ein neues Overlay hinzufügen."
+    },
+    "overlay_needs_template": {
+      "message": "Ein Text-Overlay braucht einen Text."
+    },
+    "overlay_needs_image": {
+      "message": "Ein Bild-Overlay braucht eine Bildquelle."
+    },
     "invalid_card_background": {
       "message": "Ein Foto-Hintergrund braucht die ID eines Fotos (keiner Karte) dieses Rahmens."
+    },
+    "card_needs_background_image": {
+      "message": "Ein Bild-Hintergrund braucht eine Bildquelle (background_image)."
     },
     "card_has_no_render_settings": {
       "message": "Karten haben keine Darstellungseinstellungen; stattdessen den Hintergrund ändern."
@@ -450,7 +476,7 @@
         },
         "file_path": {
           "name": "Dateipfad",
-          "description": "Lokale Datei (muss in einem erlaubten Verzeichnis liegen)."
+          "description": "Lokale Datei (muss in einem Verzeichnis liegen, auf das Zugriff gewährt ist)."
         },
         "url": {
           "name": "URL",
@@ -470,7 +496,7 @@
         },
         "enabled": {
           "name": "In der Rotation",
-          "description": "Ob das Foto an der Diashow teilnimmt."
+          "description": "Ob das Foto in der Diashow enthalten ist."
         },
         "dither": {
           "name": "Dithering",
@@ -481,8 +507,8 @@
           "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte. Rendert deutlich langsamer (auf kleinen Hosts mehrere Sekunden)."
         },
         "fit": {
-          "name": "Einpassung",
-          "description": "Wie das Foto in den Rahmen eingepasst wird."
+          "name": "Anpassung",
+          "description": "Wie das Foto an den Rahmen angepasst wird."
         },
         "background": {
           "name": "Hintergrund",
@@ -502,7 +528,7 @@
         },
         "rotation": {
           "name": "Drehung",
-          "description": "Foto im Uhrzeigersinn drehen (Grad)."
+          "description": "Drehung des Fotos im Uhrzeigersinn (Grad)."
         },
         "focal_x": {
           "name": "Fokuspunkt X",
@@ -550,11 +576,11 @@
         },
         "enabled": {
           "name": "In der Rotation",
-          "description": "Ob das Foto an der Diashow teilnimmt."
+          "description": "Ob das Foto in der Diashow enthalten ist."
         },
         "reset": {
           "name": "Zurücksetzen",
-          "description": "Einstellungen, die auf den geerbten Standard zurückgesetzt werden (oder „all“)."
+          "description": "Einstellungen, die auf den Standardwert zurückgesetzt werden (oder „all“)."
         },
         "dither": {
           "name": "Dithering",
@@ -565,8 +591,8 @@
           "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte. Rendert deutlich langsamer (auf kleinen Hosts mehrere Sekunden)."
         },
         "fit": {
-          "name": "Einpassung",
-          "description": "Wie das Foto in den Rahmen eingepasst wird."
+          "name": "Anpassung",
+          "description": "Wie das Foto an den Rahmen angepasst wird."
         },
         "background": {
           "name": "Hintergrund",
@@ -586,7 +612,7 @@
         },
         "rotation": {
           "name": "Drehung",
-          "description": "Foto im Uhrzeigersinn drehen (Grad)."
+          "description": "Drehung des Fotos im Uhrzeigersinn (Grad)."
         },
         "focal_x": {
           "name": "Fokuspunkt X",
@@ -607,6 +633,18 @@
         "background_photo_id": {
           "name": "Hintergrundfoto-ID",
           "description": "Das Foto, auf das eine Karte mit Foto-Hintergrund gezeichnet wird, mit dessen Einstellungen."
+        },
+        "background_image": {
+          "name": "Hintergrundbild",
+          "description": "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.garten. Wird bei jedem Aufwachen neu geladen, solange die Karte angezeigt wird. Allein angegeben, wechselt die Karte zu einem Bild-Hintergrund."
+        },
+        "background_fit": {
+          "name": "Bildanpassung",
+          "description": "Wie ein Bild-Hintergrund in den Rahmen passt: wie die Fotos des Rahmens, füllend zugeschnitten, oder ganz eingepasst mit Rand in der Randfarbe des Rahmens. „Wie beim Rahmen“ kehrt zur Anpassung des Rahmens zurück."
+        },
+        "background_padding": {
+          "name": "Bildabstand",
+          "description": "Bei „Einpassen mit Rand“: Abstand zwischen Bild und Rahmenkanten, in Prozent der kurzen Rahmenseite (0 bis 25)."
         }
       }
     },
@@ -629,7 +667,7 @@
       }
     },
     "copy_photo": {
-      "name": "Foto in Rahmen kopieren",
+      "name": "Foto zu einem Rahmen kopieren",
       "description": "Kopiert ein Foto oder eine Karte samt Einstellungen und Overlays in einen anderen Rahmen. Das Hintergrundfoto einer Karte wird mitkopiert, oder wiederverwendet, wenn der Rahmen es schon hat.",
       "fields": {
         "config_entry_id": {
@@ -648,7 +686,7 @@
     },
     "show_photo": {
       "name": "Foto als Nächstes zeigen",
-      "description": "Zeigt dieses Foto beim nächsten Aufwachen des Rahmens.",
+      "description": "Zeigt dieses Foto beim nächsten Aufwachen des Rahmens an.",
       "fields": {
         "config_entry_id": {
           "name": "Rahmen",
@@ -680,7 +718,7 @@
         },
         "file_path": {
           "name": "Dateipfad",
-          "description": "Lokale Datei (muss in einem erlaubten Verzeichnis liegen)."
+          "description": "Lokale Datei (muss in einem Verzeichnis liegen, auf das Zugriff gewährt ist)."
         },
         "url": {
           "name": "URL",
@@ -700,7 +738,7 @@
         },
         "wakes": {
           "name": "Aufwachvorgänge",
-          "description": "So viele Aufwachvorgänge anzeigen, dann zurück zur Diashow. Leer = bis zum Entfernen."
+          "description": "Für so viele Aufwachvorgänge anzeigen, bis die Diashow fortgesetzt wird. Leer = bis zum Entfernen."
         },
         "dither": {
           "name": "Dithering",
@@ -711,8 +749,8 @@
           "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte. Rendert deutlich langsamer (auf kleinen Hosts mehrere Sekunden)."
         },
         "fit": {
-          "name": "Einpassung",
-          "description": "Wie das Foto in den Rahmen eingepasst wird."
+          "name": "Anpassung",
+          "description": "Wie das Foto an den Rahmen angepasst wird."
         },
         "background": {
           "name": "Hintergrund",
@@ -732,7 +770,7 @@
         },
         "rotation": {
           "name": "Drehung",
-          "description": "Foto im Uhrzeigersinn drehen (Grad)."
+          "description": "Drehung des Fotos im Uhrzeigersinn (Grad)."
         },
         "focal_x": {
           "name": "Fokuspunkt X",
@@ -789,8 +827,8 @@
           "description": "Abtastrichtung je Zeile wechseln; reduziert Richtungsartefakte. Rendert deutlich langsamer (auf kleinen Hosts mehrere Sekunden)."
         },
         "fit": {
-          "name": "Einpassung",
-          "description": "Wie das Foto in den Rahmen eingepasst wird."
+          "name": "Anpassung",
+          "description": "Wie das Foto an den Rahmen angepasst wird."
         },
         "background": {
           "name": "Hintergrund",
@@ -810,13 +848,13 @@
         },
         "reset": {
           "name": "Zurücksetzen",
-          "description": "Einstellungen, die auf den geerbten Standard zurückgesetzt werden (oder „all“)."
+          "description": "Einstellungen, die auf den Standardwert zurückgesetzt werden (oder „all“)."
         }
       }
     },
     "add_overlay": {
       "name": "Overlay hinzufügen",
-      "description": "Fügt ein globales Foto-Overlay hinzu (eine Textbox über jedem Foto eines Rahmens) oder, mit Foto-ID, ein Foto-Overlay nur für dieses Foto.",
+      "description": "Fügt ein globales Foto-Overlay hinzu (eine Textbox oder ein Bild über jedem Foto eines Rahmens) oder, mit Foto-ID, ein Foto-Overlay nur für dieses Foto.",
       "fields": {
         "config_entry_id": {
           "name": "Rahmen",
@@ -830,9 +868,17 @@
           "name": "Name",
           "description": "Im Panel angezeigter Name."
         },
+        "kind": {
+          "name": "Art",
+          "description": "Eine Textbox oder ein Bild. Lässt sich später nicht ändern."
+        },
         "template": {
           "name": "Text",
           "description": "Markdown mit Home-Assistant-Templates, z. B. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**."
+        },
+        "image": {
+          "name": "Bild",
+          "description": "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.front_door. Wird bei jedem Aufwachen neu geladen, bei dem das Overlay gezeichnet wird."
         },
         "show_if": {
           "name": "Anzeigen wenn",
@@ -852,7 +898,7 @@
         },
         "width": {
           "name": "Breite",
-          "description": "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen."
+          "description": "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen (40 % bei einem Bild)."
         },
         "margin": {
           "name": "Abstand",
@@ -904,6 +950,10 @@
           "name": "Text",
           "description": "Markdown mit Home-Assistant-Templates, z. B. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**."
         },
+        "image": {
+          "name": "Bild",
+          "description": "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.front_door. Wird bei jedem Aufwachen neu geladen, bei dem das Overlay gezeichnet wird."
+        },
         "show_if": {
           "name": "Anzeigen wenn",
           "description": "Optionales Template; das Overlay wird nur gezeichnet, wenn es etwas Wahres ergibt."
@@ -922,7 +972,7 @@
         },
         "width": {
           "name": "Breite",
-          "description": "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen."
+          "description": "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen (40 % bei einem Bild)."
         },
         "margin": {
           "name": "Abstand",
@@ -991,7 +1041,7 @@
       }
     },
     "copy_overlays": {
-      "name": "Overlays in Rahmen kopieren",
+      "name": "Overlays zu einem Rahmen kopieren",
       "description": "Kopiert die globalen Foto-Overlays eines Rahmens in einen anderen Rahmen, oder die Overlays eines Fotos in andere Fotos desselben Rahmens.",
       "fields": {
         "config_entry_id": {
@@ -1048,11 +1098,23 @@
         },
         "background": {
           "name": "Hintergrund",
-          "description": "Eine Farbe, oder „Foto“, um die Karte auf ein Foto dieses Rahmens zu zeichnen."
+          "description": "Eine Farbe, „Foto“, um die Karte auf ein Foto dieses Rahmens zu zeichnen, oder „Bild“ für ein Bild einer Kamera, einer Bild-Entität oder einer URL."
         },
         "background_photo_id": {
           "name": "Hintergrundfoto-ID",
           "description": "Das Foto, auf das eine Karte mit Foto-Hintergrund gezeichnet wird, mit dessen Einstellungen."
+        },
+        "background_image": {
+          "name": "Hintergrundbild",
+          "description": "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.garten. Wird bei jedem Aufwachen neu geladen, solange die Karte angezeigt wird. Allein angegeben, wechselt die Karte zu einem Bild-Hintergrund."
+        },
+        "background_fit": {
+          "name": "Bildanpassung",
+          "description": "Wie ein Bild-Hintergrund in den Rahmen passt: wie die Fotos des Rahmens, füllend zugeschnitten, oder ganz eingepasst mit Rand in der Randfarbe des Rahmens. „Wie beim Rahmen“ kehrt zur Anpassung des Rahmens zurück."
+        },
+        "background_padding": {
+          "name": "Bildabstand",
+          "description": "Bei „Einpassen mit Rand“: Abstand zwischen Bild und Rahmenkanten, in Prozent der kurzen Rahmenseite (0 bis 25)."
         }
       }
     },
@@ -1090,7 +1152,7 @@
         },
         "wakes": {
           "name": "Aufwachvorgänge",
-          "description": "So viele Aufwachvorgänge anzeigen, dann zurück zur Diashow. Leer = bis zum Entfernen."
+          "description": "Für so viele Aufwachvorgänge anzeigen, bis die Diashow fortgesetzt wird. Leer = bis zum Entfernen."
         },
         "overlays": {
           "name": "Overlays",
