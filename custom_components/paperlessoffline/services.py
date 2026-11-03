@@ -15,7 +15,7 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 import probatio as vol
 
-from .cards import CARD_BACKGROUNDS, PRESETS
+from .cards import BACKGROUND_FITS, CARD_BACKGROUNDS, MAX_BACKGROUND_PADDING, PRESETS
 from .const import DOMAIN, RENDER_KEYS_FRAME_ONLY, RENDER_KEYS_PHOTO_ONLY, RENDER_KEYS_SHARED
 from .data import DATA_KEY, get_manager
 from .overlay_schema import OVERLAY_FIELDS, build_overlay
@@ -37,6 +37,9 @@ ATTR_RESET = "reset"
 ATTR_PRESET = "preset"
 ATTR_BACKGROUND = "background"
 ATTR_BACKGROUND_PHOTO = "background_photo_id"
+ATTR_BACKGROUND_IMAGE = "background_image"
+ATTR_BACKGROUND_FIT = "background_fit"
+ATTR_BACKGROUND_PADDING = "background_padding"
 ATTR_TEXT = "text"
 ATTR_SIZE = "size"
 ATTR_ANCHOR = "anchor"
@@ -78,6 +81,8 @@ _PHOTO_OVERRIDES = {vol.Optional(k): v for k, v in PHOTO_FIELDS.items()}
 _PHOTO_KEYS = RENDER_KEYS_SHARED + RENDER_KEYS_PHOTO_ONLY
 _FRAME_KEYS = RENDER_KEYS_SHARED + RENDER_KEYS_FRAME_ONLY
 
+# A picture background's padding, in percent of the frame's short side.
+BACKGROUND_PADDING = vol.All(vol.Coerce(int), vol.Range(min=0, max=MAX_BACKGROUND_PADDING))
 _OVERLAY_OPTIONAL = {vol.Optional(k): v for k, v in OVERLAY_FIELDS.items()}
 _OVERLAY_ENTRY: dict[Any, Any] = {**_ENTRY, vol.Optional(ATTR_PHOTO): cv.string}
 _OVERLAY_REF = {**_OVERLAY_ENTRY, vol.Required(ATTR_OVERLAY): cv.string}
@@ -87,8 +92,7 @@ SCHEMAS: dict[str, vol.Schema] = {
         {
             **_OVERLAY_ENTRY,
             vol.Required("name"): cv.string,
-            vol.Required("template"): cv.string,
-            **{k: v for k, v in _OVERLAY_OPTIONAL.items() if str(k) not in ("name", "template")},
+            **{k: v for k, v in _OVERLAY_OPTIONAL.items() if str(k) != "name"},
         }
     ),
     SERVICE_UPDATE_OVERLAY: vol.Schema({**_OVERLAY_REF, **_OVERLAY_OPTIONAL}),
@@ -122,6 +126,9 @@ SCHEMAS: dict[str, vol.Schema] = {
             vol.Optional(ATTR_PRESET, default="blank"): vol.In(PRESETS),
             vol.Optional(ATTR_BACKGROUND, default="white"): vol.In(CARD_BACKGROUNDS),
             vol.Optional(ATTR_BACKGROUND_PHOTO): cv.string,
+            vol.Optional(ATTR_BACKGROUND_IMAGE): cv.string,
+            vol.Optional(ATTR_BACKGROUND_FIT): vol.In(BACKGROUND_FITS),
+            vol.Optional(ATTR_BACKGROUND_PADDING): BACKGROUND_PADDING,
         }
     ),
     SERVICE_REMOVE_PHOTO: vol.Schema(_PHOTO),
@@ -136,6 +143,9 @@ SCHEMAS: dict[str, vol.Schema] = {
             # A photo's render setting, or a card's background (checked per item).
             vol.Optional(ATTR_BACKGROUND): vol.In(CARD_BACKGROUNDS),
             vol.Optional(ATTR_BACKGROUND_PHOTO): cv.string,
+            vol.Optional(ATTR_BACKGROUND_IMAGE): cv.string,
+            vol.Optional(ATTR_BACKGROUND_FIT): vol.In(BACKGROUND_FITS),
+            vol.Optional(ATTR_BACKGROUND_PADDING): BACKGROUND_PADDING,
         }
     ),
     SERVICE_MOVE_PHOTO: vol.Schema(
@@ -196,16 +206,23 @@ def _photo_dict(manager: Any, photo: Any) -> dict[str, Any]:
         },
         "hide_frame_overlays": photo.hide_frame_overlays,
         "overlay_count": len(photo.overlays),
-        **card_fields(photo),
+        **card_fields(manager, photo),
         "preview_url": f"/api/{DOMAIN}/preview/{manager.entry.entry_id}/{photo.id}.png",
     }
 
 
-def card_fields(photo: Any) -> dict[str, Any]:
-    """A card's background (empty for photos)."""
+def card_fields(manager: Any, photo: Any) -> dict[str, Any]:
+    """A card's background and the error of its last picture fetch (empty for photos)."""
     if not photo.is_card:
         return {}
-    return {"background": photo.background, "background_photo_id": photo.background_photo_id}
+    return {
+        "background": photo.background,
+        "background_photo_id": photo.background_photo_id,
+        "background_image": photo.background_image,
+        "background_fit": photo.background_fit,
+        "background_padding": photo.background_padding,
+        "background_error": manager.state.card_picture_errors.get(photo.id),
+    }
 
 
 async def _add_card(call: ServiceCall) -> ServiceResponse:
@@ -215,6 +232,9 @@ async def _add_card(call: ServiceCall) -> ServiceResponse:
         call.data[ATTR_PRESET],
         call.data[ATTR_BACKGROUND],
         call.data.get(ATTR_BACKGROUND_PHOTO),
+        background_image=call.data.get(ATTR_BACKGROUND_IMAGE),
+        background_fit=call.data.get(ATTR_BACKGROUND_FIT),
+        background_padding=call.data.get(ATTR_BACKGROUND_PADDING, 0),
     )
     return _photo_dict(manager, card)
 
@@ -256,6 +276,9 @@ async def _update_photo(call: ServiceCall) -> ServiceResponse:
         reset=call.data.get(ATTR_RESET),
         background=background,
         background_photo_id=call.data.get(ATTR_BACKGROUND_PHOTO),
+        background_image=call.data.get(ATTR_BACKGROUND_IMAGE),
+        background_fit=call.data.get(ATTR_BACKGROUND_FIT),
+        background_padding=call.data.get(ATTR_BACKGROUND_PADDING),
     )
     if ATTR_HIDE_OVERLAYS in call.data:
         photo = manager.async_set_photo_hide_overlays(photo.id, call.data[ATTR_HIDE_OVERLAYS])
@@ -354,6 +377,12 @@ def overlay_dict(manager: Any, overlay: OverlayDef) -> dict[str, Any]:
 
 async def _add_overlay(call: ServiceCall) -> ServiceResponse:
     manager = get_manager(call.hass, call.data[ATTR_ENTRY])
+    # A text overlay needs its text, an image overlay its source.
+    needed = "image" if call.data.get("kind") == "image" else "template"
+    if not str(call.data.get(needed, "")).strip():
+        raise ServiceValidationError(
+            translation_domain=DOMAIN, translation_key=f"overlay_needs_{needed}"
+        )
     overlay = manager.async_save_overlay(build_overlay(dict(call.data)), call.data.get(ATTR_PHOTO))
     return overlay_dict(manager, overlay)
 

@@ -16,6 +16,7 @@ from .pipeline import (
     render_fill,
     render_placeholder,
     render_preview,
+    render_snapshot,
     validate_image,
 )
 from .placeholder import PlaceholderText
@@ -37,5 +38,6 @@ __all__ = [
     "render_fill",
     "render_placeholder",
     "render_preview",
+    "render_snapshot",
     "validate_image",
 ]

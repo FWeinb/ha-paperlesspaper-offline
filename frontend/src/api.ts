@@ -1,4 +1,5 @@
 import type {
+  BackgroundFit,
   CardBackground,
   CardPreset,
   Defaults,
@@ -47,20 +48,32 @@ export const updatePhoto = (
     /** Cards only. */
     background?: CardBackground;
     background_photo_id?: string | null;
+    background_image?: string;
+    background_fit?: BackgroundFit;
+    background_padding?: number;
   },
 ) => hass.callWS<LibraryItem>({ type: `${D}/photo/update`, entry_id: entryId, photo_id: photoId, ...changes });
 
 export const addCard = (
   hass: HomeAssistant,
   entryId: string,
-  card: { name?: string; preset: CardPreset; background: CardBackground; background_photo_id?: string | null },
+  card: {
+    name?: string;
+    preset: CardPreset;
+    background: CardBackground;
+    background_photo_id?: string | null;
+    background_image?: string;
+    background_fit?: BackgroundFit;
+    background_padding?: number;
+  },
 ) => {
-  const { background_photo_id, ...rest } = card;
+  const { background_photo_id, background_image, ...rest } = card;
   return hass.callWS<LibraryItem>({
     type: `${D}/card/add`,
     entry_id: entryId,
     ...rest,
     ...(background_photo_id ? { background_photo_id } : {}),
+    ...(background_image ? { background_image } : {}),
   });
 };
 
@@ -104,11 +117,15 @@ export const renderPreview = (
     /** Cards: an unsaved background. */
     background?: CardBackground;
     background_photo_id?: string | null;
+    background_image?: string;
+    background_fit?: BackgroundFit;
+    background_padding?: number;
     /** An unsaved hide switch for the frame's overlays. */
     hide_frame_overlays?: boolean;
   },
 ) =>
-  hass.callWS<{ image: string; width: number; height: number }>({
+  /** `background_error`: why a card's picture background couldn't be fetched. */
+  hass.callWS<{ image: string; width: number; height: number; background_error?: string | null }>({
     type: `${D}/preview`,
     entry_id: entryId,
     photo_id: photoId,

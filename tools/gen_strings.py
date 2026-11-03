@@ -53,8 +53,8 @@ RENDER_FIELDS = {
         ),
     ),
     "fit": (
-        t("Fit", "Einpassung"),
-        t("How the photo is fitted to the frame.", "Wie das Foto in den Rahmen eingepasst wird."),
+        t("Fit", "Anpassung"),
+        t("How the photo is fitted to the frame.", "Wie das Foto an den Rahmen angepasst wird."),
     ),
     "background": (
         t("Background", "Hintergrund"),
@@ -74,7 +74,7 @@ RENDER_FIELDS = {
     ),
     "rotation": (
         t("Rotation", "Drehung"),
-        t("Rotate the photo clockwise (degrees).", "Foto im Uhrzeigersinn drehen (Grad)."),
+        t("Rotate the photo clockwise (degrees).", "Drehung des Fotos im Uhrzeigersinn (Grad)."),
     ),
     "focal_x": (
         t("Focal point X", "Fokuspunkt X"),
@@ -115,7 +115,7 @@ COMMON_FIELDS = {
         t("File path", "Dateipfad"),
         t(
             "Local file (must be in an allowed directory).",
-            "Lokale Datei (muss in einem erlaubten Verzeichnis liegen).",
+            "Lokale Datei (muss in einem Verzeichnis liegen, auf das Zugriff gewährt ist).",
         ),
     ),
     "url": (t("URL", "URL"), t("Image URL to download.", "Bild-URL zum Herunterladen.")),
@@ -135,14 +135,14 @@ COMMON_FIELDS = {
         t("In rotation", "In der Rotation"),
         t(
             "Whether the photo takes part in the slideshow.",
-            "Ob das Foto an der Diashow teilnimmt.",
+            "Ob das Foto in der Diashow enthalten ist.",
         ),
     ),
     "reset": (
         t("Reset", "Zurücksetzen"),
         t(
-            "Settings to reset to the inherited default (or 'all').",
-            "Einstellungen, die auf den geerbten Standard zurückgesetzt werden (oder „all“).",
+            "Settings to reset to the default value (or 'all').",
+            "Einstellungen, die auf den Standardwert zurückgesetzt werden (oder „all“).",
         ),
     ),
     "position": (
@@ -153,7 +153,7 @@ COMMON_FIELDS = {
         t("Wakes", "Aufwachvorgänge"),
         t(
             "Show for this many wakes, then return to the slideshow. Empty = until cleared.",
-            "So viele Aufwachvorgänge anzeigen, dann zurück zur Diashow. Leer = bis zum Entfernen.",
+            "Für so viele Aufwachvorgänge anzeigen, bis die Diashow fortgesetzt wird. Leer = bis zum Entfernen.",
         ),
     ),
     "palette": (
@@ -168,7 +168,7 @@ SERVICES = {
     "remove_photo": t("Remove photo", "Foto entfernen"),
     "update_photo": t("Update photo", "Foto bearbeiten"),
     "move_photo": t("Move photo", "Foto verschieben"),
-    "copy_photo": t("Copy photo to frame", "Foto in Rahmen kopieren"),
+    "copy_photo": t("Copy photo to frame", "Foto zu einem Rahmen kopieren"),
     "show_photo": t("Show photo next", "Foto als Nächstes zeigen"),
     "next_photo": t("Skip to next photo", "Zum nächsten Foto springen"),
     "show_image": t("Show image", "Bild anzeigen"),
@@ -198,7 +198,7 @@ SERVICE_DESC = {
     ),
     "show_photo": t(
         "Shows this photo on the frame's next wake.",
-        "Zeigt dieses Foto beim nächsten Aufwachen des Rahmens.",
+        "Zeigt dieses Foto beim nächsten Aufwachen des Rahmens an.",
     ),
     "next_photo": t(
         "Skips the photo that is up next.", "Überspringt das als Nächstes geplante Foto."
@@ -376,7 +376,7 @@ def _build_base(lang: str) -> dict:
                     "description": L(
                         t(
                             "Home Assistant will configure the frame over Bluetooth to fetch its pictures from `{base_url}`. Keep the frame in setup mode (press its button once).",
-                            "Home Assistant konfiguriert den Rahmen per Bluetooth, damit er seine Bilder von `{base_url}` abruft. Den Rahmen im Einrichtungsmodus halten (Taste einmal drücken).",
+                            "Home Assistant konfiguriert den Rahmen per Bluetooth, damit er seine Bilder von `{base_url}` abruft. Den Rahmen in den Einrichtungsmodus versetzen (Taste einmal drücken).",
                         )
                     ),
                     "data": {
@@ -399,8 +399,8 @@ def _build_base(lang: str) -> dict:
                 ),
                 "provision_failed": L(
                     t(
-                        "Couldn't configure the frame over Bluetooth. Press its button once and try again, or untick the option to set it up manually.",
-                        "Der Rahmen konnte nicht per Bluetooth konfiguriert werden. Taste einmal drücken und erneut versuchen oder die Option abwählen, um ihn manuell einzurichten.",
+                        "Couldn't configure the frame over Bluetooth. Press its button once and try again, or set it up manually.",
+                        "Der Rahmen konnte nicht per Bluetooth konfiguriert werden. Taste einmal drücken und erneut versuchen oder ihn manuell einrichten.",
                     )
                 ),
             },
@@ -700,7 +700,7 @@ def _build_base(lang: str) -> dict:
                 "message": L(
                     t(
                         "{path} is not in an allowed directory (allowlist_external_dirs).",
-                        "{path} liegt nicht in einem erlaubten Verzeichnis (allowlist_external_dirs).",
+                        "{path} liegt nicht in einem Verzeichnis, auf das Zugriff gewährt ist (allowlist_external_dirs).",
                     )
                 )
             },
@@ -929,6 +929,20 @@ def _overlays(lang: str) -> dict:
                 "Markdown mit Home-Assistant-Templates, z. B. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**.",
             ),
         ),
+        "kind": (
+            t("Kind", "Art"),
+            t(
+                "A text box or a picture. Can't be changed later.",
+                "Eine Textbox oder ein Bild. Lässt sich später nicht ändern.",
+            ),
+        ),
+        "image": (
+            t("Picture", "Bild"),
+            t(
+                "Template for a camera or image entity, or an http(s) URL, e.g. camera.front_door. Fetched at each wake where the overlay is drawn.",
+                "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.front_door. Wird bei jedem Aufwachen neu geladen, bei dem das Overlay gezeichnet wird.",
+            ),
+        ),
         "show_if": (
             t("Show if", "Anzeigen wenn"),
             t(
@@ -954,8 +968,8 @@ def _overlays(lang: str) -> dict:
         "width": (
             t("Width", "Breite"),
             t(
-                "Box width in percent of the frame; empty to fit the text.",
-                "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen.",
+                "Box width in percent of the frame; empty to fit the text (40 % for a picture).",
+                "Boxbreite in Prozent des Rahmens; leer, um sich dem Text anzupassen (40 % bei einem Bild).",
             ),
         ),
         "margin": (
@@ -1013,14 +1027,16 @@ def _overlays(lang: str) -> dict:
         "add_overlay": (
             t("Add overlay", "Overlay hinzufügen"),
             t(
-                "Adds a global photo overlay (a text box drawn over every photo of a frame), or with a photo ID, a photo overlay for that one photo.",
-                "Fügt ein globales Foto-Overlay hinzu (eine Textbox über jedem Foto eines Rahmens) oder, mit Foto-ID, ein Foto-Overlay nur für dieses Foto.",
+                "Adds a global photo overlay (a text box or picture drawn over every photo of a frame), or with a photo ID, a photo overlay for that one photo.",
+                "Fügt ein globales Foto-Overlay hinzu (eine Textbox oder ein Bild über jedem Foto eines Rahmens) oder, mit Foto-ID, ein Foto-Overlay nur für dieses Foto.",
             ),
             [
                 "config_entry_id",
                 "photo_id",
                 "name",
+                "kind",
                 "template",
+                "image",
                 "show_if",
                 "enabled",
                 "anchor",
@@ -1043,6 +1059,7 @@ def _overlays(lang: str) -> dict:
                 "overlay_id",
                 "name",
                 "template",
+                "image",
                 "show_if",
                 "enabled",
                 "anchor",
@@ -1070,7 +1087,7 @@ def _overlays(lang: str) -> dict:
             ["config_entry_id", "photo_id", "overlay_id", "position"],
         ),
         "copy_overlays": (
-            t("Copy overlays to frame", "Overlays in Rahmen kopieren"),
+            t("Copy overlays to frame", "Overlays zu einem Rahmen kopieren"),
             t(
                 "Copies the frame's global photo overlays to another frame, or a photo's overlays to other photos of the same frame.",
                 "Kopiert die globalen Foto-Overlays eines Rahmens in einen anderen Rahmen, oder die Overlays eines Fotos in andere Fotos desselben Rahmens.",
@@ -1124,6 +1141,7 @@ def _overlays(lang: str) -> dict:
                 }
             ),
             "overlay_color": opts(colors),
+            "overlay_kind": opts({"text": t("Text", "Text"), "image": t("Picture", "Bild")}),
             "overlay_backing": opts(
                 {
                     "box": t("Box", "Box"),
@@ -1146,13 +1164,34 @@ def _overlays(lang: str) -> dict:
                 "message": L(
                     t(
                         "Give a target frame, or a source photo together with target photos.",
-                        "Gib einen Zielrahmen an, oder ein Quellfoto zusammen mit Zielfotos.",
+                        "Einen Zielrahmen angeben, oder ein Quellfoto zusammen mit Zielfotos.",
                     )
                 )
             },
             "overlay_not_found": {
                 "message": L(
                     t("Overlay {overlay_id} not found.", "Overlay {overlay_id} nicht gefunden.")
+                )
+            },
+            "overlay_kind_fixed": {
+                "message": L(
+                    t(
+                        "An overlay's kind can't be changed; add a new overlay instead.",
+                        "Die Art eines Overlays lässt sich nicht ändern; stattdessen ein neues Overlay hinzufügen.",
+                    )
+                )
+            },
+            "overlay_needs_template": {
+                "message": L(
+                    t("A text overlay needs a text.", "Ein Text-Overlay braucht einen Text.")
+                )
+            },
+            "overlay_needs_image": {
+                "message": L(
+                    t(
+                        "An image overlay needs a picture source.",
+                        "Ein Bild-Overlay braucht eine Bildquelle.",
+                    )
                 )
             },
         },
@@ -1207,8 +1246,29 @@ def _cards(lang: str) -> dict:
     background = (
         t("Background", "Hintergrund"),
         t(
-            "A colour, or 'photo' to draw the card on a photo of this frame.",
-            "Eine Farbe, oder „Foto“, um die Karte auf ein Foto dieses Rahmens zu zeichnen.",
+            "A colour, 'photo' to draw the card on a photo of this frame, or 'image' for a picture from a camera, an image entity or a URL.",
+            "Eine Farbe, „Foto“, um die Karte auf ein Foto dieses Rahmens zu zeichnen, oder „Bild“ für ein Bild einer Kamera, einer Bild-Entität oder einer URL.",
+        ),
+    )
+    background_fit = (
+        t("Picture fit", "Bildanpassung"),
+        t(
+            "How a picture background fits the frame: like the frame's photos, filled and cropped, or scaled to fit with borders in the frame's border colour. 'default' goes back to the frame's fit.",
+            "Wie ein Bild-Hintergrund in den Rahmen passt: wie die Fotos des Rahmens, füllend zugeschnitten, oder ganz eingepasst mit Rand in der Randfarbe des Rahmens. „Wie beim Rahmen“ kehrt zur Anpassung des Rahmens zurück.",
+        ),
+    )
+    background_padding = (
+        t("Picture padding", "Bildabstand"),
+        t(
+            "With 'Fit with borders': space between the picture and the frame's edges, in percent of the frame's short side (0 to 25).",
+            "Bei „Einpassen mit Rand“: Abstand zwischen Bild und Rahmenkanten, in Prozent der kurzen Rahmenseite (0 bis 25).",
+        ),
+    )
+    background_image = (
+        t("Background picture", "Hintergrundbild"),
+        t(
+            "Template for a camera or image entity, or an http(s) URL, e.g. camera.garden. Fetched at each wake where the card is shown. Setting it alone switches the card to a picture background.",
+            "Template für eine Kamera- oder Bild-Entität oder eine http(s)-URL, z. B. camera.garten. Wird bei jedem Aufwachen neu geladen, solange die Karte angezeigt wird. Allein angegeben, wechselt die Karte zu einem Bild-Hintergrund.",
         ),
     )
     background_photo = (
@@ -1240,6 +1300,14 @@ def _cards(lang: str) -> dict:
                     "blue": L(t("Blue", "Blau")),
                     "yellow": L(t("Yellow", "Gelb")),
                     "photo": L(t("Photo", "Foto")),
+                    "image": L(t("Camera or picture", "Kamera oder Bild")),
+                }
+            },
+            "card_background_fit": {
+                "options": {
+                    "default": L(t("Frame default", "Wie beim Rahmen")),
+                    "cover": L(FIT["cover"]),
+                    "contain": L(FIT["contain"]),
                 }
             },
         },
@@ -1249,6 +1317,14 @@ def _cards(lang: str) -> dict:
                     t(
                         "A photo background needs the ID of a photo (not a card) of this frame.",
                         "Ein Foto-Hintergrund braucht die ID eines Fotos (keiner Karte) dieses Rahmens.",
+                    )
+                )
+            },
+            "card_needs_background_image": {
+                "message": L(
+                    t(
+                        "A picture background needs a picture source (background_image).",
+                        "Ein Bild-Hintergrund braucht eine Bildquelle (background_image).",
                     )
                 )
             },
@@ -1292,6 +1368,9 @@ def _cards(lang: str) -> dict:
                     ),
                     "background": field(background),
                     "background_photo_id": field(background_photo),
+                    "background_image": field(background_image),
+                    "background_fit": field(background_fit),
+                    "background_padding": field(background_padding),
                 },
             },
             "update_photo": {
@@ -1306,6 +1385,9 @@ def _cards(lang: str) -> dict:
                         )
                     ),
                     "background_photo_id": field(background_photo),
+                    "background_image": field(background_image),
+                    "background_fit": field(background_fit),
+                    "background_padding": field(background_padding),
                 }
             },
         },

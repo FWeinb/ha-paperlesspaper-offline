@@ -42,12 +42,7 @@ class FramePreview(PaperlessEntity, ImageEntity):
         manager = self.manager
         if self._which == "showing":
             return manager.state.served_key
-        kind, photo_id = manager.up_next()
-        if kind == "photo" and (photo := manager.get_photo(photo_id)):
-            return manager.photo_key(photo)
-        if kind == "override" and manager.state.override:
-            return f"override:{manager.state.override.sha256}:{manager.state.override.overrides}"
-        return manager.placeholder_key()
+        return manager.up_next_look()
 
     @callback
     def _update_from_manager(self) -> None:

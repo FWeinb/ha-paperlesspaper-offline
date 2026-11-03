@@ -205,7 +205,7 @@ async def test_diagnostics_storage(hass: HomeAssistant, loaded_entry) -> None:
     assert diag["storage"]["originals"]["files"] == 1
     assert diag["storage"]["originals"]["bytes"] == len(make_jpeg())
     assert diag["storage"]["thumbs"]["files"] == 1
-    assert set(diag["storage"]) == {"cache", "thumbs", "originals"}
+    assert set(diag["storage"]) == {"cache", "thumbs", "originals", "snapshots"}
 
 
 async def test_up_next_keys_match_render(hass: HomeAssistant, loaded_entry) -> None:

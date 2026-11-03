@@ -28,8 +28,10 @@ from . import housekeeping, slideshow
 from .ble import FrameBleError, FrameSession
 from .cache import RenderCache, cache_key
 from .cards import (
+    BACKGROUND_IMAGE,
     BACKGROUND_PHOTO,
     CARD_BACKGROUNDS,
+    FIT_DEFAULT,
     copy_overlays,
     preset_name,
     preset_overlays,
@@ -78,6 +80,7 @@ from .const import (
 )
 from .exif import read_capture
 from .issues import async_update_issues, reprovision_reason
+from .overlay_images import PREVIEW_TIMEOUT, WAKE_TIMEOUT, Snapshots, async_fetch
 from .render import (
     Canvas,
     OverlayStyle,
@@ -92,8 +95,10 @@ from .render import (
     render_fill,
     render_placeholder,
     render_preview,
+    render_snapshot,
     validate_image,
 )
+from .render.overlay import COLORS
 from .schedule import parse_time, quiet_change, quiet_sleep
 from .settings import resolve
 from .store import KIND_CARD, FrameState, FrameStore, GlobalStore, LibraryItem, OverlayDef, Override
@@ -132,6 +137,32 @@ PLACEHOLDER_NAME = "placeholder"
 THUMB_SIZES = (320, 1280)
 
 
+async def _wake_result[T](task: asyncio.Task[T]) -> T | None:
+    """A wake task's result, or None if a newer wake cancelled it."""
+    try:
+        return await task
+    except asyncio.CancelledError:
+        if (current := asyncio.current_task()) and current.cancelling():
+            raise
+        return None
+
+
+def _fit(background: str, fit: str | None) -> str | None:
+    """A card's stored background fit: only picture backgrounds have one."""
+    return fit if background == BACKGROUND_IMAGE and fit != FIT_DEFAULT else None
+
+
+def _padding(card: LibraryItem, padding: int) -> int:
+    """A card's stored background padding: only pictures that fit with borders have one."""
+    return (
+        padding if card.background == BACKGROUND_IMAGE and card.background_fit == "contain" else 0
+    )
+
+
+def _picture_gone() -> RenderResult:
+    raise HomeAssistantError("A card's picture background is missing from the cache")
+
+
 def new_token() -> str:
     """Return a new unguessable URL token."""
     return secrets.token_urlsafe(24)
@@ -155,10 +186,18 @@ class FrameManager:
         self.directory = Path(hass.config.path(STORAGE_DIR, entry.entry_id))
         self.originals = self.directory / "originals"
         self.cache = RenderCache(self.directory / "cache")
+        self.snapshots = Snapshots(self.directory / "snapshots")
         self._lock = asyncio.Lock()
         self._render_lock = asyncio.Lock()
         self._prerender_task: asyncio.Task[None] | None = None
         self._ble_task: asyncio.Task[bool] | None = None
+        # Pictures of image overlays being fetched for the current wake.
+        self._image_task: asyncio.Task[tuple[dict[str, str], dict[str, str]]] | None = None
+        # The shown card's picture background being fetched: (card id, task).
+        self._background_task: tuple[str, asyncio.Task[tuple[str | None, str | None]]] | None = None
+        # What "Up next" last rendered to, base and final (not computable without
+        # fetching pictures).
+        self._up_next_rendered: tuple[str, str] | None = None
         self._unsub_quiet: CALLBACK_TYPE | None = None
         self._ble_last_attempt = 0.0
         # HA's URL as the frame should use it; refreshed periodically.
@@ -196,6 +235,10 @@ class FrameManager:
             self._prerender_task.cancel()
         if self._ble_task:
             self._ble_task.cancel()
+        if self._image_task:
+            self._image_task.cancel()
+        if self._background_task:
+            self._background_task[1].cancel()
         self._cancel_quiet_timer()
         await self.store.async_save()
 
@@ -430,7 +473,7 @@ class FrameManager:
             st.last_wake = now
             st.wake_count += 1
             self._advance()
-            self._evaluate_overlays_for_wake()
+            self._evaluate_for_wake()
             self._fire_wake()
         return is_wake
 
@@ -490,7 +533,9 @@ class FrameManager:
                 st.served_base_key = key
                 shown = self.get_photo(st.current_id) if st.current_kind == "photo" else None
                 draw = self._overlay_draw_list(
-                    self._applicable_overlays(st.current_kind, shown), st.overlay_texts
+                    self._applicable_overlays(st.current_kind, shown),
+                    st.overlay_texts,
+                    st.overlay_images,
                 )
                 if draw:
                     key = await self._async_render_composite(key, draw)
@@ -511,6 +556,7 @@ class FrameManager:
         image it already has (which already includes its overlays).
         """
         st = self.state
+        await self._async_finish_wake_pictures()
         if st.current_kind == "override" and st.override is not None:
             return await self._async_render_override(st.override), st.override.name, True
         if st.current_kind == "photo":
@@ -520,7 +566,8 @@ class FrameManager:
                 # Deleted since the wake: keep what the frame already shows.
                 return str(st.served_key), st.served_name or "", False
             self._advance()
-            self._evaluate_overlays_for_wake()
+            self._evaluate_for_wake()
+            await self._async_finish_wake_pictures()
             if st.current_kind == "photo" and (photo := self.get_photo(st.current_id)):
                 return await self.async_render_photo(photo), photo.name, True
         # Empty rotation: keep the last photo, or show the (current) placeholder.
@@ -789,7 +836,12 @@ class FrameManager:
         if item.is_card:
             if (background := self.card_background_photo(item)) is not None:
                 return self._base_render(background)
-            color = item.background
+            if item.background == BACKGROUND_IMAGE and (
+                picture := self.state.card_pictures.get(item.id)
+            ):
+                # Rendered at a wake and kept by housekeeping while the card uses it.
+                return picture, _picture_gone
+            color = item.background if item.background in COLORS else "white"
             key = cache_key("fill:" + color, {}, asdict(canvas))
             return key, lambda: render_fill(color, canvas)
         key, opts = self._key(item.sha256, item.overrides)
@@ -874,42 +926,94 @@ class FrameManager:
             return None
         return await self.hass.async_add_executor_job(self.cache.read_png, key)
 
-    def _up_next_parts(self) -> tuple[str, LibraryItem | None, list[tuple[str, OverlayStyle]]]:
-        """What the next wake shows: (kind, photo, overlays to draw with current values)."""
+    def _up_next_display(self) -> tuple[str, LibraryItem | None]:
+        """What the next wake shows: (kind, photo)."""
         kind, photo_id = self.up_next()
-        photo = self.get_photo(photo_id) if kind == "photo" else None
-        return kind, photo, self._draw_now(kind, photo)
+        return kind, self.get_photo(photo_id) if kind == "photo" else None
 
-    def _draw_now(self, kind: str, photo: LibraryItem | None) -> list[tuple[str, OverlayStyle]]:
-        """Overlays drawn on a display, with the values they'd have right now."""
-        applicable = self._applicable_overlays(kind, photo)
+    def _texts_now(
+        self, overlays: list[OverlayDef], photo: LibraryItem | None
+    ) -> dict[str, str | None]:
         variables = self.template_variables(photo)
-        texts = {o.id: self.evaluate_overlay(o, variables)[0] for o in applicable}
-        return self._overlay_draw_list(applicable, texts)
+        return {o.id: self.evaluate_overlay(o, variables)[0] for o in overlays}
 
-    async def _async_render_up_next(self) -> tuple[str, str]:
-        """Render what the next wake shows; return (base key, key with overlays)."""
-        kind, photo, draw = self._up_next_parts()
+    async def _async_draw_now(
+        self, kind: str, photo: LibraryItem | None, pictures: bool = True
+    ) -> list[tuple[str, OverlayStyle]]:
+        """Overlays drawn on a display, with the values (and pictures) they'd have right now.
+
+        Without ``pictures`` image overlays are left out instead of fetched.
+        """
+        applicable = self._applicable_overlays(kind, photo)
+        texts = self._texts_now(applicable, photo)
+        images: dict[str, str] = {}
+        if pictures:
+            images, _ = await self._async_snapshots(applicable, texts, PREVIEW_TIMEOUT)
+        return self._overlay_draw_list(applicable, texts, images)
+
+    async def _async_render_up_next(self, pictures: bool = True) -> tuple[str, str]:
+        """Render what the next wake shows; return (base key, key with overlays).
+
+        Pre-rendering passes ``pictures=False``: it runs after every change, so it
+        warms the base without fetching image overlays' pictures each time.
+        """
+        kind, photo = self._up_next_display()
         if kind == "override" and self.state.override:
             base = await self._async_render_override(self.state.override)
+        elif photo is not None and pictures:
+            base = (await self._async_base_now(photo))[0]
         elif photo is not None:
             base = await self.async_render_photo(photo)
         else:
             base = await self._async_render_placeholder()
         # Up next shows overlays with the values they'd have right now.
-        if draw:
-            return base, await self._async_render_composite(base, draw)
-        return base, base
+        final = base
+        if draw := await self._async_draw_now(kind, photo, pictures):
+            final = await self._async_render_composite(base, draw)
+        if pictures:
+            self._up_next_rendered = (base, final)
+        return base, final
+
+    def up_next_look(self) -> str:
+        """Changes whenever "Up next" would look different, except for new pictures.
+
+        Covers the base render, the overlay definitions and their current texts
+        (an image overlay's source). New pictures from the same source don't
+        count: telling would mean fetching them, and every fetch would change it.
+        """
+        kind, photo = self._up_next_display()
+        applicable = self._applicable_overlays(kind, photo)
+        return _hash(
+            {
+                "base": self._up_next_keys()[0],
+                "picture": (
+                    (photo.background_image, photo.background_fit, photo.background_padding)
+                    if photo
+                    else None
+                ),
+                "overlays": [o.as_dict() for o in applicable],
+                "texts": self._texts_now(applicable, photo),
+            }
+        )
 
     def _up_next_keys(self) -> tuple[str, str]:
-        """Cache keys _async_render_up_next would use, without rendering."""
-        kind, photo, draw = self._up_next_parts()
+        """Cache keys _async_render_up_next would use, without rendering.
+
+        With image overlays or a picture background they need the pictures, so
+        they are the ones "Up next" last rendered to.
+        """
+        kind, photo = self._up_next_display()
         if kind == "override" and self.state.override:
             base = self._override_base(self.state.override)[0]
         elif photo is not None:
             base = self.photo_key(photo)
         else:
             base = self.placeholder_key()
+        applicable = self._applicable_overlays(kind, photo)
+        picture = photo is not None and photo.is_card and photo.background == BACKGROUND_IMAGE
+        if picture or any(o.kind == "image" for o in applicable):
+            return self._up_next_rendered or (base, base)
+        draw = self._overlay_draw_list(applicable, self._texts_now(applicable, photo))
         return base, self._composite_key(base, draw) if draw else base
 
     async def async_photo_preview(self, photo_id: str) -> bytes | None:
@@ -917,10 +1021,14 @@ class FrameManager:
         return await self._async_item_preview(self.require_photo(photo_id))
 
     async def _async_item_preview(self, item: LibraryItem) -> bytes | None:
-        key = await self.async_render_photo(item)
-        if item.is_card and (draw := self._draw_now("photo", item)):
+        return (await self._async_item_preview_error(item))[0]
+
+    async def _async_item_preview_error(self, item: LibraryItem) -> tuple[bytes | None, str | None]:
+        """Preview PNG of a library item, and the error of fetching its picture background."""
+        key, error = await self._async_base_now(item)
+        if item.is_card and (draw := await self._async_draw_now("photo", item)):
             key = await self._async_render_composite(key, draw)
-        return await self.hass.async_add_executor_job(self.cache.read_png, key)
+        return await self.hass.async_add_executor_job(self.cache.read_png, key), error
 
     @callback
     def _schedule_prerender(self) -> None:
@@ -933,7 +1041,7 @@ class FrameManager:
     async def _async_prerender(self) -> None:
         await asyncio.sleep(1)
         try:
-            await self._async_render_up_next()
+            await self._async_render_up_next(pictures=False)
         except Exception:
             _LOGGER.exception("Pre-rendering for %s failed", self.client_id)
         try:
@@ -946,20 +1054,35 @@ class FrameManager:
 
         Needed are the image the frame shows, its base (to redraw overlays
         cheaply) and the next wake's base and image (with overlays at their
-        current values). Everything else goes once unused for the grace period;
-        see ``housekeeping`` for thumbs and others. Nothing is rendered here.
+        current values), and the pictures of the last wake's image overlays.
+        Everything else goes once unused for the grace period; see
+        ``housekeeping`` for thumbs and others. Nothing is rendered here.
         """
         base, final = self._up_next_keys()
         st = self.state
         needed = {st.served_key, st.served_base_key, base, final}
+        # Cards keep their last picture background while they use one.
+        needed |= {
+            key
+            for card_id, key in st.card_pictures.items()
+            if (card := self.get_photo(card_id)) and card.background == BACKGROUND_IMAGE
+        }
         photos = {p.id: p.filename for p in self.photos if not p.is_card}
         override = {st.override.filename} if st.override and st.override.filename else set()
-        await self.hass.async_add_executor_job(self._evict_files, needed, photos, override)
+        snapshots = {self.snapshots.path(i).name for i in st.overlay_images.values()}
+        await self.hass.async_add_executor_job(
+            self._evict_files, needed, photos, override, snapshots
+        )
 
     def _evict_files(
-        self, needed: set[str | None], photos: dict[str, str], override: set[str]
+        self,
+        needed: set[str | None],
+        photos: dict[str, str],
+        override: set[str],
+        snapshots: set[str],
     ) -> None:
         deleted = self.cache.evict(needed)
+        deleted += housekeeping.evict_unreferenced(self.snapshots.directory, "*.png*", snapshots)
         deleted += housekeeping.evict_thumbs(self.directory / "thumbs", photos.keys())
         deleted += housekeeping.evict_unreferenced(self.originals, "*", set(photos.values()))
         deleted += housekeeping.evict_unreferenced(self.directory, "override.*", override)
@@ -967,11 +1090,12 @@ class FrameManager:
             _LOGGER.debug("Deleted %d unneeded files for %s", deleted, self.client_id)
 
     def storage_usage(self) -> dict[str, dict[str, int]]:
-        """File count and bytes of the render cache, thumbnails and originals. Blocking."""
+        """File count and bytes of the cache, thumbnails, originals and snapshots. Blocking."""
         return {
             "cache": housekeeping.usage(self.cache.directory),
             "thumbs": housekeeping.usage(self.directory / "thumbs"),
             "originals": housekeeping.usage(self.originals),
+            "snapshots": housekeeping.usage(self.snapshots.directory),
         }
 
     # -------------------------------------------------------------- overlays
@@ -1042,14 +1166,18 @@ class FrameManager:
     def evaluate_overlay(
         self, overlay: OverlayDef, variables: dict[str, Any] | None = None
     ) -> tuple[str | None, str | None]:
-        """Evaluate an overlay now: (text or None if hidden/empty, error or None)."""
+        """Evaluate an overlay now: (text or None if hidden/empty, error or None).
+
+        An image overlay's text is its evaluated source; its picture is fetched later.
+        """
         variables = variables if variables is not None else self.template_variables()
+        source = overlay.image if overlay.kind == "image" else overlay.template
         try:
             if overlay.show_if and overlay.show_if.strip():
                 shown = render_text(self.hass, overlay.show_if, variables)
                 if not is_truthy(shown):
                     return None, None
-            text = render_text(self.hass, overlay.template, variables).strip()
+            text = render_text(self.hass, source, variables).strip()
         except TemplateError as err:
             return None, str(err)
         return text or None, None
@@ -1067,26 +1195,221 @@ class FrameManager:
         same_display = ident == st.overlay_eval_base
         variables = self.template_variables(photo)
         texts: dict[str, str | None] = {}
+        images: dict[str, str] = {}
         errors: dict[str, str] = {}
+        fetch: list[OverlayDef] = []
         for overlay in applicable:
             if same_display and overlay.redraw == "photo" and overlay.id in st.overlay_texts:
                 texts[overlay.id] = st.overlay_texts[overlay.id]
+                if overlay.id in st.overlay_images:
+                    images[overlay.id] = st.overlay_images[overlay.id]
                 continue
             text, error = self.evaluate_overlay(overlay, variables)
             texts[overlay.id] = text
             if error:
                 errors[overlay.id] = error
-                _LOGGER.warning(
-                    "Overlay %r on %s left out: %s", overlay.name, self.display_name, error
-                )
+                self._log_left_out(overlay, error)
+            elif overlay.kind == "image" and text:
+                fetch.append(overlay)
         st.overlay_texts = texts
+        st.overlay_images = images
         st.overlay_errors = errors
         st.overlay_eval_base = ident
+        if self._image_task:
+            self._image_task.cancel()
+        self._image_task = (
+            self.entry.async_create_background_task(
+                self.hass,
+                self._async_snapshots(fetch, texts, WAKE_TIMEOUT),
+                f"{DOMAIN} overlay pictures {self.client_id}",
+            )
+            if fetch
+            else None
+        )
+
+    @callback
+    def _evaluate_for_wake(self) -> None:
+        """Evaluate overlays and start fetching this wake's pictures."""
+        self._evaluate_overlays_for_wake()
+        if self._background_task:
+            self._background_task[1].cancel()
+        self._background_task = None
+        card = self._current_photo()
+        if card is not None and card.is_card and card.background == BACKGROUND_IMAGE:
+            self._background_task = (
+                card.id,
+                self.entry.async_create_background_task(
+                    self.hass,
+                    self._async_card_picture(card, WAKE_TIMEOUT),
+                    f"{DOMAIN} card picture {self.client_id}",
+                ),
+            )
+
+    def _log_left_out(self, overlay: OverlayDef, error: str) -> None:
+        _LOGGER.warning("Overlay %r on %s left out: %s", overlay.name, self.display_name, error)
+
+    async def _async_finish_wake_pictures(self) -> None:
+        """Wait for this wake's pictures, so every request of the wake gets the same image."""
+        st = self.state
+        task, self._image_task = self._image_task, None
+        if task is not None and (result := await _wake_result(task)) is not None:
+            images, errors = result
+            st.overlay_images.update(images)
+            st.overlay_errors.update(errors)
+            for overlay_id, overlay_error in errors.items():
+                if overlay := next((o for o in self._all_overlays() if o.id == overlay_id), None):
+                    self._log_left_out(overlay, overlay_error)
+        background, self._background_task = self._background_task, None
+        if background is None or (picture := await _wake_result(background[1])) is None:
+            return
+        card_id, (key, error) = background[0], picture
+        if error is None:
+            st.card_picture_errors.pop(card_id, None)
+            if key:
+                st.card_pictures[card_id] = key
+            else:  # an empty source: the card is white
+                st.card_pictures.pop(card_id, None)
+            return
+        st.card_picture_errors[card_id] = error
+        card = self.get_photo(card_id)
+        _LOGGER.warning(
+            "Picture background of %r on %s not fetched: %s",
+            card.name if card else card_id,
+            self.display_name,
+            error,
+        )
+        # Keep the last picture while it is still there, otherwise the card is white.
+        kept = st.card_pictures.get(card_id)
+        if kept and not await self.hass.async_add_executor_job(self.cache.has, kept):
+            st.card_pictures.pop(card_id, None)
+
+    async def _async_card_picture(
+        self, card: LibraryItem, wait: float
+    ) -> tuple[str | None, str | None]:
+        """Fetch and render a card's picture background: (render key, error).
+
+        Both are None when the source is empty, which leaves the card white.
+        """
+        try:
+            source = render_text(
+                self.hass, card.background_image, self.template_variables(card)
+            ).strip()
+        except TemplateError as err:
+            return None, str(err)
+        if not source:
+            return None, None
+        try:
+            async with asyncio.timeout(wait):
+                data = await async_fetch(self.hass, source)
+            return (
+                await self._async_render_picture(
+                    data, card.background_fit, card.background_padding
+                ),
+                None,
+            )
+        except TimeoutError:
+            return None, f"No picture within {wait:g} s"
+        except (HomeAssistantError, OSError, ValueError) as err:
+            return None, str(err) or type(err).__name__
+
+    async def _async_render_picture(
+        self, data: bytes, fit: str | None = None, padding: int = 0
+    ) -> str:
+        """Render a fetched picture like a photo with the frame's settings; its cache key.
+
+        ``fit`` replaces the frame's fit (borders in the frame's background colour);
+        ``padding`` is the space around it in percent of the canvas' short side.
+        """
+        opts = self.render_options({"fit": fit} if fit else None)
+        canvas = self.canvas
+        pixels = round(min(canvas.width, canvas.height) * padding / 100)
+
+        def produce() -> str:
+            validate_image(data, MAX_IMAGE_PIXELS)
+            source = "picture:" + hashlib.sha256(data).hexdigest()
+            key = cache_key(
+                f"{source}:{pixels}" if pixels else source, opts.cache_dict(), asdict(canvas)
+            )
+            if not self.cache.has(key):
+                result = render(data, opts, canvas, pixels)
+                self.cache.put(key, result.bmp, result.preview_png)
+            return key
+
+        async with self._render_lock:
+            return await self.hass.async_add_executor_job(produce)
+
+    async def _async_base_now(self, item: LibraryItem) -> tuple[str, str | None]:
+        """Render key of an item's base with a picture background fetched now, and its error."""
+        if item.is_card and item.background == BACKGROUND_IMAGE and item.background_image:
+            key, error = await self._async_card_picture(item, PREVIEW_TIMEOUT)
+            if key:
+                return key, None
+            if error is None:  # an empty source
+                return await self._async_render_cached(*self._white_base()), None
+            return await self.async_render_photo(item), error
+        return await self.async_render_photo(item), None
+
+    def _white_base(self) -> tuple[str, Callable[[], RenderResult]]:
+        canvas = self.canvas
+        return cache_key("fill:white", {}, asdict(canvas)), lambda: render_fill("white", canvas)
+
+    def _all_overlays(self) -> list[OverlayDef]:
+        photo = self._current_photo()
+        return [*(photo.overlays if photo else []), *self.overlays]
+
+    async def _async_snapshots(
+        self, overlays: list[OverlayDef], texts: dict[str, str | None], wait: float
+    ) -> tuple[dict[str, str], dict[str, str]]:
+        """Fetch the pictures of image overlays whose source is in ``texts``.
+
+        Returns snapshot ids and errors, both by overlay id. Fetches run together,
+        each given ``wait`` seconds.
+        """
+        wanted = [o for o in overlays if o.kind == "image" and texts.get(o.id)]
+        results = await asyncio.gather(
+            *(self._async_snapshot(o, str(texts[o.id]), wait) for o in wanted),
+            return_exceptions=True,
+        )
+        images: dict[str, str] = {}
+        errors: dict[str, str] = {}
+        for overlay, result in zip(wanted, results, strict=True):
+            if isinstance(result, str):
+                images[overlay.id] = result
+            elif isinstance(result, TimeoutError):
+                errors[overlay.id] = f"No picture within {wait:g} s"
+            elif isinstance(result, (HomeAssistantError, OSError, ValueError)):
+                errors[overlay.id] = str(result) or type(result).__name__
+            else:
+                raise result
+        return images, errors
+
+    async def _async_snapshot(self, overlay: OverlayDef, source: str, wait: float) -> str:
+        """Fetch an image overlay's picture and store it dithered; returns its snapshot id."""
+        async with asyncio.timeout(wait):
+            data = await async_fetch(self.hass, source)
+        style = self.overlay_style(overlay)
+        opts = self.render_options(None)
+        canvas = self.canvas
+
+        def produce() -> str:
+            snapshot_id = cache_key(
+                "snapshot:" + hashlib.sha256(data).hexdigest(),
+                {"style": asdict(style), "opts": opts.cache_dict()},
+                asdict(canvas),
+            )
+            if not self.snapshots.has(snapshot_id):
+                png = render_snapshot(data, style, opts, canvas, MAX_IMAGE_PIXELS)
+                self.snapshots.put(snapshot_id, png)
+            return snapshot_id
+
+        async with self._render_lock:
+            return await self.hass.async_add_executor_job(produce)
 
     @staticmethod
     def overlay_style(overlay: OverlayDef) -> OverlayStyle:
         """Drawing style of an overlay."""
         return OverlayStyle(
+            kind=overlay.kind,
             anchor=overlay.anchor,
             margin=overlay.margin,
             width=overlay.width,
@@ -1098,14 +1421,26 @@ class FrameManager:
         )
 
     def _overlay_draw_list(
-        self, overlays: list[OverlayDef], texts: dict[str, str | None]
+        self,
+        overlays: list[OverlayDef],
+        texts: dict[str, str | None],
+        images: dict[str, str] | None = None,
     ) -> list[tuple[str, OverlayStyle]]:
+        """What composite draws: each text, or for an image overlay its snapshot id."""
         draw: list[tuple[str, OverlayStyle]] = []
         for overlay in overlays:
-            text = texts.get(overlay.id)
+            if overlay.kind == "image":
+                text = (images or {}).get(overlay.id)
+            else:
+                text = texts.get(overlay.id)
             if text:
                 draw.append((text, self.overlay_style(overlay)))
         return draw
+
+    def _read_snapshots(self, draw: list[tuple[str, OverlayStyle]]) -> dict[str, bytes]:
+        """The pictures a draw list needs, by snapshot id. Blocking."""
+        found = {t: self.snapshots.read(t) for t, style in draw if style.kind == "image"}
+        return {t: png for t, png in found.items() if png is not None}
 
     def _composite_key(self, base_key: str, draw: list[tuple[str, OverlayStyle]]) -> str:
         return cache_key(
@@ -1124,7 +1459,7 @@ class FrameManager:
             base = self.cache.read_bmp(base_key)
             if base is None:
                 raise HomeAssistantError("Base image missing from cache")
-            return composite(base, draw, canvas)
+            return composite(base, draw, canvas, self._read_snapshots(draw))
 
         return await self._async_render_cached(key, produce)
 
@@ -1151,7 +1486,7 @@ class FrameManager:
         glob = self.overlays if for_photo or overlays is None else overlays
         hidden = for_photo and photo is not None and photo.hide_frame_overlays
         base = (
-            await self.async_render_photo(photo)
+            (await self._async_base_now(photo))[0]
             if photo
             else await self._async_render_placeholder()
         )
@@ -1164,11 +1499,14 @@ class FrameManager:
             )
             results[overlay.id] = {"text": text, "error": error}
             texts[overlay.id] = text
+        images, errors = await self._async_snapshots([*own, *glob], texts, PREVIEW_TIMEOUT)
+        for overlay_id, error in errors.items():
+            results[overlay_id]["error"] = error
         drawn = [o for o in own if o.enabled]
         if not hidden:
             drawn += [o for o in glob if o.enabled]
         key = base
-        if draw := self._overlay_draw_list(drawn, texts):
+        if draw := self._overlay_draw_list(drawn, texts, images):
             key = await self._async_render_composite(base, draw)
         png = await self.hass.async_add_executor_job(self.cache.read_png, key)
         return png, results
@@ -1282,9 +1620,15 @@ class FrameManager:
         preset: str = "blank",
         background: str = "white",
         background_photo_id: str | None = None,
+        *,
+        background_image: str | None = None,
+        background_fit: str | None = None,
+        background_padding: int = 0,
     ) -> LibraryItem:
         """Add a card made from a preset (texts in HA's language) to the library."""
-        background, background_photo_id = self._card_background(background, background_photo_id)
+        background, background_photo_id, background_image = self._card_background(
+            background, background_photo_id, background_image
+        )
         language = self.hass.config.language
         card = LibraryItem(
             id=secrets.token_hex(6),
@@ -1297,27 +1641,39 @@ class FrameManager:
             overlays=preset_overlays(preset, background, language),
             background=background,
             background_photo_id=background_photo_id,
+            background_image=background_image,
+            background_fit=_fit(background, background_fit),
         )
+        card.background_padding = _padding(card, background_padding)
         self.photos.append(card)
         self._changed()
         return card
 
     def _card_background(
-        self, background: str, background_photo_id: str | None
-    ) -> tuple[str, str | None]:
-        """Validate a card background; a photo background needs a photo of this frame."""
+        self, background: str, background_photo_id: str | None, background_image: str | None = None
+    ) -> tuple[str, str | None, str]:
+        """Validate a card background: (background, background photo id, picture source).
+
+        A photo background needs a photo of this frame, a picture background its source.
+        """
+        if background == BACKGROUND_IMAGE:
+            if not (background_image or "").strip():
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN, translation_key="card_needs_background_image"
+                )
+            return background, None, str(background_image)
         if background != BACKGROUND_PHOTO:
             if background not in CARD_BACKGROUNDS:
                 raise ServiceValidationError(
                     translation_domain=DOMAIN, translation_key="invalid_card_background"
                 )
-            return background, None
+            return background, None, ""
         photo = self.get_photo(background_photo_id)
         if photo is None or photo.is_card:
             raise ServiceValidationError(
                 translation_domain=DOMAIN, translation_key="invalid_card_background"
             )
-        return background, photo.id
+        return background, photo.id, ""
 
     async def _async_validate(self, data: bytes) -> str:
         if len(data) > MAX_UPLOAD_BYTES:
@@ -1359,6 +1715,8 @@ class FrameManager:
         if st.queued_id == photo_id:
             st.queued_id = None
         st.bag = [p for p in st.bag if p != photo_id]
+        st.card_pictures.pop(photo_id, None)
+        st.card_picture_errors.pop(photo_id, None)
         for card in self.cards_on(photo_id):
             card.background, card.background_photo_id = "white", None
         if not photo.is_card:
@@ -1389,25 +1747,46 @@ class FrameManager:
         reset: list[str] | None = None,
         background: str | None = None,
         background_photo_id: str | None = None,
+        background_image: str | None = None,
+        background_fit: str | None = None,
+        background_padding: int | None = None,
     ) -> LibraryItem:
         """Change a photo's name, rotation membership or render overrides, or a card's background.
 
-        A ``background_photo_id`` without ``background`` sets a photo background.
+        A ``background_photo_id`` without ``background`` sets a photo background,
+        a ``background_image`` a picture background. ``background_fit`` "default"
+        makes a picture background follow the frame's fit again;
+        ``background_padding`` only stays with fit "contain".
         """
+        card_background = (background, background_photo_id, background_image)
         photo = self.require_photo(photo_id)
         if photo.is_card and (overrides or reset):
             raise ServiceValidationError(
                 translation_domain=DOMAIN, translation_key="card_has_no_render_settings"
             )
-        if not photo.is_card and (background is not None or background_photo_id is not None):
+        card_fit = (background_fit, background_padding)
+        if not photo.is_card and any(v is not None for v in (*card_background, *card_fit)):
             raise ServiceValidationError(
                 translation_domain=DOMAIN,
                 translation_key="not_a_card",
                 translation_placeholders={"photo_id": photo_id},
             )
-        if background is not None or background_photo_id is not None:
-            photo.background, photo.background_photo_id = self._card_background(
-                background or BACKGROUND_PHOTO, background_photo_id or photo.background_photo_id
+        if any(v is not None for v in card_background):
+            implied = BACKGROUND_IMAGE if background_image is not None else BACKGROUND_PHOTO
+            photo.background, photo.background_photo_id, photo.background_image = (
+                self._card_background(
+                    background or implied,
+                    background_photo_id or photo.background_photo_id,
+                    background_image if background_image is not None else photo.background_image,
+                )
+            )
+        if photo.is_card:
+            photo.background_fit = _fit(
+                photo.background, photo.background_fit if background_fit is None else background_fit
+            )
+            photo.background_padding = _padding(
+                photo,
+                photo.background_padding if background_padding is None else background_padding,
             )
         if name is not None:
             photo.name = name
@@ -1464,7 +1843,15 @@ class FrameManager:
             if same is None:
                 same = await self.async_copy_photo_to(photo.id, target, enabled=False)
             background, background_photo_id = BACKGROUND_PHOTO, same.id
-        copy = target.async_add_card(card.name, "blank", background, background_photo_id)
+        copy = target.async_add_card(
+            card.name,
+            "blank",
+            background,
+            background_photo_id,
+            background_image=card.background_image or None,
+            background_fit=card.background_fit,
+            background_padding=card.background_padding,
+        )
         copy.overlays[:] = copy_overlays(card.overlays)
         copy.hide_frame_overlays = card.hide_frame_overlays
         copy.enabled = enabled
@@ -1498,24 +1885,36 @@ class FrameManager:
         overrides: dict[str, Any] | None,
         frame_defaults: dict[str, Any] | None = None,
         global_defaults: dict[str, Any] | None = None,
-        background: tuple[str, str | None] | None = None,
+        background: tuple[str, str | None, str | None] | None = None,
         *,
         hide_frame_overlays: bool | None = None,
-    ) -> bytes:
+        background_fit: str | None = None,
+        background_padding: int = 0,
+    ) -> tuple[bytes, str | None]:
         """Preview PNG of a library item with unsaved settings (not cached).
 
         It is drawn with its overlays at their current values, like "Up next";
         ``hide_frame_overlays`` is an unsaved hide switch. A card is drawn on an
-        unsaved ``background`` (background, background photo id) if given.
+        unsaved ``background`` (background, background photo id, picture source),
+        ``background_fit`` and ``background_padding`` if given. Also returns the
+        error of fetching a card's picture background.
         """
         photo = self.require_photo(photo_id)
         if hide_frame_overlays is not None:
             photo = replace(photo, hide_frame_overlays=hide_frame_overlays)
         if photo.is_card:
             if background is not None:
-                bg, bg_id = self._card_background(*background)
-                photo = replace(photo, background=bg, background_photo_id=bg_id)
-            return await self._async_item_preview(photo) or b""
+                bg, bg_id, bg_image = self._card_background(*background)
+                photo = replace(
+                    photo,
+                    background=bg,
+                    background_photo_id=bg_id,
+                    background_image=bg_image,
+                    background_fit=_fit(bg, background_fit),
+                )
+                photo = replace(photo, background_padding=_padding(photo, background_padding))
+            png, error = await self._async_item_preview_error(photo)
+            return png or b"", error
         if global_defaults is None:
             global_defaults = self.global_store.defaults
         if frame_defaults is None:
@@ -1525,15 +1924,16 @@ class FrameManager:
         )
         path = self.originals / photo.filename
         canvas = self.canvas
-        draw = self._draw_now("photo", photo)
+        draw = await self._async_draw_now("photo", photo)
 
         def produce() -> bytes:
             if not draw:
                 return render_preview(path.read_bytes(), opts, canvas)
-            return composite(render(path.read_bytes(), opts, canvas).bmp, draw, canvas).preview_png
+            base = render(path.read_bytes(), opts, canvas).bmp
+            return composite(base, draw, canvas, self._read_snapshots(draw)).preview_png
 
         async with self._render_lock:
-            return await self.hass.async_add_executor_job(produce)
+            return await self.hass.async_add_executor_job(produce), None
 
     @callback
     def async_reorder(self, order: list[str]) -> None:

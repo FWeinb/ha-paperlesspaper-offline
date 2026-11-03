@@ -36,7 +36,15 @@ export class PhotoEditor extends LitElement {
   @state() private name = "";
   @state() private enabled = true;
   @state() private hideOverlays = false;
-  @state() private background: CardBackgroundValue = { background: "white", background_photo_id: null };
+  @state() private background: CardBackgroundValue = {
+    background: "white",
+    background_photo_id: null,
+    background_image: "",
+    background_fit: "default",
+    background_padding: 0,
+  };
+  /** Why the previewed picture background couldn't be fetched (undefined: no preview yet). */
+  @state() private backgroundError: string | null | undefined = undefined;
   @state() private preview: string | null = null;
   @state() private rendering = false;
   @state() private lockAspect = true;
@@ -88,6 +96,7 @@ export class PhotoEditor extends LitElement {
       this.enabled = this.photo.enabled;
       this.hideOverlays = this.photo.hide_frame_overlays ?? false;
       this.background = this.savedBackground;
+      this.backgroundError = undefined;
       this.lockAspect = true;
       this.schedulePreview(0);
     } else if (changed.has("photos")) {
@@ -104,6 +113,9 @@ export class PhotoEditor extends LitElement {
     return {
       background: this.photo.background ?? "white",
       background_photo_id: this.photo.background_photo_id ?? null,
+      background_image: this.photo.background_image ?? "",
+      background_fit: this.photo.background_fit ?? "default",
+      background_padding: this.photo.background_padding ?? 0,
     };
   }
 
@@ -151,7 +163,9 @@ export class PhotoEditor extends LitElement {
           hide_frame_overlays: this.hideOverlays,
         },
       );
-      if (!stale()) this.preview = result.image;
+      if (stale()) return;
+      this.preview = result.image;
+      this.backgroundError = result.background_error ?? null;
     } catch (err) {
       if (!stale()) this.error = errorMessage(err);
     }
@@ -258,9 +272,17 @@ export class PhotoEditor extends LitElement {
         .hass=${this.hass}
         .photos=${this.photos}
         .value=${this.background}
+        .error=${this.backgroundError === undefined ? (this.photo.background_error ?? null) : this.backgroundError}
         @value-changed=${(e: CustomEvent<{ value: CardBackgroundValue }>) => {
+          // Typing a picture source or dragging its padding waits for a pause before fetching it.
+          const next = e.detail.value;
+          const typing =
+            next.background === "image" &&
+            this.background.background === "image" &&
+            (next.background_image !== this.background.background_image ||
+              next.background_padding !== this.background.background_padding);
           this.background = e.detail.value;
-          this.schedulePreview(0);
+          this.schedulePreview(typing ? PREVIEW_DELAY : 0);
         }}
       ></pp-card-background>`;
   }

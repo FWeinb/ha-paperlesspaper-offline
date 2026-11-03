@@ -82,7 +82,9 @@ export interface Frame {
   needs_reprovision: boolean;
 }
 
-export type CardBackground = PaletteColor | "photo";
+export type CardBackground = PaletteColor | "photo" | "image";
+/** How a picture background fits the frame; "default" follows the frame's fit. */
+export type BackgroundFit = "default" | "cover" | "contain";
 export type CardPreset = "blank" | "info" | "notice";
 
 /** A library item: a photo, or a card (text on a background, no file). */
@@ -100,6 +102,14 @@ export interface LibraryItem {
   /** Cards only. */
   background?: CardBackground;
   background_photo_id?: string | null;
+  /** A picture background's source template. */
+  background_image?: string;
+  /** A picture background's fit; null follows the frame's fit. */
+  background_fit?: Exclude<BackgroundFit, "default"> | null;
+  /** With fit "contain": space around the picture, in percent of the short side. */
+  background_padding?: number;
+  /** Why the last wake couldn't fetch the picture background, if it couldn't. */
+  background_error?: string | null;
   thumb_url: string;
   display_urls: Record<string, string>;
 }
@@ -137,6 +147,9 @@ export interface Overlay {
   overlay_id?: string;
   name: string;
   template: string;
+  /** A text box, or a picture whose source is the `image` template. Fixed once saved. */
+  kind?: "text" | "image";
+  image?: string;
   enabled: boolean;
   show_if: string | null;
   anchor: Anchor;

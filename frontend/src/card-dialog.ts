@@ -18,7 +18,13 @@ export class CardDialog extends LitElement {
   @property({ attribute: false }) photos: LibraryItem[] = [];
 
   @state() private preset: CardPreset = "info";
-  @state() private background: CardBackgroundValue = { background: "white", background_photo_id: null };
+  @state() private background: CardBackgroundValue = {
+    background: "white",
+    background_photo_id: null,
+    background_image: "",
+    background_fit: "default",
+    background_padding: 0,
+  };
   @state() private name = "";
   @state() private busy = false;
   @state() private error: string | null = null;

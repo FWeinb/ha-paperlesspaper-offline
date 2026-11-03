@@ -43,7 +43,7 @@
     },
     "error": {
       "invalid_client_id": "This doesn't look like a frame ID (epd7-… or epd13- followed by 12 hex digits).",
-      "provision_failed": "Couldn't configure the frame over Bluetooth. Press its button once and try again, or untick the option to set it up manually.",
+      "provision_failed": "Couldn't configure the frame over Bluetooth. Press its button once and try again, or set it up manually.",
       "wifi_failed": "The frame couldn't join that WiFi network. Check the name and password, press the frame's button once, and try again.",
       "invalid_host": "Enter an IP address or hostname, without http:// or a port.",
       "unusable_host": "The frame can't use this address (loopback, localhost or a .local name). Choose a LAN IP address."
@@ -227,6 +227,12 @@
         "yellow": "Yellow"
       }
     },
+    "overlay_kind": {
+      "options": {
+        "text": "Text",
+        "image": "Picture"
+      }
+    },
     "overlay_backing": {
       "options": {
         "box": "Box",
@@ -255,7 +261,15 @@
         "green": "Green",
         "blue": "Blue",
         "yellow": "Yellow",
-        "photo": "Photo"
+        "photo": "Photo",
+        "image": "Camera or picture"
+      }
+    },
+    "card_background_fit": {
+      "options": {
+        "default": "Frame default",
+        "cover": "Fill and crop",
+        "contain": "Fit with borders"
       }
     }
   },
@@ -429,8 +443,20 @@
     "overlay_not_found": {
       "message": "Overlay {overlay_id} not found."
     },
+    "overlay_kind_fixed": {
+      "message": "An overlay's kind can't be changed; add a new overlay instead."
+    },
+    "overlay_needs_template": {
+      "message": "A text overlay needs a text."
+    },
+    "overlay_needs_image": {
+      "message": "An image overlay needs a picture source."
+    },
     "invalid_card_background": {
       "message": "A photo background needs the ID of a photo (not a card) of this frame."
+    },
+    "card_needs_background_image": {
+      "message": "A picture background needs a picture source (background_image)."
     },
     "card_has_no_render_settings": {
       "message": "Cards have no render settings; change the background instead."
@@ -554,7 +580,7 @@
         },
         "reset": {
           "name": "Reset",
-          "description": "Settings to reset to the inherited default (or 'all')."
+          "description": "Settings to reset to the default value (or 'all')."
         },
         "dither": {
           "name": "Dithering",
@@ -607,6 +633,18 @@
         "background_photo_id": {
           "name": "Background photo ID",
           "description": "The photo a card with a photo background is drawn on, with that photo's settings."
+        },
+        "background_image": {
+          "name": "Background picture",
+          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.garden. Fetched at each wake where the card is shown. Setting it alone switches the card to a picture background."
+        },
+        "background_fit": {
+          "name": "Picture fit",
+          "description": "How a picture background fits the frame: like the frame's photos, filled and cropped, or scaled to fit with borders in the frame's border colour. 'default' goes back to the frame's fit."
+        },
+        "background_padding": {
+          "name": "Picture padding",
+          "description": "With 'Fit with borders': space between the picture and the frame's edges, in percent of the frame's short side (0 to 25)."
         }
       }
     },
@@ -810,13 +848,13 @@
         },
         "reset": {
           "name": "Reset",
-          "description": "Settings to reset to the inherited default (or 'all')."
+          "description": "Settings to reset to the default value (or 'all')."
         }
       }
     },
     "add_overlay": {
       "name": "Add overlay",
-      "description": "Adds a global photo overlay (a text box drawn over every photo of a frame), or with a photo ID, a photo overlay for that one photo.",
+      "description": "Adds a global photo overlay (a text box or picture drawn over every photo of a frame), or with a photo ID, a photo overlay for that one photo.",
       "fields": {
         "config_entry_id": {
           "name": "Frame",
@@ -830,9 +868,17 @@
           "name": "Name",
           "description": "Name shown in the panel."
         },
+        "kind": {
+          "name": "Kind",
+          "description": "A text box or a picture. Can't be changed later."
+        },
         "template": {
           "name": "Text",
           "description": "Markdown with Home Assistant templates, e.g. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**."
+        },
+        "image": {
+          "name": "Picture",
+          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.front_door. Fetched at each wake where the overlay is drawn."
         },
         "show_if": {
           "name": "Show if",
@@ -852,7 +898,7 @@
         },
         "width": {
           "name": "Width",
-          "description": "Box width in percent of the frame; empty to fit the text."
+          "description": "Box width in percent of the frame; empty to fit the text (40 % for a picture)."
         },
         "margin": {
           "name": "Margin",
@@ -904,6 +950,10 @@
           "name": "Text",
           "description": "Markdown with Home Assistant templates, e.g. :mdi:thermometer: **{{ states('sensor.outdoor') }} °C**."
         },
+        "image": {
+          "name": "Picture",
+          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.front_door. Fetched at each wake where the overlay is drawn."
+        },
         "show_if": {
           "name": "Show if",
           "description": "Optional template; the overlay is only drawn when it renders to something truthy."
@@ -922,7 +972,7 @@
         },
         "width": {
           "name": "Width",
-          "description": "Box width in percent of the frame; empty to fit the text."
+          "description": "Box width in percent of the frame; empty to fit the text (40 % for a picture)."
         },
         "margin": {
           "name": "Margin",
@@ -1048,11 +1098,23 @@
         },
         "background": {
           "name": "Background",
-          "description": "A colour, or 'photo' to draw the card on a photo of this frame."
+          "description": "A colour, 'photo' to draw the card on a photo of this frame, or 'image' for a picture from a camera, an image entity or a URL."
         },
         "background_photo_id": {
           "name": "Background photo ID",
           "description": "The photo a card with a photo background is drawn on, with that photo's settings."
+        },
+        "background_image": {
+          "name": "Background picture",
+          "description": "Template for a camera or image entity, or an http(s) URL, e.g. camera.garden. Fetched at each wake where the card is shown. Setting it alone switches the card to a picture background."
+        },
+        "background_fit": {
+          "name": "Picture fit",
+          "description": "How a picture background fits the frame: like the frame's photos, filled and cropped, or scaled to fit with borders in the frame's border colour. 'default' goes back to the frame's fit."
+        },
+        "background_padding": {
+          "name": "Picture padding",
+          "description": "With 'Fit with borders': space between the picture and the frame's edges, in percent of the frame's short side (0 to 25)."
         }
       }
     },

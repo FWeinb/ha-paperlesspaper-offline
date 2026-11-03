@@ -58,6 +58,7 @@ OVERLAY_FIELDS = {
         "example": ":mdi:thermometer: **{{ states('sensor.outdoor') }} °C**",
         "selector": {"text": {"multiline": True}},
     },
+    "image": {"example": "camera.front_door", "selector": {"text": {}}},
     "show_if": {"selector": {"text": {"multiline": True}}},
     "enabled": {"selector": {"boolean": {}}},
     "anchor": select(ANCHORS, "overlay_anchor"),
@@ -71,7 +72,8 @@ OVERLAY_FIELDS = {
     "redraw": select(["change", "photo"], "overlay_redraw"),
 }
 
-CARD_BACKGROUND = select([*COLORS, "photo"], "card_background")
+CARD_BACKGROUND = select([*COLORS, "photo", "image"], "card_background")
+BACKGROUND_IMAGE = {"example": "camera.garden", "selector": {"text": {}}}
 
 SERVICES = {
     "add_photo": {
@@ -87,6 +89,11 @@ SERVICES = {
         "preset": {"default": "blank", **select(["blank", "info", "notice"], "card_preset")},
         "background": {"default": "white", **CARD_BACKGROUND},
         "background_photo_id": PHOTO_ID_OPTIONAL,
+        "background_image": BACKGROUND_IMAGE,
+        "background_fit": select(["default", "cover", "contain"], "card_background_fit"),
+        "background_padding": {
+            "selector": {"number": {"min": 0, "max": 25, "unit_of_measurement": "%"}}
+        },
     },
     "remove_photo": {"config_entry_id": FRAME, "photo_id": PHOTO_ID},
     "update_photo": {
@@ -99,6 +106,11 @@ SERVICES = {
         **PHOTO_RENDER,
         "background": CARD_BACKGROUND,
         "background_photo_id": PHOTO_ID_OPTIONAL,
+        "background_image": BACKGROUND_IMAGE,
+        "background_fit": select(["default", "cover", "contain"], "card_background_fit"),
+        "background_padding": {
+            "selector": {"number": {"min": 0, "max": 25, "unit_of_measurement": "%"}}
+        },
     },
     "move_photo": {
         "config_entry_id": FRAME,
@@ -144,10 +156,8 @@ SERVICES = {
         "config_entry_id": FRAME,
         "photo_id": PHOTO_ID_OPTIONAL,
         "name": {"required": True, "selector": {"text": {}}},
-        **{
-            k: ({**v, "required": True} if k == "template" else v)
-            for k, v in OVERLAY_FIELDS.items()
-        },
+        "kind": {"default": "text", **select(["text", "image"], "overlay_kind")},
+        **OVERLAY_FIELDS,
     },
     "update_overlay": {
         "config_entry_id": FRAME,

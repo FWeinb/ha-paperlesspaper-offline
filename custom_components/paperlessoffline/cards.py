@@ -8,7 +8,13 @@ from .render.overlay import COLORS
 from .store import OverlayDef
 
 BACKGROUND_PHOTO = "photo"
-CARD_BACKGROUNDS = (*COLORS, BACKGROUND_PHOTO)
+BACKGROUND_IMAGE = "image"  # a picture from a camera or image entity, or a URL
+CARD_BACKGROUNDS = (*COLORS, BACKGROUND_PHOTO, BACKGROUND_IMAGE)
+# How a picture background fits the frame; "default" (stored as None) is the frame's fit.
+FIT_DEFAULT = "default"
+BACKGROUND_FITS = (FIT_DEFAULT, "cover", "contain")
+# Space around a picture background that fits with borders, in percent of the short side.
+MAX_BACKGROUND_PADDING = 25
 PRESETS = ("blank", "info", "notice")
 # Backgrounds on which black text is hard to read.
 _DARK = ("black", "blue", "red", "green")

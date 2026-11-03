@@ -5,10 +5,12 @@ from __future__ import annotations
 import secrets
 from typing import Any
 
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 import probatio as vol
 
-from .render.overlay import ALIGNS, ANCHORS, BACKINGS, COLORS, SIZES
+from .const import DOMAIN
+from .render.overlay import ALIGNS, ANCHORS, BACKINGS, COLORS, KINDS, SIZES
 from .store import OverlayDef
 
 REDRAWS = ("change", "photo")
@@ -28,6 +30,8 @@ def _optional_text(value: Any) -> str | None:
 OVERLAY_FIELDS: dict[str, Any] = {
     "name": cv.string,
     "template": cv.string,
+    "kind": vol.In(KINDS),
+    "image": cv.string,
     "enabled": cv.boolean,
     "show_if": vol.Any(None, _optional_text),
     "anchor": vol.In(ANCHORS),
@@ -46,8 +50,15 @@ OVERLAY_SCHEMA = vol.Schema(
 
 
 def build_overlay(data: dict[str, Any], existing: OverlayDef | None = None) -> OverlayDef:
-    """A new overlay from validated fields, merged over an existing one if given."""
+    """A new overlay from validated fields, merged over an existing one if given.
+
+    An overlay's kind can't change: refused with ``overlay_kind_fixed``.
+    """
     if existing:
+        if data.get("kind", existing.kind) != existing.kind:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN, translation_key="overlay_kind_fixed"
+            )
         base = existing.as_dict()
     else:
         # A caller-supplied id is kept (e.g. "draft" in previews); otherwise a new one.
